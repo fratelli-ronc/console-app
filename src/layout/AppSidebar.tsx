@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react'
-import { useSidebar } from '@/context/SidebarContext'
 import { cn } from '@/lib/utils'
 
 interface NavChild {
@@ -56,7 +55,6 @@ const navSections: NavSection[] = [
 ]
 
 export default function AppSidebar() {
-  const { isExpanded } = useSidebar()
   const location = useLocation()
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set())
 
@@ -71,38 +69,25 @@ export default function AppSidebar() {
   const isActive = (href: string) => location.pathname === href
 
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 h-screen flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300',
-        isExpanded ? 'w-70' : 'w-18',
-      )}
-    >
+    <aside className="w-70 fixed left-0 top-0 h-screen flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300">
       {/* Logo */}
       <div
         data-tauri-drag-region
-        className={cn(
-          'flex h-16 shrink-0 items-center border-b border-sidebar-border px-4',
-          !isExpanded && 'justify-center',
-        )}
+        className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-4"
       >
-        {isExpanded ? (
-          <span className="font-bold text-base text-sidebar-foreground">
-            Ronc Console
-          </span>
-        ) : (
-          <span className="font-bold text-base text-sidebar-primary">R</span>
-        )}
+        <span className="font-bold text-base text-sidebar-foreground">
+          Ronc Console
+        </span>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
         {navSections.map((section) => (
           <div key={section.title}>
-            {isExpanded && (
-              <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                {section.title}
-              </p>
-            )}
+            <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+              {section.title}
+            </p>
+
             <ul className="space-y-1">
               {section.items.map((item) => {
                 const hasChildren = !!item.children?.length
@@ -117,21 +102,18 @@ export default function AppSidebar() {
                         className={cn(
                           'w-full flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
                           'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                          !isExpanded && 'justify-center',
                         )}
                       >
                         <span className="shrink-0">{item.icon}</span>
-                        {isExpanded && (
-                          <>
-                            <span className="ml-3 flex-1 text-left">
-                              {item.label}
-                            </span>
-                            {isOpen ? (
-                              <ChevronDown size={16} />
-                            ) : (
-                              <ChevronRight size={16} />
-                            )}
-                          </>
+
+                        <span className="ml-3 flex-1 text-left">
+                          {item.label}
+                        </span>
+
+                        {isOpen ? (
+                          <ChevronDown size={16} />
+                        ) : (
+                          <ChevronRight size={16} />
                         )}
                       </button>
                     ) : (
@@ -142,17 +124,15 @@ export default function AppSidebar() {
                           active
                             ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                             : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                          !isExpanded && 'justify-center',
                         )}
                       >
                         <span className="shrink-0">{item.icon}</span>
-                        {isExpanded && (
-                          <span className="ml-3">{item.label}</span>
-                        )}
+
+                        <span className="ml-3">{item.label}</span>
                       </Link>
                     )}
 
-                    {hasChildren && isOpen && isExpanded && (
+                    {hasChildren && isOpen && (
                       <ul className="mt-1 ml-9 space-y-1 border-l border-sidebar-border pl-3">
                         {item.children!.map((child) => (
                           <li key={child.href}>
