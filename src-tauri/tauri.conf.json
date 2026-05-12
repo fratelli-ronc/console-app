@@ -14,7 +14,9 @@
       {
         "title": "Ronc Console",
         "maximized": true,
-        "resizable": false
+        "decorations": true,
+        "hiddenTitle": true,
+        "titleBarStyle": "Transparent"
       }
     ],
     "security": {
