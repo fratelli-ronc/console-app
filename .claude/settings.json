@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:tailadmin.com)",
+      "Bash(curl -s https://raw.githubusercontent.com/Tailwind-Admin/free-tailwind-admin-dashboard-template/main/react/package.json)",
+      "Bash(curl -s https://raw.githubusercontent.com/Tailwind-Admin/free-tailwind-admin-dashboard-template/refs/heads/main/react/package.json)",
+      "Bash(curl -s https://api.github.com/repos/Tailwind-Admin/free-tailwind-admin-dashboard-template/contents/react/package.json)",
+      "Bash(curl -s https://raw.githubusercontent.com/TailAdmin/free-react-tailwind-admin-dashboard/main/src/layout/AppHeader.tsx)",
+      "Bash(curl -s https://raw.githubusercontent.com/TailAdmin/free-react-tailwind-admin-dashboard/main/src/context/SidebarContext.tsx)",
+      "Bash(curl -s https://api.github.com/repos/TailAdmin/free-react-tailwind-admin-dashboard/contents/src/components/common)",
+      "Bash(curl -s https://raw.githubusercontent.com/TailAdmin/free-react-tailwind-admin-dashboard/main/src/App.tsx)",
+      "Bash(curl -s https://raw.githubusercontent.com/TailAdmin/free-react-tailwind-admin-dashboard/main/src/layout/Backdrop.tsx)",
+      "Bash(curl -s https://raw.githubusercontent.com/TailAdmin/free-react-tailwind-admin-dashboard/main/src/layout/SidebarWidget.tsx)",
+      "Bash(curl -s https://api.github.com/repos/TailAdmin/free-react-tailwind-admin-dashboard/contents/src/components/header)",
+      "Bash(curl -s https://raw.githubusercontent.com/TailAdmin/free-react-tailwind-admin-dashboard/main/tailwind.config.js)",
+      "Bash(curl -s https://api.github.com/repos/TailAdmin/free-react-tailwind-admin-dashboard/contents)",
+      "Bash(curl -s https://raw.githubusercontent.com/TailAdmin/free-react-tailwind-admin-dashboard/main/tailwind.config.ts)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  }
+}
