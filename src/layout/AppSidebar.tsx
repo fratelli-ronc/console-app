@@ -79,6 +79,7 @@ export default function AppSidebar() {
     >
       {/* Logo */}
       <div
+        data-tauri-drag-region
         className={cn(
           'flex h-16 shrink-0 items-center border-b border-sidebar-border px-4',
           !isExpanded && 'justify-center',
