@@ -104,7 +104,7 @@ export default function AppSidebar() {
                       <button
                         onClick={() => toggleSubmenu(item.label)}
                         className={cn(
-                          'w-full flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                          'w-full flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors',
                           'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                         )}
                       >
@@ -124,7 +124,7 @@ export default function AppSidebar() {
                       <Link
                         to={item.href ?? '#'}
                         className={cn(
-                          'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                          'flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors',
                           active
                             ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                             : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
