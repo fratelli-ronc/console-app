@@ -8,6 +8,7 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  LayoutTemplate,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -45,6 +46,7 @@ const navSections: NavSection[] = [
     items: [
       { label: 'Users', href: '/users', icon: <Users size={20} /> },
       { label: 'Settings', href: '/settings', icon: <Settings size={20} /> },
+      { label: 'Temp', href: '/auth', icon: <LayoutTemplate size={20} /> },
     ],
   },
 ]
