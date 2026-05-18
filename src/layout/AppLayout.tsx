@@ -1,21 +1,20 @@
+import { useRef } from 'react'
 import { Outlet } from 'react-router-dom'
 import AppSidebar from './AppSidebar'
 import AppHeader from './AppHeader'
 
-function LayoutContent() {
+export default function AppLayout() {
+  const scrollRef = useRef<HTMLElement>(null)
+
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <AppSidebar />
-      <div className="ml-70 flex flex-col flex-1 transition-all duration-300">
-        <AppHeader />
-        <main className="flex-1 p-6">
+      <div className="ml-70 flex flex-col flex-1 overflow-hidden transition-all duration-300">
+        <AppHeader scrollContainer={scrollRef} />
+        <main ref={scrollRef} className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
     </div>
   )
-}
-
-export default function AppLayout() {
-  return <LayoutContent />
 }

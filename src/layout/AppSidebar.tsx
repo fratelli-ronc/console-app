@@ -3,8 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import {
   LayoutDashboard,
-  BarChart2,
-  FileText,
+  Container,
   Users,
   Settings,
   ChevronDown,
@@ -34,14 +33,10 @@ const navSections: NavSection[] = [
     title: 'Menu',
     items: [
       { label: 'Dashboard', href: '/', icon: <LayoutDashboard size={20} /> },
-      { label: 'Analytics', href: '/analytics', icon: <BarChart2 size={20} /> },
       {
-        label: 'Reports',
-        icon: <FileText size={20} />,
-        children: [
-          { label: 'Monthly', href: '/reports/monthly' },
-          { label: 'Yearly', href: '/reports/yearly' },
-        ],
+        label: 'Container',
+        href: '/containers',
+        icon: <Container size={20} />,
       },
     ],
   },
@@ -73,11 +68,20 @@ export default function AppSidebar() {
       {/* Logo */}
       <div
         data-tauri-drag-region
-        className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-4"
+        className="h-16 flex shrink-0 items-center px-4"
       >
+        <div className="relative h-9 w-9 mr-3">
+          <img
+            src="/logo-verde-castoro-ronc.png"
+            alt="logo"
+            className="w-full h-full"
+          />
+        </div>
+
         <span className="font-bold text-base text-sidebar-foreground">
-          Ronc Console
+          Ronc
         </span>
+        <span className="ml-1 text-base text-sidebar-foreground">Console</span>
       </div>
 
       {/* Nav */}

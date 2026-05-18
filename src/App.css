@@ -1,6 +1,10 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @layer base {
+  body {
+    overflow: hidden;
+  }
+
   :root {
     font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
     font-synthesis: none;
@@ -39,15 +43,15 @@
     --chart-4: oklch(0.646 0.222 41.116);
     --chart-5: oklch(0.6 0.118 184.704);
 
-    /* Sidebar tokens — dark teal (#283C3A) with yellow active state */
-    --sidebar: oklch(0.34 0.025 188);
-    --sidebar-foreground: oklch(0.92 0.01 188);
-    --sidebar-primary: oklch(0.83 0.154 85);
-    --sidebar-primary-foreground: oklch(0.22 0.022 185);
-    --sidebar-accent: oklch(0.42 0.03 188);
-    --sidebar-accent-foreground: oklch(0.92 0.01 188);
-    --sidebar-border: oklch(0.44 0.028 188);
-    --sidebar-ring: oklch(0.83 0.154 85);
+    /* Sidebar tokens — white background with primary green (#0D7023) active state */
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.22 0.022 185);
+    --sidebar-primary: oklch(0.47 0.14 145);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.95 0.012 145);
+    --sidebar-accent-foreground: oklch(0.22 0.022 185);
+    --sidebar-border: oklch(0.88 0.018 145);
+    --sidebar-ring: oklch(0.47 0.14 145);
     --sidebar-width: 280px;
     --sidebar-width-collapsed: 72px;
   }
