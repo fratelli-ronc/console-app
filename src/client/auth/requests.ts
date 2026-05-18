@@ -1,9 +1,5 @@
-import authClient from './client'
-
-export interface LoginResponse {
-  token: string
-  refresh_token: string
-}
+import authClient, { authenticatedAuthClient } from './client'
+import { LoginResponse, UserProfile } from './dtos'
 
 export const login = async (
   email: string,
@@ -24,5 +20,10 @@ export const refreshToken = async (token: string): Promise<LoginResponse> => {
   const { data } = await authClient.post<LoginResponse>('/auth/refresh', {
     refreshToken: token,
   })
+  return data
+}
+
+export const me = async (): Promise<UserProfile> => {
+  const { data } = await authenticatedAuthClient.get<UserProfile>('/auth/me')
   return data
 }
