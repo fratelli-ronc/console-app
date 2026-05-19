@@ -79,7 +79,7 @@ export const AppSidebar: React.FC = () => {
       {/* Logo */}
       <div
         data-tauri-drag-region
-        className="h-16 flex shrink-0 items-center px-4"
+        className="h-14 flex shrink-0 items-center px-4"
       >
         <div className="relative h-9 w-9 mr-3">
           <img
@@ -184,10 +184,14 @@ export const AppSidebar: React.FC = () => {
               className="h-9 w-9 rounded-md object-cover shrink-0"
             />
             <div className="flex-1 min-w-0 leading-tight">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
-              <p className="text-xs text-sidebar-foreground/50 truncate">{user.email}</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {user.name}
+              </p>
+              <p className="text-xs text-sidebar-foreground/50 truncate">
+                {user.email}
+              </p>
             </div>
-            
+
             <button
               onClick={handleLogout}
               title="Logout"
