@@ -31,6 +31,7 @@ export function withAuthInterceptors(
 
         try {
           const rt = await getRefreshToken()
+
           if (!rt) throw new Error('no refresh token')
 
           const result = await doRefresh(rt)
@@ -40,7 +41,7 @@ export function withAuthInterceptors(
 
           original.headers.Authorization = `Bearer ${result.token}`
 
-          return instance(original)
+          return await instance(original)
         } catch {
           await clearToken()
           await clearRefreshToken()
