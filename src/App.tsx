@@ -1,6 +1,12 @@
 import { Route, Routes } from 'react-router-dom'
-import { AuthPage, HomePage } from './pages/intex'
 import { AppLayout, AppPrivateRoute } from '@/layout'
+import {
+  AuthPage,
+  ContainersPage,
+  HomePage,
+  SettingsPage,
+  UsersPage,
+} from '@/pages'
 import './App.css'
 
 function App() {
@@ -11,6 +17,9 @@ function App() {
       <Route element={<AppPrivateRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/containers" element={<ContainersPage />} />
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>
     </Routes>
