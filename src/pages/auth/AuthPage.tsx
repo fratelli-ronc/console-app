@@ -24,8 +24,6 @@ export const AuthPage: React.FC = () => {
     try {
       const data = await login(username, password)
 
-      console.log(data.token)
-
       await setToken(data.token)
       await setRefreshToken(data.refresh_token)
 

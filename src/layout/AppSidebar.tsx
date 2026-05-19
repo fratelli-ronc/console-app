@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import {
   LayoutDashboard,
@@ -8,9 +8,11 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
-  LayoutTemplate,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { clearToken, clearRefreshToken } from '@/client/tokenStore'
+import { useUserStore } from '@/store'
 
 interface NavChild {
   label: string
@@ -42,18 +44,25 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: 'Others',
+    title: 'Altro',
     items: [
       { label: 'Users', href: '/users', icon: <Users size={20} /> },
       { label: 'Settings', href: '/settings', icon: <Settings size={20} /> },
-      { label: 'Temp', href: '/auth', icon: <LayoutTemplate size={20} /> },
     ],
   },
 ]
 
-export default function AppSidebar() {
+export const AppSidebar: React.FC = () => {
   const location = useLocation()
+  const navigate = useNavigate()
+  const user = useUserStore((s) => s.user)
+
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set())
+
+  async function handleLogout() {
+    await Promise.all([clearToken(), clearRefreshToken()])
+    navigate('/auth', { replace: true })
+  }
 
   function toggleSubmenu(label: string) {
     setOpenSubmenus((prev) => {
@@ -164,6 +173,42 @@ export default function AppSidebar() {
           </div>
         ))}
       </nav>
+
+      {/* User + Logout */}
+      <div className="shrink-0 border-t border-sidebar-border p-3">
+        {user ? (
+          <div className="flex items-center gap-3">
+            <img
+              src={user.avatar}
+              alt={user.name}
+              className="h-9 w-9 rounded-md object-cover shrink-0"
+            />
+            <div className="flex-1 min-w-0 leading-tight">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
+              <p className="text-xs text-sidebar-foreground/50 truncate">{user.email}</p>
+            </div>
+            
+            <button
+              onClick={handleLogout}
+              title="Logout"
+              className="shrink-0 rounded-md p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleLogout}
+            className={cn(
+              'w-full flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors',
+              'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            )}
+          >
+            <LogOut size={20} />
+            <span className="ml-3">Logout</span>
+          </button>
+        )}
+      </div>
     </aside>
   )
 }
