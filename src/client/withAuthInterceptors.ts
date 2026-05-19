@@ -44,6 +44,8 @@ export function withAuthInterceptors(
         } catch {
           await clearToken()
           await clearRefreshToken()
+
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'))
         }
       }
 

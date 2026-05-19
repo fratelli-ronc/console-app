@@ -1,15 +1,44 @@
 import { FilledButton, TextInput } from '@/components'
+import { login } from '@/client/auth/requests'
+import { setToken, setRefreshToken } from '@/client/tokenStore'
+import { isAxiosError } from 'axios'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const randomImage = `/centrale-elettrica-${Math.ceil(Math.random() * 5)}.jpg`
 
 export const AuthPage: React.FC = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const navigate = useNavigate()
 
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // TODO: wire up auth
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const data = await login(username, password)
+
+      console.log(data.token)
+
+      await setToken(data.token)
+      await setRefreshToken(data.refresh_token)
+
+      navigate('/')
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 401) {
+        setError('Credenziali non corrette. Riprova.')
+      } else {
+        setError('Errore di connessione. Controlla la rete e riprova.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -34,11 +63,11 @@ export const AuthPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <TextInput
               required
-              label="Email"
-              value={email}
-              type="email"
+              label="Username"
+              value={username}
+              type="username"
               placeholder="nome@esempio.com"
-              onChange={setEmail}
+              onChange={setUsername}
             />
 
             <TextInput
@@ -50,7 +79,13 @@ export const AuthPage: React.FC = () => {
               onChange={setPassword}
             />
 
-            <FilledButton type="submit" label="Accedi" />
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <FilledButton
+              type="submit"
+              label={loading ? 'Accesso…' : 'Accedi'}
+              disabled={loading}
+            />
           </form>
         </div>
 

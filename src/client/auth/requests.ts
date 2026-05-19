@@ -2,11 +2,11 @@ import authClient, { authenticatedAuthClient } from './client'
 import { LoginResponse, UserProfile } from './dtos'
 
 export const login = async (
-  email: string,
+  username: string,
   password: string,
 ): Promise<LoginResponse> => {
   const { data } = await authClient.post<LoginResponse>('/auth', {
-    email,
+    username,
     password,
   })
   return data
