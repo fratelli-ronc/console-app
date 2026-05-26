@@ -2,8 +2,8 @@ import { Route, Routes } from 'react-router-dom'
 import { AppLayout, AppPrivateRoute } from '@/layout'
 import {
   AuthPage,
-  ContainersPage,
   HomePage,
+  ServersPage,
   SettingsPage,
   UsersPage,
 } from '@/pages'
@@ -17,7 +17,7 @@ function App() {
       <Route element={<AppPrivateRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/containers" element={<ContainersPage />} />
+          <Route path="/servers" element={<ServersPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

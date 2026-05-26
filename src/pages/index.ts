@@ -1,5 +1,5 @@
 export { AuthPage } from './auth/AuthPage'
-export { ContainersPage } from './containers/ContainersPage'
+export { ServersPage } from './servers/ServersPage'
 export { HomePage } from './home/HomePage'
 export { SettingsPage } from './settings/SettingsPage'
 export { UsersPage } from './users/UsersPage'

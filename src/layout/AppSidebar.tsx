@@ -3,12 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import {
   LayoutDashboard,
-  Container,
   Users,
   Settings,
   ChevronDown,
   ChevronRight,
   LogOut,
+  Server,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { clearToken, clearRefreshToken } from '@/client/tokenStore'
@@ -36,18 +36,27 @@ const navSections: NavSection[] = [
     title: 'Menu',
     items: [
       { label: 'Dashboard', href: '/', icon: <LayoutDashboard size={20} /> },
+    ],
+  },
+  {
+    title: 'Deploy',
+    items: [
       {
-        label: 'Container',
-        href: '/containers',
-        icon: <Container size={20} />,
+        label: 'Server',
+        href: '/servers',
+        icon: <Server size={20} />,
       },
     ],
   },
   {
     title: 'Altro',
     items: [
-      { label: 'Users', href: '/users', icon: <Users size={20} /> },
-      { label: 'Settings', href: '/settings', icon: <Settings size={20} /> },
+      { label: 'Utenti', href: '/users', icon: <Users size={20} /> },
+      {
+        label: 'Impostazioni',
+        href: '/settings',
+        icon: <Settings size={20} />,
+      },
     ],
   },
 ]
