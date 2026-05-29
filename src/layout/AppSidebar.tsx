@@ -81,7 +81,8 @@ export const AppSidebar: React.FC = () => {
     })
   }
 
-  const isActive = (href: string) => location.pathname === href
+  const isActive = (href: string) =>
+    href === '/' ? location.pathname === href : location.pathname.includes(href)
 
   return (
     <aside className="w-70 fixed left-0 top-0 h-screen flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300">
