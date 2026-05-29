@@ -31,8 +31,10 @@ export const ResoucesPage: React.FC = () => {
     fetchResources()
   }, [uuid])
 
-  const filtered = resources.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase()),
+  const filtered = resources.filter(
+    (r) =>
+      r.name.toLowerCase().includes(search.toLowerCase()) ||
+      r.image.toLowerCase().includes(search.toLowerCase()),
   )
 
   return (

@@ -91,7 +91,7 @@ export const ServersPage: React.FC = () => {
       {/* Server grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <ServerCardSkeleton key={i} />
           ))}
         </div>

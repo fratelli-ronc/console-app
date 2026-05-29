@@ -32,8 +32,9 @@ export interface ServerResouce {
   name: string
   status: ServerResouceStatus
   type: ResouceType
-  created_at: Date
-  updated_at: Date
+  image: string
+  createdAt: Date
+  updatedAt: Date
 }
 
 enum ServerResouceStatus {

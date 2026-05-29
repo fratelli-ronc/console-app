@@ -73,10 +73,10 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
       <div className="px-5 py-4 flex items-center gap-4">
         <div className="flex flex-col gap-0.5">
           <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
-            Tipo
+            Immagine
           </span>
-          <span className="text-sm font-semibold text-foreground capitalize">
-            {resource.type}
+          <span className="text-sm font-semibold text-foreground">
+            {resource.image.split('/').at(-1)}
           </span>
         </div>
 
@@ -85,7 +85,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
             Aggiornato
           </span>
           <span className="text-xs text-muted-foreground">
-            {new Date(resource.updated_at).toLocaleDateString('it-IT')}
+            {`${new Date(resource.updatedAt).toLocaleDateString('it-IT')} ${new Date(resource.updatedAt).toLocaleTimeString('it-IT')}`}
           </span>
         </div>
       </div>
