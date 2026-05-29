@@ -3,6 +3,7 @@ import { AppLayout, AppPrivateRoute } from '@/layout'
 import {
   AuthPage,
   HomePage,
+  ResoucesPage,
   ServersPage,
   SettingsPage,
   UsersPage,
@@ -18,6 +19,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/servers" element={<ServersPage />} />
+          <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

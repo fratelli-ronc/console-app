@@ -25,3 +25,21 @@ export interface ServerMetrics {
     usedPercent: number
   }[]
 }
+
+export interface ServerResouce {
+  id: number
+  uuid: string
+  name: string
+  status: ServerResouceStatus
+  type: ResouceType
+  created_at: Date
+  updated_at: Date
+}
+
+enum ServerResouceStatus {
+  RunningHealthy = 'running:healthy',
+  RunningUnknown = 'running:unknown',
+  RunningUnhealthy = 'running:unhealthy',
+}
+
+type ResouceType = 'service'

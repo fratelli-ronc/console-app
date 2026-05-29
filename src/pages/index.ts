@@ -1,5 +1,6 @@
 export { AuthPage } from './auth/AuthPage'
 export { ServersPage } from './servers/ServersPage'
 export { HomePage } from './home/HomePage'
+export { ResoucesPage } from './resources/ResourcesPage'
 export { SettingsPage } from './settings/SettingsPage'
 export { UsersPage } from './users/UsersPage'
