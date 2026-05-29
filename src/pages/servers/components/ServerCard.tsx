@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Server as ServerIcon } from 'lucide-react'
 import { Server, ServerMetrics } from '@/client/coolify'
 import { getServerMetrics } from '@/client/coolify/requests'
@@ -15,6 +16,7 @@ interface ServerCardProps {
 }
 
 export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
+  const navigate = useNavigate()
   const [metrics, setMetrics] = useState<ServerMetrics | undefined>(undefined)
   const [loadingMetrics, setLoadingMetrics] = useState(true)
 
@@ -29,10 +31,15 @@ export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
     return metrics.filesystems.find((fs) => fs.mountpoint === '/')
   }, [metrics])
 
-  if (loadingMetrics) return <ServerCardSkeleton />
-
   return (
-    <div className="bg-card border border-border rounded-xl hover:border-primary/40 hover:shadow-sm transition-all duration-150 group">
+    <div
+      className="bg-card border border-border rounded-xl hover:border-primary/40 hover:shadow-sm transition-all duration-150 group cursor-pointer"
+      onClick={() =>
+        navigate(`/servers/${server.uuid}/resources`, {
+          state: { serverName: server.name },
+        })
+      }
+    >
       {/* Card header */}
       <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
@@ -92,50 +99,62 @@ export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
 
       {/* Stats row */}
       <div className="px-5 py-4 grid grid-cols-3 gap-3">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
-            CPU
-          </span>
+        {loadingMetrics ? (
+          [0, 1, 2].map((i) => (
+            <div key={i} className="flex flex-col gap-1.5 my-0.5">
+              <div className="h-2.5 w-8 bg-accent rounded" />
+              <div className="h-4 w-12 bg-accent rounded" />
+              <div className="h-3 w-16 bg-accent rounded" />
+            </div>
+          ))
+        ) : (
+          <>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
+                CPU
+              </span>
 
-          <span className="text-sm font-semibold text-foreground">
-            {metrics?.cpu.usedPercent.toFixed(1)} %
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {metrics
-              ? `${metrics.cpu.count} core · ${metrics.cpu.architecture}`
-              : '—'}
-          </span>
-        </div>
+              <span className="text-sm font-semibold text-foreground">
+                {metrics?.cpu.usedPercent.toFixed(1)} %
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {metrics
+                  ? `${metrics.cpu.count} core · ${metrics.cpu.architecture}`
+                  : '—'}
+              </span>
+            </div>
 
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
-            Memoria
-          </span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
+                Memoria
+              </span>
 
-          <span className="text-sm font-semibold text-foreground">
-            {metrics?.memory.usedPercent.toFixed(1)} %
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {metrics
-              ? `${formatBytes(metrics.memory.totalBytes - metrics.memory.availableBytes)} / ${formatBytes(metrics.memory.totalBytes)}`
-              : '—'}
-          </span>
-        </div>
+              <span className="text-sm font-semibold text-foreground">
+                {metrics?.memory.usedPercent.toFixed(1)} %
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {metrics
+                  ? `${formatBytes(metrics.memory.totalBytes - metrics.memory.availableBytes)} / ${formatBytes(metrics.memory.totalBytes)}`
+                  : '—'}
+              </span>
+            </div>
 
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
-            Disco
-          </span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
+                Disco
+              </span>
 
-          <span className="text-sm font-semibold text-foreground">
-            {serverStorage?.usedPercent?.toFixed(1)} %
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {serverStorage
-              ? `${formatBytes(serverStorage.availBytes)} liberi`
-              : '—'}
-          </span>
-        </div>
+              <span className="text-sm font-semibold text-foreground">
+                {serverStorage?.usedPercent?.toFixed(1)} %
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {serverStorage
+                  ? `${formatBytes(serverStorage.availBytes)} liberi`
+                  : '—'}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
