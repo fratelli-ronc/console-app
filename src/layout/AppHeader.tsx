@@ -6,14 +6,50 @@ import { cn } from '@/lib/utils'
 
 const ROUTE_LABELS: Record<string, string> = {
   servers: 'Server',
+  resources: 'Risorse',
   users: 'Utenti',
   settings: 'Impostazioni',
 }
 
-function labelFor(segment: string): string {
-  return (
-    ROUTE_LABELS[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1)
-  )
+function isStaticSegment(seg: string): boolean {
+  return seg in ROUTE_LABELS
+}
+
+type RouteState = Record<string, string> | null
+
+interface Crumb {
+  label: string
+  href: string
+  navigable: boolean
+}
+
+function resolveDynamicLabel(
+  parentSegment: string,
+  state: RouteState,
+  fallback: string,
+): string {
+  switch (parentSegment) {
+    case 'servers':
+      return state?.serverName ?? fallback
+    default:
+      return fallback
+  }
+}
+
+function buildCrumbs(segments: string[], state: RouteState): Crumb[] {
+  return segments.map((seg, i) => ({
+    label: isStaticSegment(seg)
+      ? ROUTE_LABELS[seg]
+      : resolveDynamicLabel(segments[i - 1] ?? '', state, seg),
+    href: '/' + segments.slice(0, i + 1).join('/'),
+    navigable: isStaticSegment(seg),
+  }))
+}
+
+function resolveParentHref(crumbs: Crumb[]): string | null {
+  if (crumbs.length === 0) return null
+  const navigable = crumbs.filter((c) => c.navigable)
+  return navigable.length <= 1 ? '/' : navigable[navigable.length - 2].href
 }
 
 interface AppHeaderProps {
@@ -38,16 +74,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ scrollContainer }) => {
   }, [scrollContainer])
 
   const segments = location.pathname.split('/').filter(Boolean)
-  const crumbs = segments.map((seg, i) => ({
-    label: labelFor(seg),
-    href: '/' + segments.slice(0, i + 1).join('/'),
-  }))
+  const crumbs = buildCrumbs(segments, location.state as RouteState)
   const isRoot = crumbs.length === 0
-  const parentHref = isRoot
-    ? null
-    : crumbs.length === 1
-      ? '/'
-      : crumbs[crumbs.length - 2].href
+  const parentHref = resolveParentHref(crumbs)
 
   return (
     <header
@@ -73,7 +102,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ scrollContainer }) => {
           <>
             <Link
               to="/"
-              className="text-muted-foreground hover:text-foreground transition-colors leading-3.5"
+              className="text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors leading-3.5"
             >
               Dashboard
             </Link>
@@ -85,13 +114,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ scrollContainer }) => {
                   <span className="font-semibold text-foreground leading-3.5">
                     {crumb.label}
                   </span>
-                ) : (
+                ) : crumb.navigable ? (
                   <Link
                     to={crumb.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors leading-3.5"
+                    className="text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors leading-3.5"
                   >
                     {crumb.label}
                   </Link>
+                ) : (
+                  <span className="text-foreground/50 leading-3.5">
+                    {crumb.label}
+                  </span>
                 )}
               </span>
             ))}
