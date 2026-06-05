@@ -2,7 +2,9 @@ import { Route, Routes } from 'react-router-dom'
 import { AppLayout, AppPrivateRoute } from '@/layout'
 import {
   AuthPage,
+  EditUserPage,
   HomePage,
+  NewUserPage,
   ResoucesPage,
   ServersPage,
   SettingsPage,
@@ -21,6 +23,8 @@ function App() {
           <Route path="/servers" element={<ServersPage />} />
           <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/users/new" element={<NewUserPage />} />
+          <Route path="/users/:userId" element={<EditUserPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>

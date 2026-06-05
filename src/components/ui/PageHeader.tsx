@@ -4,12 +4,14 @@ interface PageHeaderProps {
   title: string
   subtitle: string
   newLabel?: string
+  onNewClick?: () => void
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   subtitle,
   newLabel,
+  onNewClick,
 }) => {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -20,7 +22,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       </div>
 
       {newLabel && (
-        <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:bg-primary/80 transition-colors shrink-0">
+        <button onClick={onNewClick} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:bg-primary/80 transition-colors shrink-0">
           <Plus size={16} />
           {newLabel}
         </button>

@@ -9,6 +9,7 @@ const ROUTE_LABELS: Record<string, string> = {
   resources: 'Risorse',
   users: 'Utenti',
   settings: 'Impostazioni',
+  new: 'Nuovo',
 }
 
 function isStaticSegment(seg: string): boolean {
@@ -31,6 +32,8 @@ function resolveDynamicLabel(
   switch (parentSegment) {
     case 'servers':
       return state?.serverName ?? fallback
+    case 'users':
+      return 'Modifica'
     default:
       return fallback
   }

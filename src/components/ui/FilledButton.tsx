@@ -16,7 +16,7 @@ export const FilledButton: React.FC<FilledButtonProps> = ({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="mt-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:bg-primary/80 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      className="px-4 mt-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:bg-primary/80 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {label}
     </button>
