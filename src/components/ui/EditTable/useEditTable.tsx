@@ -23,6 +23,10 @@ export function useEditTable<T extends Record<string, unknown>>(
     row: number
     key: string
   } | null>(null)
+  const [selectedCell, setSelectedCell] = useState<{
+    row: number
+    key: string
+  } | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
@@ -62,7 +66,9 @@ export function useEditTable<T extends Record<string, unknown>>(
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (containerRef.current?.contains(document.activeElement)) return
+      const active = document.activeElement
+      if (active?.tagName === 'INPUT' && containerRef.current?.contains(active))
+        return
 
       const isUndo = (e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey
       const isRedo = (e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey
@@ -83,17 +89,23 @@ export function useEditTable<T extends Record<string, unknown>>(
   }, [])
 
   const commitEdit = (row: number, key: string, value: string) => {
+    setEditingCell(null)
+
+    if (String(currentData[row]?.[key] ?? '') === value) return
+
     const newData = currentData.map((r, i) =>
       i === row ? { ...r, [key]: value } : r,
     ) as T[]
+
     setHistory((h) => [...h.slice(0, historyIndex + 1), newData])
     setHistoryIndex((i) => i + 1)
-    setEditingCell(null)
   }
 
   const handleSave = async () => {
     if (!onSave) return
+
     await onSave(currentData)
+
     setInitialData(currentData)
     setHistory([currentData])
     setHistoryIndex(0)
@@ -120,12 +132,14 @@ export function useEditTable<T extends Record<string, unknown>>(
     pageSize,
     total,
     editingCell,
+    selectedCell,
     inputValue,
     isDirty,
     setInputValue,
     isCellModified,
     commitEdit,
     setEditingCell,
+    setSelectedCell,
     handleDiscard,
     handleSave,
     nextPage,
