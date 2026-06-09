@@ -18,6 +18,11 @@ interface Column {
   label: string
   editable?: boolean
   renderFn?: (value: any) => React.JSX.Element | string
+  editRenderFn?: (
+    value: string,
+    onCommit: (value: string) => void,
+    onCancel: () => void,
+  ) => React.JSX.Element
 }
 
 interface EditTableProps<
@@ -32,7 +37,7 @@ interface EditTableProps<
 }
 
 function isColEditable(col: Column): boolean {
-  return col.editable !== false && !col.renderFn
+  return col.editable !== false && (!col.renderFn || !!col.editRenderFn)
 }
 
 type NavDirection = 'tab' | 'shift-tab' | 'up' | 'down' | 'left' | 'right'
@@ -183,6 +188,52 @@ function EditTableInner<
                     selectedCell?.key === key
 
                   if (isEditing) {
+                    const resolveNav = (
+                      nav: { row: number; key: string } | null,
+                    ) => {
+                      if (nav) {
+                        const nextCol = columns.find((c) => c.key === nav.key)!
+                        if (isColEditable(nextCol)) {
+                          setSelectedCell(null)
+                          setEditingCell(nav)
+                          setInputValue(
+                            String(currentData[nav.row]?.[nav.key] ?? ''),
+                          )
+                        } else {
+                          setSelectedCell(nav)
+                          focusCell(nav.row, nav.key)
+                        }
+                      } else {
+                        setEditingCell(null)
+                        setSelectedCell({ row: rowIndex, key })
+                        focusCell(rowIndex, key)
+                      }
+                    }
+
+                    if (col.editRenderFn) {
+                      return (
+                        <td
+                          key={key}
+                          className="px-4 py-3.5 border-b border-border ring-2 ring-inset ring-primary/60 bg-background"
+                        >
+                          {col.editRenderFn(
+                            inputValue,
+                            (finalValue: string) => {
+                              const nav = pendingNavRef.current
+                              pendingNavRef.current = null
+                              commitEdit(rowIndex, key, finalValue)
+                              resolveNav(nav)
+                            },
+                            () => {
+                              setEditingCell(null)
+                              setSelectedCell({ row: rowIndex, key })
+                              focusCell(rowIndex, key)
+                            },
+                          )}
+                        </td>
+                      )
+                    }
+
                     return (
                       <td
                         key={key}
@@ -332,7 +383,11 @@ function EditTableInner<
                               e.preventDefault()
                               setSelectedCell(null)
                               setEditingCell({ row: rowIndex, key })
-                              setInputValue(e.key)
+                              setInputValue(
+                                col.editRenderFn
+                                  ? String(item[key] ?? '')
+                                  : e.key,
+                              )
                             }
                         }
                       }}

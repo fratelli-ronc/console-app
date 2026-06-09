@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
+  CellSelect,
   EditTable,
   FilledButton,
   Search,
@@ -112,6 +113,14 @@ export const TestPage: React.FC = () => {
             label: 'Tag',
             renderFn: (value: string) =>
               TAGS.find((t) => t.key === value)?.label ?? '-',
+            editRenderFn: (value, onCommit, onCancel) => (
+              <CellSelect
+                value={value}
+                options={TAGS.map((t) => ({ value: t.key, label: t.label }))}
+                onCommit={onCommit}
+                onCancel={onCancel}
+              />
+            ),
           },
         ]}
         fetchFn={fetchFn}
