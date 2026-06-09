@@ -9,7 +9,7 @@ import {
   type FetchResult,
 } from '@/components'
 
-type Row = { id: string; name: string; tag: string }
+type Row = { id: string; name: string; description: string; tag: string }
 
 const TAGS = [
   { key: 'tag1', label: 'Tag 1' },
@@ -19,6 +19,7 @@ const TAGS = [
 const ALL_DATA: Row[] = [...Array(100)].map((_, index) => ({
   id: (index + 1).toString(),
   name: `Variabile ${index + 1}`,
+  description: `Description ${index + 1}`,
   tag: index % 2 === 0 ? 'tag1' : 'tag2',
 }))
 
@@ -27,6 +28,7 @@ const TAG_OPTIONS = TAGS.map((t) => ({ value: t.key, label: t.label }))
 const COLUMNS: EditTableColumn[] = [
   { key: 'id', label: 'ID', editable: false },
   { key: 'name', label: 'Nome' },
+  { key: 'description', label: 'Descrizione' },
   {
     key: 'tag',
     label: 'Tag',
