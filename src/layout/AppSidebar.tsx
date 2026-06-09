@@ -9,6 +9,7 @@ import {
   ChevronRight,
   LogOut,
   Server,
+  TestTube,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { clearToken, clearRefreshToken } from '@/client/tokenStore'
@@ -36,6 +37,7 @@ const navSections: NavSection[] = [
     title: 'Menu',
     items: [
       { label: 'Dashboard', href: '/', icon: <LayoutDashboard size={20} /> },
+      { label: 'Test', href: '/test', icon: <TestTube size={20} /> },
     ],
   },
   {
@@ -93,6 +95,7 @@ export const AppSidebar: React.FC = () => {
       >
         <div className="relative h-9 w-9 mr-3">
           <img
+            draggable={false}
             src="/logo-verde-castoro-ronc.png"
             alt="logo"
             className="w-full h-full"
@@ -143,6 +146,7 @@ export const AppSidebar: React.FC = () => {
                       </button>
                     ) : (
                       <Link
+                        draggable={false}
                         to={item.href ?? '#'}
                         className={cn(
                           'flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors',
@@ -162,6 +166,7 @@ export const AppSidebar: React.FC = () => {
                         {item.children!.map((child) => (
                           <li key={child.href}>
                             <Link
+                              draggable={false}
                               to={child.href}
                               className={cn(
                                 'block rounded-md px-3 py-1.5 text-sm transition-colors',
@@ -189,6 +194,7 @@ export const AppSidebar: React.FC = () => {
         {user ? (
           <div className="flex items-center gap-3">
             <img
+              draggable={false}
               src={user.avatar}
               alt={user.name}
               className="h-9 w-9 rounded-md object-cover shrink-0"

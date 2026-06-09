@@ -8,6 +8,7 @@ import {
   ResoucesPage,
   ServersPage,
   SettingsPage,
+  TestPage,
   UsersPage,
 } from '@/pages'
 import './App.css'
@@ -25,6 +26,7 @@ function App() {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/new" element={<NewUserPage />} />
           <Route path="/users/:userId" element={<EditUserPage />} />
+          <Route path="/test" element={<TestPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>

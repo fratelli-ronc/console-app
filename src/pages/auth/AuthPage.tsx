@@ -79,11 +79,9 @@ export const AuthPage: React.FC = () => {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <FilledButton
-              type="submit"
-              label={loading ? 'Accesso…' : 'Accedi'}
-              disabled={loading}
-            />
+            <FilledButton className="mt-2" type="submit" disabled={loading}>
+              {loading ? 'Accesso…' : 'Accedi'}
+            </FilledButton>
           </form>
         </div>
 

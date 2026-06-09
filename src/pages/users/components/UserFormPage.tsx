@@ -149,17 +149,13 @@ export const UserFormPage: React.FC<UserFormPageProps> = ({
           )}
 
           <div className="flex items-center gap-6 pt-1">
-            <FilledButton
-              type="submit"
-              label={
-                loading
-                  ? 'Salvataggio…'
-                  : isCreate
-                    ? 'Crea utente'
-                    : 'Salva modifiche'
-              }
-              disabled={loading}
-            />
+            <FilledButton type="submit" disabled={loading}>
+              {loading
+                ? 'Salvataggio…'
+                : isCreate
+                  ? 'Crea utente'
+                  : 'Salva modifiche'}
+            </FilledButton>
             <button
               type="button"
               onClick={() => navigate('/users')}
