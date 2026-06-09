@@ -10,6 +10,7 @@ const ROUTE_LABELS: Record<string, string> = {
   users: 'Utenti',
   settings: 'Impostazioni',
   new: 'Nuovo',
+  test: 'Test',
 }
 
 function isStaticSegment(seg: string): boolean {

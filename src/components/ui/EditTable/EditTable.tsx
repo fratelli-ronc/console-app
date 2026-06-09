@@ -134,6 +134,7 @@ function EditTableInner<
 
   const inputRef = useRef<HTMLInputElement>(null)
   const pendingNavRef = useRef<{ row: number; key: string } | null>(null)
+  const editTriggeredByTypingRef = useRef(false)
 
   const focusCell = (row: number, key: string) => {
     requestAnimationFrame(() => {
@@ -162,7 +163,7 @@ function EditTableInner<
               {columns.map(({ key, label }) => (
                 <th
                   key={key}
-                  className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-border"
+                  className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-r border-border last:border-r-0"
                 >
                   {label}
                 </th>
@@ -214,7 +215,7 @@ function EditTableInner<
                       return (
                         <td
                           key={key}
-                          className="px-4 py-3.5 border-b border-border ring-2 ring-inset ring-primary/60 bg-background"
+                          className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
                         >
                           {col.editRenderFn(
                             inputValue,
@@ -244,7 +245,15 @@ function EditTableInner<
                           autoFocus
                           value={inputValue}
                           onChange={(e) => setInputValue(e.target.value)}
-                          onFocus={(e) => e.target.select()}
+                          onFocus={(e) => {
+                            if (editTriggeredByTypingRef.current) {
+                              editTriggeredByTypingRef.current = false
+                              const len = e.target.value.length
+                              e.target.setSelectionRange(len, len)
+                            } else {
+                              e.target.select()
+                            }
+                          }}
                           onBlur={() => {
                             const nav = pendingNavRef.current
                             pendingNavRef.current = null
@@ -381,6 +390,7 @@ function EditTableInner<
                               !e.altKey
                             ) {
                               e.preventDefault()
+                              editTriggeredByTypingRef.current = !col.editRenderFn
                               setSelectedCell(null)
                               setEditingCell({ row: rowIndex, key })
                               setInputValue(
@@ -392,12 +402,13 @@ function EditTableInner<
                         }
                       }}
                       className={cn(
-                        'px-4 py-3.5 text-muted-foreground focus:outline-none',
-                        isEditable &&
-                          'cursor-pointer hover:bg-muted/30 hover:text-foreground',
+                        'px-4 py-3.5 text-muted-foreground focus:outline-none border-r border-border last:border-r-0',
                         modified && 'bg-yellow-500/10',
                         isSelected &&
                           'ring-2 ring-inset ring-primary/40 bg-primary/5',
+                        isEditable
+                          ? 'cursor-pointer hover:bg-muted/30 hover:text-foreground'
+                          : 'ring-muted',
                         rowIndex < currentData.length - 1 &&
                           'border-b border-border',
                       )}
