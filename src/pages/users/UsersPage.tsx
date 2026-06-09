@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, RefreshCw, Users, Pencil } from 'lucide-react'
+import { RefreshCw, Users, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { PageHeader } from '@/components'
+import { PageHeader, Search } from '@/components'
 import { MOCK_USERS, User } from './mockUsers'
 
 const RoleBadge: React.FC<{ ruolo: User['ruolo'] }> = ({ ruolo }) => {
@@ -54,13 +54,16 @@ const TableSkeleton: React.FC = () => (
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate()
+
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
   const fetchUsers = async () => {
     setLoading(true)
+
     await new Promise((r) => setTimeout(r, 600))
+
     setUsers(MOCK_USERS)
     setLoading(false)
   }
@@ -71,6 +74,7 @@ export const UsersPage: React.FC = () => {
 
   const filtered = users.filter((u) => {
     const q = search.toLowerCase()
+
     return (
       u.nome.toLowerCase().includes(q) ||
       u.cognome.toLowerCase().includes(q) ||
@@ -89,20 +93,7 @@ export const UsersPage: React.FC = () => {
 
       {/* Toolbar */}
       <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-72">
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder="Cerca utente…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoComplete="off"
-            className="w-full h-9 pl-8 pr-3 text-sm bg-background border border-border rounded-lg outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring placeholder:text-muted-foreground transition"
-          />
-        </div>
+        <Search value={search} onChange={setSearch} />
 
         <button
           onClick={fetchUsers}

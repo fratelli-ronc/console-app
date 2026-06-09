@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
-import { Search, RefreshCw, Box } from 'lucide-react'
+import { RefreshCw, Box } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ServerResouce } from '@/client/coolify'
 import { getServerResouces } from '@/client/coolify/requests'
-import { PageHeader } from '@/components'
+import { PageHeader, Search } from '@/components'
 import { ResourceCard, ResourceCardSkeleton } from './components/ResourceCard'
 
 export const ResoucesPage: React.FC = () => {
@@ -45,21 +45,7 @@ export const ResoucesPage: React.FC = () => {
       />
 
       <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-72">
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-          />
-
-          <input
-            type="text"
-            placeholder="Cerca risorsa…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoComplete="off"
-            className="w-full h-9 pl-8 pr-3 text-sm bg-background border border-border rounded-lg outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring placeholder:text-muted-foreground transition"
-          />
-        </div>
+        <Search value={search} onChange={setSearch} />
 
         <button
           onClick={fetchResources}
