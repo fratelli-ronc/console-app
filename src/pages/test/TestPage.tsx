@@ -107,7 +107,12 @@ export const TestPage: React.FC = () => {
         columns={[
           { key: 'id', label: 'ID', editable: false },
           { key: 'name', label: 'Nome' },
-          { key: 'tag', label: 'Tag' },
+          {
+            key: 'tag',
+            label: 'Tag',
+            renderFn: (value: string) =>
+              TAGS.find((t) => t.key === value)?.label ?? '-',
+          },
         ]}
         fetchFn={fetchFn}
         onSave={() => {}}

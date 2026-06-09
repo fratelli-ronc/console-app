@@ -1,6 +1,10 @@
 import { cn } from '@/lib/utils'
 import { forwardRef, useImperativeHandle, useRef } from 'react'
-import { useEditTable, type FetchParams, type FetchResult } from './useEditTable'
+import {
+  useEditTable,
+  type FetchParams,
+  type FetchResult,
+} from './useEditTable'
 
 export type { FetchParams, FetchResult }
 
@@ -13,17 +17,22 @@ interface Column {
   key: string
   label: string
   editable?: boolean
+  renderFn?: (value: any) => React.JSX.Element | string
 }
 
 interface EditTableProps<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
   columns: Column[]
+  pageSize?: number
+  className?: string
   fetchFn: (params: FetchParams) => Promise<FetchResult<T>>
   onSave?: (data: T[]) => void | Promise<void>
   onDirtyChange?: (isDirty: boolean) => void
-  pageSize?: number
-  className?: string
+}
+
+function isColEditable(col: Column): boolean {
+  return col.editable !== false && !col.renderFn
 }
 
 type NavDirection = 'tab' | 'shift-tab' | 'up' | 'down' | 'left' | 'right'
@@ -39,23 +48,30 @@ function navigateCell(
   if (colIndex === -1) return null
 
   if (direction === 'tab' || direction === 'shift-tab') {
-    const editableCols = columns.filter((c) => c.editable !== false)
+    const editableCols = columns.filter(isColEditable)
     if (editableCols.length === 0) return null
+
     const fwd = direction === 'tab'
     if (fwd) {
       const next = editableCols.find(
         (c) => columns.findIndex((col) => col.key === c.key) > colIndex,
       )
+
       if (next) return { row, key: next.key }
+
       if (row < rowCount - 1) return { row: row + 1, key: editableCols[0].key }
+
       return null
     } else {
       const prev = [...editableCols]
         .reverse()
         .find((c) => columns.findIndex((col) => col.key === c.key) < colIndex)
+
       if (prev) return { row, key: prev.key }
+
       if (row > 0)
         return { row: row - 1, key: editableCols[editableCols.length - 1].key }
+
       return null
     }
   }
@@ -77,7 +93,14 @@ function navigateCell(
 function EditTableInner<
   T extends Record<string, unknown> = Record<string, unknown>,
 >(
-  { columns, fetchFn, onSave, onDirtyChange, pageSize, className }: EditTableProps<T>,
+  {
+    columns,
+    pageSize,
+    className,
+    fetchFn,
+    onSave,
+    onDirtyChange,
+  }: EditTableProps<T>,
   ref: React.ForwardedRef<EditTableHandle>,
 ) {
   const {
@@ -147,10 +170,13 @@ function EditTableInner<
               <tr key={rowIndex}>
                 {columns.map((col) => {
                   const { key } = col
-                  const isEditable = col.editable !== false
+
+                  const isEditable = isColEditable(col)
                   const isEditing =
                     editingCell?.row === rowIndex && editingCell?.key === key
+
                   const modified = isCellModified(rowIndex, key)
+
                   const isSelected =
                     !isEditing &&
                     selectedCell?.row === rowIndex &&
@@ -173,9 +199,9 @@ function EditTableInner<
                             pendingNavRef.current = null
                             commitEdit(rowIndex, key, inputValue)
                             if (nav) {
-                              const nextEditable =
-                                columns.find((c) => c.key === nav.key)
-                                  ?.editable !== false
+                              const nextEditable = isColEditable(
+                                columns.find((c) => c.key === nav.key)!,
+                              )
                               if (nextEditable) {
                                 setSelectedCell(null)
                                 setEditingCell(nav)
@@ -321,7 +347,9 @@ function EditTableInner<
                           'border-b border-border',
                       )}
                     >
-                      {String(item[key] ?? '')}
+                      {col.renderFn
+                        ? col.renderFn(item[key])
+                        : String(item[key] ?? '')}
                     </td>
                   )
                 })}
