@@ -1,17 +1,13 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   CellSelect,
-  EditTable,
-  FilledButton,
+  EditTablePanel,
   Search,
-  TextButton,
-  type EditTableHandle,
+  type EditTableColumn,
+  type FetchParams,
+  type FetchResult,
 } from '@/components'
-import type {
-  FetchParams,
-  FetchResult,
-} from '@/components/ui/EditTable/EditTable'
 
 type Row = { id: string; name: string; tag: string }
 
@@ -26,12 +22,30 @@ const ALL_DATA: Row[] = [...Array(100)].map((_, index) => ({
   tag: index % 2 === 0 ? 'tag1' : 'tag2',
 }))
 
-export const TestPage: React.FC = () => {
-  const tableRef = useRef<EditTableHandle>(null)
+const TAG_OPTIONS = TAGS.map((t) => ({ value: t.key, label: t.label }))
 
+const COLUMNS: EditTableColumn[] = [
+  { key: 'id', label: 'ID', editable: false },
+  { key: 'name', label: 'Nome' },
+  {
+    key: 'tag',
+    label: 'Tag',
+    renderFn: (value: string) =>
+      TAGS.find((t) => t.key === value)?.label ?? '-',
+    editRenderFn: (value, onCommit, onCancel) => (
+      <CellSelect
+        value={value}
+        options={TAG_OPTIONS}
+        onCommit={onCommit}
+        onCancel={onCancel}
+      />
+    ),
+  },
+]
+
+export const TestPage: React.FC = () => {
   const [search, setSearch] = useState('')
   const [tag, setTag] = useState<null | string>(null)
-  const [isDirty, setIsDirty] = useState(false)
 
   const fetchFn = useCallback(
     async ({ page, pageSize }: FetchParams): Promise<FetchResult<Row>> => {
@@ -60,73 +74,35 @@ export const TestPage: React.FC = () => {
   )
 
   return (
-    <div className="h-full flex flex-col gap-6">
-      <div className="flex items-center gap-3 ">
-        <Search value={search} onChange={setSearch} />
+    <EditTablePanel
+      columns={COLUMNS}
+      fetchFn={fetchFn}
+      onSave={() => {}}
+      filters={
+        <>
+          <Search value={search} onChange={setSearch} />
 
-        <div className="flex items-center gap-1.5 bg-muted rounded-lg p-1">
-          {[
-            { label: 'Tutti', value: null },
-            ...TAGS.map((t) => ({ label: t.label, value: t.key })),
-          ].map(({ label, value }) => (
-            <button
-              key={label}
-              onClick={() => setTag(value)}
-              className={cn(
-                'px-3 py-1 rounded-md text-xs font-medium transition-colors',
-                tag === value
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <TextButton
-          type="button"
-          disabled={!isDirty}
-          onClick={() => tableRef.current?.discard()}
-          className="ml-auto"
-        >
-          Annulla
-        </TextButton>
-
-        <FilledButton
-          type="button"
-          disabled={!isDirty}
-          onClick={() => tableRef.current?.save()}
-        >
-          Salva
-        </FilledButton>
-      </div>
-
-      <EditTable
-        ref={tableRef}
-        className="flex-1 min-h-0"
-        columns={[
-          { key: 'id', label: 'ID', editable: false },
-          { key: 'name', label: 'Nome' },
-          {
-            key: 'tag',
-            label: 'Tag',
-            renderFn: (value: string) =>
-              TAGS.find((t) => t.key === value)?.label ?? '-',
-            editRenderFn: (value, onCommit, onCancel) => (
-              <CellSelect
-                value={value}
-                options={TAGS.map((t) => ({ value: t.key, label: t.label }))}
-                onCommit={onCommit}
-                onCancel={onCancel}
-              />
-            ),
-          },
-        ]}
-        fetchFn={fetchFn}
-        onSave={() => {}}
-        onDirtyChange={setIsDirty}
-      />
-    </div>
+          <div className="flex items-center gap-1.5 bg-muted rounded-lg p-1">
+            {[
+              { label: 'Tutti', value: null },
+              ...TAGS.map((t) => ({ label: t.label, value: t.key })),
+            ].map(({ label, value }) => (
+              <button
+                key={label}
+                onClick={() => setTag(value)}
+                className={cn(
+                  'px-3 py-1 rounded-md text-xs font-medium transition-colors',
+                  tag === value
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      }
+    />
   )
 }

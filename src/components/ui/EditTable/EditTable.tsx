@@ -13,7 +13,7 @@ export interface EditTableHandle {
   discard: () => void
 }
 
-interface Column {
+export interface EditTableColumn {
   key: string
   label: string
   editable?: boolean
@@ -28,7 +28,7 @@ interface Column {
 interface EditTableProps<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
-  columns: Column[]
+  columns: EditTableColumn[]
   pageSize?: number
   className?: string
   fetchFn: (params: FetchParams) => Promise<FetchResult<T>>
@@ -36,7 +36,7 @@ interface EditTableProps<
   onDirtyChange?: (isDirty: boolean) => void
 }
 
-function isColEditable(col: Column): boolean {
+function isColEditable(col: EditTableColumn): boolean {
   return col.editable !== false && (!col.renderFn || !!col.editRenderFn)
 }
 
@@ -46,7 +46,7 @@ function navigateCell(
   row: number,
   colKey: string,
   direction: NavDirection,
-  columns: Column[],
+  columns: EditTableColumn[],
   rowCount: number,
 ): { row: number; key: string } | null {
   const colIndex = columns.findIndex((c) => c.key === colKey)
