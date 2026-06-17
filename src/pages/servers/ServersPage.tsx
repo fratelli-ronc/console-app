@@ -1,40 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { RefreshCw, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Server as ServerModel, ServerStatus } from '@/client/coolify'
-import { getServers } from '@/client/coolify/requests'
+import { ServerStatus } from '@/client/coolify'
+import { useDashboardStore } from '@/store'
 import { ServerCard, ServerCardSkeleton } from './components/ServerCard'
 import { PageHeader, Search } from '@/components'
 
 export const ServersPage: React.FC = () => {
-  const [servers, setServers] = useState<ServerModel[]>([])
-  const [loading, setLoading] = useState(true)
+  const snapshot = useDashboardStore((s) => s.snapshot)
+  const connected = useDashboardStore((s) => s.connected)
+
+  const reconnect = useDashboardStore((s) => s.reconnect)
+
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ServerStatus | 'all'>('all')
 
-  const fetchServers = async () => {
-    setLoading(true)
-    try {
-      const data = await getServers()
-      setServers((data ?? []).sort((a, b) => (a.ip > b.ip ? 1 : -1)))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = snapshot === null
 
-  useEffect(() => {
-    fetchServers()
-  }, [])
-
-  const filtered = servers.filter((s) => {
-    const matchesSearch =
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.ip.includes(search)
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (s.isReachable ? 'online' : 'offline') === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filtered = (snapshot?.servers ?? [])
+    .filter((ss) => {
+      const { server } = ss
+      const matchesSearch =
+        server.name.toLowerCase().includes(search.toLowerCase()) ||
+        server.ip.includes(search)
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (server.isReachable ? 'online' : 'offline') === statusFilter
+      return matchesSearch && matchesStatus
+    })
+    .sort((a, b) => (a.server.ip > b.server.ip ? 1 : -1))
 
   return (
     <div className="space-y-6">
@@ -66,11 +60,11 @@ export const ServersPage: React.FC = () => {
         </div>
 
         <button
-          onClick={fetchServers}
+          onClick={reconnect}
           className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors"
         >
-          <RefreshCw size={14} className={cn(loading && 'animate-spin')} />
-          Aggiorna
+          <RefreshCw size={14} className={cn(!connected && 'animate-spin')} />
+          {connected ? 'Aggiorna' : 'Riconnetti'}
         </button>
       </div>
 
@@ -83,8 +77,8 @@ export const ServersPage: React.FC = () => {
         </div>
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((server) => (
-            <ServerCard key={server.uuid} server={server} />
+          {filtered.map((ss) => (
+            <ServerCard key={ss.server.uuid} snapshot={ss} />
           ))}
         </div>
       ) : (

@@ -1,35 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { RefreshCw, Box } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ServerResouce } from '@/client/coolify'
-import { getServerResouces } from '@/client/coolify/requests'
+import { useDashboardStore } from '@/store'
 import { PageHeader, Search } from '@/components'
 import { ResourceCard, ResourceCardSkeleton } from './components/ResourceCard'
 
 export const ResoucesPage: React.FC = () => {
   const { uuid } = useParams<{ uuid: string }>()
   const { state } = useLocation()
-  const serverName: string = state?.serverName ?? uuid ?? ''
 
-  const [resources, setResources] = useState<ServerResouce[]>([])
-  const [loading, setLoading] = useState(true)
+  const snapshot = useDashboardStore((s) => s.snapshot)
+  const connected = useDashboardStore((s) => s.connected)
+  const reconnect = useDashboardStore((s) => s.reconnect)
+
   const [search, setSearch] = useState('')
 
-  const fetchResources = async () => {
-    if (!uuid) return
-    setLoading(true)
-    try {
-      const data = await getServerResouces(uuid)
-      setResources((data ?? []).sort((a, b) => (a.name > b.name ? 1 : -1)))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchResources()
-  }, [uuid])
+  const serverSnapshot = snapshot?.servers.find((ss) => ss.server.uuid === uuid)
+  const serverName =
+    serverSnapshot?.server.name ?? state?.serverName ?? uuid ?? ''
+  const resources = serverSnapshot?.resources ?? []
+  const loading = snapshot === null
 
   const filtered = resources.filter(
     (r) =>
@@ -48,11 +39,11 @@ export const ResoucesPage: React.FC = () => {
         <Search value={search} onChange={setSearch} />
 
         <button
-          onClick={fetchResources}
+          onClick={reconnect}
           className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors"
         >
-          <RefreshCw size={14} className={cn(loading && 'animate-spin')} />
-          Aggiorna
+          <RefreshCw size={14} className={cn(!connected && 'animate-spin')} />
+          {connected ? 'Aggiorna' : 'Riconnetti'}
         </button>
       </div>
 

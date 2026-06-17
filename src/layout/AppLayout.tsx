@@ -3,12 +3,15 @@ import { Outlet } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
+import { StreamController } from './StreamController'
 
 export const AppLayout: React.FC = () => {
   const scrollRef = useRef<HTMLElement>(null)
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <StreamController />
+
       <AppSidebar />
 
       <div className="ml-70 flex flex-col flex-1 overflow-hidden transition-all duration-300">

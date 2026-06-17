@@ -7,13 +7,13 @@ export interface Server {
   isReachable: boolean
 }
 
-export interface ServerMetrics {
-  cpu: {
+export interface NodeMetrics {
+  cpu?: {
     usedPercent: number
     count: number
-    architecture: string
+    architecture?: string
   }
-  memory: {
+  memory?: {
     totalBytes: number
     availableBytes: number
     usedPercent: number
@@ -24,23 +24,42 @@ export interface ServerMetrics {
     availBytes: number
     usedPercent: number
   }[]
+  error?: string
 }
 
 export interface ServerResouce {
-  id: number
   uuid: string
   name: string
-  status: ServerResouceStatus
-  type: ResouceType
+  status: string
+  type: string
   image: string
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
+  error?: string
 }
 
-enum ServerResouceStatus {
-  RunningHealthy = 'running:healthy',
-  RunningUnknown = 'running:unknown',
-  RunningUnhealthy = 'running:unhealthy',
+export interface ServerSnapshot {
+  server: Server
+  metrics: NodeMetrics
+  resources: ServerResouce[]
 }
 
-type ResouceType = 'service'
+export interface DashboardSnapshot {
+  servers: ServerSnapshot[]
+}
+
+export interface MetricsEvent {
+  serverUUID: string
+  metrics: NodeMetrics
+}
+
+export interface ResourceStatusEvent {
+  serverUUID: string
+  resourceUUID: string
+  status: string
+}
+
+export interface ServerReachabilityEvent {
+  serverUUID: string
+  isReachable: boolean
+}

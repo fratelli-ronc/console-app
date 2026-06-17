@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Server as ServerIcon } from 'lucide-react'
-import { Server, ServerMetrics, ServerResouce } from '@/client/coolify'
-import { getServerMetrics, getServerResouces } from '@/client/coolify/requests'
+import { ServerSnapshot } from '@/client/coolify'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
-import { resourceStatusConfig, fallbackResourceStatus } from '@/data/statusConfig'
+import {
+  resourceStatusConfig,
+  fallbackResourceStatus,
+} from '@/data/statusConfig'
 
 function formatBytes(bytes: number): string {
   if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`
@@ -14,31 +16,17 @@ function formatBytes(bytes: number): string {
 }
 
 interface ServerCardProps {
-  server: Server
+  snapshot: ServerSnapshot
 }
 
-export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
+export const ServerCard: React.FC<ServerCardProps> = ({ snapshot }) => {
+  const { server, metrics, resources } = snapshot
   const navigate = useNavigate()
 
-  const [metrics, setMetrics] = useState<ServerMetrics | null>(null)
-  const [loadingMetrics, setLoadingMetrics] = useState(true)
-
-  const [resources, setResources] = useState<ServerResouce[] | null>(null)
-  const [loadingResources, setLoadingResources] = useState(true)
-
-  useEffect(() => {
-    getServerMetrics(server.uuid)
-      .then(setMetrics)
-      .finally(() => setLoadingMetrics(false))
-    getServerResouces(server.uuid)
-      .then(setResources)
-      .finally(() => setLoadingResources(false))
-  }, [server.uuid])
-
-  const serverStorage = useMemo(() => {
-    if (!metrics) return
-    return metrics.filesystems.find((fs) => fs.mountpoint === '/')
-  }, [metrics])
+  const serverStorage = useMemo(
+    () => metrics.filesystems.find((fs) => fs.mountpoint === '/'),
+    [metrics.filesystems],
+  )
 
   return (
     <div
@@ -77,14 +65,10 @@ export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
 
       {/* Stats row */}
       <div className="px-5 pt-4 pb-3 grid grid-cols-3 gap-3">
-        {loadingMetrics ? (
-          [0, 1, 2].map((i) => (
-            <div key={i} className="flex flex-col gap-1.5 my-0.5">
-              <div className="h-2.5 w-8 bg-accent rounded" />
-              <div className="h-4 w-12 bg-accent rounded" />
-              <div className="h-3 w-16 bg-accent rounded" />
-            </div>
-          ))
+        {metrics.error ? (
+          <div className="col-span-3 text-xs text-muted-foreground py-1">
+            Metriche non disponibili
+          </div>
         ) : (
           <>
             <div className="flex flex-col gap-0.5">
@@ -93,11 +77,11 @@ export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
               </span>
 
               <span className="text-sm font-semibold text-foreground">
-                {metrics?.cpu.usedPercent.toFixed(1)} %
+                {metrics.cpu ? `${metrics.cpu.usedPercent.toFixed(1)} %` : '—'}
               </span>
               <span className="text-xs text-muted-foreground">
-                {metrics
-                  ? `${metrics.cpu.count} core · ${metrics.cpu.architecture}`
+                {metrics.cpu
+                  ? `${metrics.cpu.count} core · ${metrics.cpu.architecture ?? ''}`
                   : '—'}
               </span>
             </div>
@@ -108,10 +92,12 @@ export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
               </span>
 
               <span className="text-sm font-semibold text-foreground">
-                {metrics?.memory.usedPercent.toFixed(1)} %
+                {metrics.memory
+                  ? `${metrics.memory.usedPercent.toFixed(1)} %`
+                  : '—'}
               </span>
               <span className="text-xs text-muted-foreground">
-                {metrics
+                {metrics.memory
                   ? `${formatBytes(metrics.memory.totalBytes - metrics.memory.availableBytes)} / ${formatBytes(metrics.memory.totalBytes)}`
                   : '—'}
               </span>
@@ -123,7 +109,9 @@ export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
               </span>
 
               <span className="text-sm font-semibold text-foreground">
-                {serverStorage?.usedPercent?.toFixed(1)} %
+                {serverStorage
+                  ? `${serverStorage.usedPercent.toFixed(1)} %`
+                  : '—'}
               </span>
               <span className="text-xs text-muted-foreground">
                 {serverStorage
@@ -143,14 +131,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
         </span>
 
         <div className="mt-2 flex flex-col gap-1.5">
-          {loadingResources ? (
-            [0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="h-3 w-32 bg-accent rounded animate-pulse" />
-                <div className="h-3 w-16 bg-accent rounded animate-pulse" />
-              </div>
-            ))
-          ) : !resources?.length ? (
+          {resources.length === 0 ? (
             <p className="text-xs text-muted-foreground">Nessuna risorsa</p>
           ) : (
             resources.map((resource) => {

@@ -23,12 +23,12 @@ export const resourceStatusConfig: Record<
   'running:healthy': {
     dot: 'bg-green-500',
     badge: 'bg-green-50 text-green-700 border-green-200',
-    label: 'Running',
+    label: 'Esecuzione',
   },
   'running:unknown': {
     dot: 'bg-green-500',
     badge: 'bg-green-50 text-green-700 border-green-200',
-    label: 'Running',
+    label: 'Esecuzione',
   },
   'running:unhealthy': {
     dot: 'bg-yellow-500',
@@ -38,17 +38,17 @@ export const resourceStatusConfig: Record<
   'starting:unhealthy': {
     dot: 'bg-yellow-500',
     badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    label: 'Starting',
+    label: 'Avvio',
   },
   'starting:healthy': {
     dot: 'bg-yellow-500',
     badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    label: 'Starting',
+    label: 'Avvio',
   },
   exited: {
     dot: 'bg-red-500',
     badge: 'bg-red-50 text-red-700 border-red-200',
-    label: 'Stop',
+    label: 'Fermo',
   },
 }
 
