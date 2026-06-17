@@ -50,6 +50,16 @@ export const resourceStatusConfig: Record<
     badge: 'bg-red-50 text-red-700 border-red-200',
     label: 'Fermo',
   },
+  stopping: {
+    dot: 'bg-zinc-400',
+    badge: 'bg-zinc-50 text-zinc-600 border-zinc-200',
+    label: 'Fermando',
+  },
+  restarting: {
+    dot: 'bg-yellow-500',
+    badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    label: 'Riavvio',
+  },
 }
 
 export const fallbackResourceStatus = {

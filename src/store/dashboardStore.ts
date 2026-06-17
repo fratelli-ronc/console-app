@@ -106,6 +106,27 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   },
 }))
 
+// --- optimistic updates ---
+
+export function optimisticallySetResourceStatus(
+  resourceUUID: string,
+  status: string,
+) {
+  useDashboardStore.setState((prev) => {
+    if (!prev.snapshot) return {}
+    return {
+      snapshot: {
+        servers: prev.snapshot.servers.map((ss) => ({
+          ...ss,
+          resources: ss.resources.map((r) =>
+            r.uuid === resourceUUID ? { ...r, status } : r,
+          ),
+        })),
+      },
+    }
+  })
+}
+
 // --- SSE connection logic ---
 
 async function startStream() {

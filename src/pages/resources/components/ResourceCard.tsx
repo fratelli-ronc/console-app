@@ -12,6 +12,20 @@ import {
   resourceStatusConfig,
   fallbackResourceStatus,
 } from '@/data/statusConfig'
+import { optimisticallySetResourceStatus } from '@/store/dashboardStore'
+
+const RUNNING_STATUSES = new Set([
+  'running:healthy',
+  'running:unknown',
+  'running:unhealthy',
+])
+
+function getDisabledActions(status: string): Set<string> {
+  if (RUNNING_STATUSES.has(status)) return new Set(['start'])
+  if (status === 'exited') return new Set(['stop', 'restart'])
+  // transient states: stopping, restarting, starting:*
+  return new Set(['stop', 'start', 'restart'])
+}
 
 interface ResourceCardProps {
   resource: ServerResouce
@@ -19,6 +33,7 @@ interface ResourceCardProps {
 
 export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
   const cfg = resourceStatusConfig[resource.status] ?? fallbackResourceStatus
+  const disabledActions = getDisabledActions(resource.status)
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -38,12 +53,15 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
     async (key: string) => {
       switch (key) {
         case 'stop':
+          optimisticallySetResourceStatus(resource.uuid, 'stopping')
           await requestStopResource(resource.uuid)
           break
         case 'start':
+          optimisticallySetResourceStatus(resource.uuid, 'starting:unhealthy')
           await requestStartResource(resource.uuid)
           break
         case 'restart':
+          optimisticallySetResourceStatus(resource.uuid, 'restarting')
           await requestRestartResource(resource.uuid)
           break
       }
@@ -90,24 +108,29 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
                   { label: 'Stop', key: 'stop', icon: Square },
                   { label: 'Start', key: 'start', icon: Play },
                   { label: 'Riavvia', key: 'restart', icon: RotateCcw },
-                ].map(({ label, key, icon: Icon }) => (
-                  <button
-                    key={key}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleResourceAction(key)
-                      setMenuOpen(false)
-                    }}
-                    className={cn(
-                      'w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2',
-                      key === 'stop' &&
-                        'text-destructive hover:bg-destructive/10',
-                    )}
-                  >
-                    <Icon className="relative bottom-px" size={13} />
-                    {label}
-                  </button>
-                ))}
+                ].map(({ label, key, icon: Icon }) => {
+                  const disabled = disabledActions.has(key)
+                  return (
+                    <button
+                      key={key}
+                      disabled={disabled}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (!disabled) handleResourceAction(key)
+                        setMenuOpen(false)
+                      }}
+                      className={cn(
+                        'w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2',
+                        key === 'stop' &&
+                          'text-destructive hover:bg-destructive/10',
+                        disabled && 'opacity-40 cursor-not-allowed hover:bg-transparent',
+                      )}
+                    >
+                      <Icon className="relative bottom-px" size={13} />
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
