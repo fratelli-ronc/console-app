@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RefreshCw, Server } from 'lucide-react'
+import { Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ServerStatus } from '@/client/coolify'
 import { useDashboardStore } from '@/store'
@@ -9,8 +9,6 @@ import { PageHeader, Search } from '@/components'
 export const ServersPage: React.FC = () => {
   const snapshot = useDashboardStore((s) => s.snapshot)
   const connected = useDashboardStore((s) => s.connected)
-
-  const reconnect = useDashboardStore((s) => s.reconnect)
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ServerStatus | 'all'>('all')
@@ -59,13 +57,22 @@ export const ServersPage: React.FC = () => {
           ))}
         </div>
 
-        <button
-          onClick={reconnect}
-          className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors"
+        <div
+          className={cn(
+            'ml-auto h-7 px-2.5 inline-flex items-center gap-1.5 text-xs rounded-lg border',
+            connected
+              ? 'border-green-500/30 bg-green-500/10 text-green-700'
+              : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-700',
+          )}
         >
-          <RefreshCw size={14} className={cn(!connected && 'animate-spin')} />
-          {connected ? 'Aggiorna' : 'Riconnetti'}
-        </button>
+          <span
+            className={cn(
+              'w-1.5 h-1.5 rounded-full',
+              connected ? 'bg-green-500' : 'bg-yellow-500 animate-pulse',
+            )}
+          />
+          {connected ? 'Live' : 'Riconnessione...'}
+        </div>
       </div>
 
       {/* Server grid */}
