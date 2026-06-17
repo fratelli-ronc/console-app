@@ -16,7 +16,7 @@ export const ServersPage: React.FC = () => {
     setLoading(true)
     try {
       const data = await getServers()
-      setServers(data)
+      setServers(data ?? [])
     } finally {
       setLoading(false)
     }

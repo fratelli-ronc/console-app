@@ -17,7 +17,7 @@ interface ServerCardProps {
 
 export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
   const navigate = useNavigate()
-  const [metrics, setMetrics] = useState<ServerMetrics | undefined>(undefined)
+  const [metrics, setMetrics] = useState<ServerMetrics | null>(null)
   const [loadingMetrics, setLoadingMetrics] = useState(true)
 
   useEffect(() => {

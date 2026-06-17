@@ -12,10 +12,10 @@ export const authenticatedAuthClient = withAuthInterceptors(
     headers: { 'Content-Type': 'application/json' },
   }),
   async (rt) => {
-    const { data } = await authClient.post<{ token: string; refresh_token: string }>(
-      '/auth/refresh',
-      { refreshToken: rt },
-    )
+    const { data } = await authClient.post<{
+      token: string
+      refresh_token: string
+    }>('/auth/refresh', { refreshToken: rt })
     return data
   },
 )
