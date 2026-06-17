@@ -1,35 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, MoreVertical, Play, RotateCcw, Square } from 'lucide-react'
-import { ServerResouce } from '@/client/coolify'
+import {
+  requestRestartResource,
+  requestStartResource,
+  requestStopResource,
+  ServerResouce,
+} from '@/client/coolify'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-
-const resourceStatusConfig: Record<
-  string,
-  { dot: string; badge: string; label: string }
-> = {
-  'running:healthy': {
-    dot: 'bg-green-500',
-    badge: 'bg-green-50 text-green-700 border-green-200',
-    label: 'Running',
-  },
-  'running:unknown': {
-    dot: 'bg-green-500',
-    badge: 'bg-green-50 text-green-700 border-green-200',
-    label: 'Running',
-  },
-  'running:unhealthy': {
-    dot: 'bg-yellow-500',
-    badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    label: 'Degradato',
-  },
-}
-
-const fallbackResourceStatus = {
-  dot: 'bg-zinc-400',
-  badge: 'bg-zinc-50 text-zinc-600 border-zinc-200',
-  label: 'Sconosciuto',
-}
+import {
+  resourceStatusConfig,
+  fallbackResourceStatus,
+} from '@/data/statusConfig'
 
 interface ResourceCardProps {
   resource: ServerResouce
@@ -51,6 +33,23 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [menuOpen])
+
+  const handleResourceAction = useCallback(
+    async (key: string) => {
+      switch (key) {
+        case 'stop':
+          await requestStopResource(resource.uuid)
+          break
+        case 'start':
+          await requestStartResource(resource.uuid)
+          break
+        case 'restart':
+          await requestRestartResource(resource.uuid)
+          break
+      }
+    },
+    [resource],
+  )
 
   return (
     <div className="bg-card border border-border rounded-xl">
@@ -88,19 +87,20 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
             {menuOpen && (
               <div className="absolute right-0 top-8 z-10 w-40 bg-popover border border-border rounded-lg shadow-lg text-sm py-1 overflow-hidden">
                 {[
-                  { label: 'Stop', key: 'edit', icon: Square },
-                  { label: 'Run', key: 'restart', icon: Play },
-                  { label: 'Riavvia', key: 'remove', icon: RotateCcw },
+                  { label: 'Stop', key: 'stop', icon: Square },
+                  { label: 'Start', key: 'start', icon: Play },
+                  { label: 'Riavvia', key: 'restart', icon: RotateCcw },
                 ].map(({ label, key, icon: Icon }) => (
                   <button
                     key={key}
                     onClick={(e) => {
                       e.stopPropagation()
+                      handleResourceAction(key)
                       setMenuOpen(false)
                     }}
                     className={cn(
                       'w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2',
-                      key === 'remove' &&
+                      key === 'stop' &&
                         'text-destructive hover:bg-destructive/10',
                     )}
                   >

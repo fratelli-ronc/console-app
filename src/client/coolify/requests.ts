@@ -2,6 +2,8 @@ import coolifyClient from './client'
 import { Server, ServerMetrics, ServerResouce } from './dtos'
 import { withErrorHandling } from '../withErrorHandling'
 
+// --- Server ---
+
 export const getServers = (): Promise<Server[] | null> =>
   withErrorHandling(async () => {
     const { data } = await coolifyClient.get<Server[]>('/servers')
@@ -24,4 +26,21 @@ export const getServerResouces = (
       `/servers/${uuid}/resources`,
     )
     return data
+  })
+
+// --- Resource ---
+
+export const requestStopResource = (uuid: string): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await coolifyClient.get(`/resources/${uuid}/stop`)
+  })
+
+export const requestStartResource = (uuid: string): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await coolifyClient.get(`/resources/${uuid}/start`)
+  })
+
+export const requestRestartResource = (uuid: string): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await coolifyClient.get(`/resources/${uuid}/restart`)
   })

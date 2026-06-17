@@ -21,7 +21,7 @@ export const ResoucesPage: React.FC = () => {
     setLoading(true)
     try {
       const data = await getServerResouces(uuid)
-      setResources(data ?? [])
+      setResources((data ?? []).sort((a, b) => (a.name > b.name ? 1 : -1)))
     } finally {
       setLoading(false)
     }

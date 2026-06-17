@@ -5,6 +5,7 @@ import { Server, ServerMetrics, ServerResouce } from '@/client/coolify'
 import { getServerMetrics, getServerResouces } from '@/client/coolify/requests'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
+import { resourceStatusConfig, fallbackResourceStatus } from '@/data/statusConfig'
 
 function formatBytes(bytes: number): string {
   if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`
@@ -15,14 +16,6 @@ function formatBytes(bytes: number): string {
 interface ServerCardProps {
   server: Server
 }
-
-const resourceStatusConfig: Record<string, { dot: string; label: string }> = {
-  'running:healthy': { dot: 'bg-green-500', label: 'Running' },
-  'running:unknown': { dot: 'bg-green-500', label: 'Running' },
-  'running:unhealthy': { dot: 'bg-yellow-500', label: 'Degradato' },
-}
-
-const fallbackResourceStatus = { dot: 'bg-zinc-400', label: 'Sconosciuto' }
 
 export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
   const navigate = useNavigate()
