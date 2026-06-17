@@ -17,7 +17,10 @@ export const AppLayout: React.FC = () => {
       <div className="ml-70 flex flex-col flex-1 overflow-hidden transition-all duration-300">
         <AppHeader scrollContainer={scrollRef} />
 
-        <main ref={scrollRef} className="flex-1 overflow-y-auto p-6 pt-3">
+        <main
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto overscroll-none p-6 pt-3"
+        >
           <Outlet />
         </main>
       </div>
