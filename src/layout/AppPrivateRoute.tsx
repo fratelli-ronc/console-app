@@ -29,7 +29,8 @@ export const AppPrivateRoute: React.FC = () => {
       .catch(() => {
         navigate('/auth', { replace: true })
       })
-  }, [navigate])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const handler = () => {
