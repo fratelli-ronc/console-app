@@ -5,64 +5,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Desktop app (starts Vite dev server + Rust dev build)
-pnpm tauri dev
-
-# Frontend only
-pnpm dev          # Vite dev server at http://localhost:1420
-pnpm build        # TypeScript check + Vite production build → dist/
-
-# Desktop release build
-pnpm tauri build
-
-# Rust only
-cargo build --manifest-path src-tauri/Cargo.toml
-cargo test --manifest-path src-tauri/Cargo.toml
-cargo clippy --manifest-path src-tauri/Cargo.toml
+pnpm dev              # Start Vite dev server only (port 1420)
+pnpm tauri dev        # Start full Tauri desktop app (dev mode)
+pnpm build            # TypeScript check + Vite production build
+pnpm tauri build      # Build distributable desktop app
 ```
 
-Environment variables go in `.env` (copy from `.env.example`): `VITE_AUTH_API_URL`, `VITE_CONSOLE_API_URL`.
+There is no test suite. TypeScript strict mode (`tsc --noEmit`) is the only static check, run implicitly by `pnpm build`.
 
 ## Architecture
 
-This is a **Tauri 2.x** desktop app. The frontend (React 19 + TypeScript) runs in a WebView; the Rust backend exposes Tauri commands over IPC. The two sides communicate exclusively via `invoke()` calls — there is no shared memory.
+This is a **Tauri 2 desktop application**: React 19 + TypeScript frontend built with Vite, Rust backend for OS-level capabilities (keyring, window management).
 
-### Frontend (`src/`)
+**Frontend stack:** React 19, React Router 7, Zustand 5, Axios, Tailwind CSS 4, shadcn/ui (New York style, zinc base color)
 
-**Routing** — React Router 7, two routes:
+**Path alias:** `@/` maps to `src/`
 
-- `/auth` → `AuthPage` (public)
-- `/` → `HomePage` (private, guarded by `AppPrivateRoute` which checks the Tauri keyring)
+### Environment Variables
 
-**HTTP layer** (`src/client/`) — Axios instances per domain:
+Required in `.env`:
+- `VITE_AUTH_API_URL` — authentication service
+- `VITE_CONSOLE_API_URL` — main API
+- `VITE_COOLIFY_BRIDGE_API_URL` — SSE stream endpoint for real-time updates
 
-- `auth/client.ts` — two instances: unauthenticated (`authClient`) and authenticated (`authenticatedAuthClient`)
-- `console/client.ts` — `consoleClient` with the same auth interceptor pattern
-- `withAuthInterceptors.ts` — factory that attaches a Bearer token and handles 401 → token refresh → retry; on refresh failure it dispatches `auth:unauthorized` (caught by the router to redirect to `/auth`)
-- `tokenStore.ts` — thin wrappers around `invoke('get_token')` / `invoke('set_token')` etc.
+### Token Storage
 
-New API domains follow the same pattern: a `client.ts` with an axios instance, a `requests.ts` with typed functions, and a `dtos.ts` for interfaces.
+Tokens are stored in the OS keyring via Tauri commands defined in `src-tauri/src/lib.rs` (`get_token`, `set_token`, `clear_token`, etc.). The frontend accesses them through `src/client/tokenStore.ts`. Do not use localStorage or sessionStorage for auth tokens.
 
-**Styling** — Tailwind CSS 4 (via `@tailwindcss/vite`). Design tokens live in `src/App.css` as CSS custom properties (OKLch palette: primary green `#0D7023`, secondary yellow `#F4C03B`). shadcn/ui New York style. Use `cn()` from `src/lib/utils.ts` (clsx + tailwind-merge) for conditional classes.
+### API Clients (`src/client/`)
 
-**Path alias** — `@/` resolves to `src/`.
+Two Axios instances:
+- `client/auth/client.ts` — unauthenticated, hits `VITE_AUTH_API_URL`
+- `client/console/client.ts` — authenticated, hits `VITE_CONSOLE_API_URL`
 
-### Backend (`src-tauri/src/lib.rs`)
+`withAuthInterceptors.ts` wraps the console client to auto-refresh tokens on 401 and emit a custom `auth:unauthorized` event when refresh fails (which triggers logout).
 
-All Tauri commands live in `lib.rs`. Currently six commands for token management:
+### State Management (`src/store/`)
 
-| Command                                                           | Description   |
-| ----------------------------------------------------------------- | ------------- |
-| `set_token` / `get_token` / `clear_token`                         | Access token  |
-| `set_refresh_token` / `get_refresh_token` / `clear_refresh_token` | Refresh token |
+- `useUserStore` — current user profile
+- `useDashboardStore` — real-time snapshot + SSE connection state. Handles `snapshot`, `metrics`, `server_reachability`, and `resource_status` events. Implements optimistic updates for resource actions and exponential backoff reconnect (1s → 30s max).
 
-Tokens are stored in the OS native keyring (via the `keyring` crate, service ID `it.fratellironc.consoleapp`) with an in-memory `Mutex<Option<String>>` cache for performance. `keyring::Error::NoEntry` is treated as a `None` (not an error).
+### Real-Time Updates
 
-New Tauri commands must be registered in the `.invoke_handler()` call inside `run()`.
+`src/layout/StreamController.tsx` manages the SSE connection lifecycle. The stream connects to `VITE_COOLIFY_BRIDGE_API_URL/stream` and feeds events into `useDashboardStore`. 401 responses from the stream trigger the same `auth:unauthorized` path as the REST clients.
 
-## Conventions
+### Routing (`src/App.tsx`)
 
-- **Commits** follow Conventional Commits (`feat:`, `fix:`, `chore:`, etc.)
-- **Formatting** — Prettier: no semicolons, single quotes, trailing commas
-- **No global state library** yet — use React `useState`; token state lives in the Rust keyring
-- **No test files exist yet** — Rust unit tests go in `lib.rs` modules; frontend tests would use Vitest
+- `/auth` — public
+- All other routes are wrapped in `AppPrivateRoute` (requires valid token + loaded user profile); unauthenticated users are redirected to `/auth`
+
+### UI Components
+
+The UI is built on shadcn/ui adapted from the [tailwind-admin](https://tailwind-admin.com/) template. Follow tailwind-admin patterns for layout and component style.
+
+**Always use the semantic CSS tokens from `src/App.css`** — never hard-code colors. The brand palette (mapped via `@theme inline` to Tailwind utilities like `bg-primary`, `text-foreground`, `border-border`, etc.):
+
+| Token | Purpose | Brand value |
+|---|---|---|
+| `--primary` | Green CTA / active states | #0D7023 |
+| `--secondary` | Yellow accent | #F4C03B |
+| `--accent` | Subtle green tint | #283C3A |
+| `--destructive` | Errors / delete actions | red |
+| `--muted` / `--muted-foreground` | Disabled / secondary text | — |
+| `--border` / `--input` | Borders and inputs | — |
+| `--sidebar-*` | Sidebar-specific variants | — |
+
+Use existing components in `src/components/ui/` before creating new ones: `StatusBadge`, `Search`, `PageHeader`, `FilledButton`, `TextButton`, `EditTable`. Add new shadcn primitives via `pnpm dlx shadcn@latest add <component>`.
+
+### Commit Convention
+
+Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, etc.).
