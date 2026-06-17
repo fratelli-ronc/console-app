@@ -1,31 +1,34 @@
-import { Box } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Box, MoreVertical, Play, RotateCcw, Square } from 'lucide-react'
 import { ServerResouce } from '@/client/coolify'
 import { cn } from '@/lib/utils'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
-const statusLabel: Record<string, string> = {
-  'running:healthy': 'Running',
-  'running:unknown': 'Running',
-  'running:unhealthy': 'Degradato',
-}
-
-const statusStyles: Record<string, { dot: string; badge: string }> = {
+const resourceStatusConfig: Record<
+  string,
+  { dot: string; badge: string; label: string }
+> = {
   'running:healthy': {
     dot: 'bg-green-500',
     badge: 'bg-green-50 text-green-700 border-green-200',
+    label: 'Running',
   },
   'running:unknown': {
     dot: 'bg-green-500',
     badge: 'bg-green-50 text-green-700 border-green-200',
+    label: 'Running',
   },
   'running:unhealthy': {
     dot: 'bg-yellow-500',
     badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    label: 'Degradato',
   },
 }
 
-const fallbackStyle = {
+const fallbackResourceStatus = {
   dot: 'bg-zinc-400',
   badge: 'bg-zinc-50 text-zinc-600 border-zinc-200',
+  label: 'Sconosciuto',
 }
 
 interface ResourceCardProps {
@@ -33,8 +36,21 @@ interface ResourceCardProps {
 }
 
 export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
-  const style = statusStyles[resource.status] ?? fallbackStyle
-  const label = statusLabel[resource.status] ?? resource.status
+  const cfg = resourceStatusConfig[resource.status] ?? fallbackResourceStatus
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
 
   return (
     <div className="bg-card border border-border rounded-xl">
@@ -50,22 +66,52 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
             </h3>
 
             <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-              {resource.uuid}
+              {resource.type}
             </p>
           </div>
         </div>
 
-        <span
-          className={cn(
-            'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border shrink-0',
-            style.badge,
-          )}
-        >
-          <span
-            className={cn('w-1.5 h-1.5 rounded-full shrink-0', style.dot)}
-          />
-          {label}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <StatusBadge dot={cfg.dot} badge={cfg.badge} label={cfg.label} />
+
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setMenuOpen((v) => !v)
+              }}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <MoreVertical size={15} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-8 z-10 w-40 bg-popover border border-border rounded-lg shadow-lg text-sm py-1 overflow-hidden">
+                {[
+                  { label: 'Stop', key: 'edit', icon: Square },
+                  { label: 'Run', key: 'restart', icon: Play },
+                  { label: 'Riavvia', key: 'remove', icon: RotateCcw },
+                ].map(({ label, key, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMenuOpen(false)
+                    }}
+                    className={cn(
+                      'w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2',
+                      key === 'remove' &&
+                        'text-destructive hover:bg-destructive/10',
+                    )}
+                  >
+                    <Icon className="relative bottom-px" size={13} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="border-t border-border mx-5" />

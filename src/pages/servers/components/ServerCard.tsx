@@ -26,8 +26,10 @@ const fallbackResourceStatus = { dot: 'bg-zinc-400', label: 'Sconosciuto' }
 
 export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
   const navigate = useNavigate()
+
   const [metrics, setMetrics] = useState<ServerMetrics | null>(null)
   const [loadingMetrics, setLoadingMetrics] = useState(true)
+
   const [resources, setResources] = useState<ServerResouce[] | null>(null)
   const [loadingResources, setLoadingResources] = useState(true)
 
@@ -74,37 +76,6 @@ export const ServerCard: React.FC<ServerCardProps> = ({ server }) => {
 
         <div className="flex items-center gap-2 shrink-0">
           <StatusBadge status={server.isReachable ? 'online' : 'offline'} />
-
-          {/* <div className="relative">
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            >
-              <MoreVertical size={15} />
-            </button>
-
-            {menuOpen && (
-              <div className="absolute right-0 top-8 z-10 w-40 bg-popover border border-border rounded-lg shadow-lg text-sm py-1 overflow-hidden">
-                {[
-                  { label: 'Modifica', key: 'edit' },
-                  { label: 'Riavvia', key: 'restart' },
-                  { label: 'Rimuovi', key: 'remove' },
-                ].map((item) => (
-                  <button
-                    key={item.key}
-                    onClick={() => setMenuOpen(false)}
-                    className={cn(
-                      'w-full text-left px-3 py-1.5 hover:bg-accent transition-colors',
-                      item.key === 'remove' &&
-                        'text-destructive hover:bg-destructive/10',
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div> */}
         </div>
       </div>
 

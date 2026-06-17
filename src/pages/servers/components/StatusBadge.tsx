@@ -1,5 +1,5 @@
 import { ServerStatus } from '@/client/coolify'
-import { cn } from '@/lib/utils'
+import { StatusBadge as StatusBadgeBase } from '@/components/ui/StatusBadge'
 
 const statusConfig: Record<
   ServerStatus,
@@ -23,15 +23,5 @@ interface StatusBadgeProps {
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const cfg = statusConfig[status]
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border',
-        cfg.badge,
-      )}
-    >
-      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', cfg.dot)} />
-      {cfg.label}
-    </span>
-  )
+  return <StatusBadgeBase dot={cfg.dot} badge={cfg.badge} label={cfg.label} />
 }
