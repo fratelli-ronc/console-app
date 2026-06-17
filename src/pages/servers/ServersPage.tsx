@@ -16,7 +16,7 @@ export const ServersPage: React.FC = () => {
     setLoading(true)
     try {
       const data = await getServers()
-      setServers(data ?? [])
+      setServers((data ?? []).sort((a, b) => (a.ip > b.ip ? 1 : -1)))
     } finally {
       setLoading(false)
     }

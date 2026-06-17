@@ -3,8 +3,8 @@ import { ServerResouce } from '@/client/coolify'
 import { cn } from '@/lib/utils'
 
 const statusLabel: Record<string, string> = {
-  'running:healthy': 'In esecuzione',
-  'running:unknown': 'In esecuzione',
+  'running:healthy': 'Running',
+  'running:unknown': 'Running',
   'running:unhealthy': 'Degradato',
 }
 
