@@ -9,7 +9,7 @@ const coolifyClient = withAuthInterceptors(
     headers: { 'Content-Type': 'application/json' },
   }),
   async (rt) => {
-    const { data } = await authClient.post<LoginResponse>('/auth/refresh', {
+    const { data } = await authClient.post<LoginResponse>('/refresh', {
       refreshToken: rt,
     })
     return data
