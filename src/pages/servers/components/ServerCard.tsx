@@ -24,18 +24,24 @@ export const ServerCard: React.FC<ServerCardProps> = ({ snapshot }) => {
   const navigate = useNavigate()
 
   const serverStorage = useMemo(
-    () => metrics.filesystems.find((fs) => fs.mountpoint === '/'),
+    () => metrics.filesystems?.find((fs) => fs.mountpoint === '/'),
     [metrics.filesystems],
   )
 
   return (
     <div
-      className="bg-card border border-border rounded-xl hover:border-primary/40 hover:shadow-sm transition-all duration-150 group cursor-pointer"
-      onClick={() =>
+      className={cn(
+        'bg-card border border-border rounded-xl transition-all duration-150 group',
+        server.isReachable
+          ? 'hover:border-primary/40 hover:shadow-sm cursor-pointer'
+          : 'cursor-default opacity-70',
+      )}
+      onClick={() => {
+        if (!server.isReachable) return
         navigate(`/servers/${server.uuid}/resources`, {
           state: { serverName: server.name },
         })
-      }
+      }}
     >
       {/* Card header */}
       <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-3">
@@ -124,8 +130,8 @@ export const ServerCard: React.FC<ServerCardProps> = ({ snapshot }) => {
       </div>
 
       {/* Resources section */}
-      <div className="border-t border-border mx-5" />
-      <div className="px-5 py-3">
+      {server.isReachable && <div className="border-t border-border mx-5" />}
+      {server.isReachable && <div className="px-5 py-3">
         <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
           Risorse
         </span>
@@ -162,6 +168,7 @@ export const ServerCard: React.FC<ServerCardProps> = ({ snapshot }) => {
           )}
         </div>
       </div>
+      }
     </div>
   )
 }
