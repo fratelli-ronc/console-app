@@ -36,6 +36,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_AUTH_API_URL: ${{ secrets.VITE_AUTH_API_URL }}
+          VITE_COOLIFY_BRIDGE_API_URL: ${{ secrets.VITE_COOLIFY_BRIDGE_API_URL }}
           VITE_CONSOLE_API_URL: ${{ secrets.VITE_CONSOLE_API_URL }}
         with:
           tagName: ${{ github.ref_name }}
