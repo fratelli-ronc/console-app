@@ -10,8 +10,8 @@ export const serverStatusConfig: Record<
     label: 'Online',
   },
   offline: {
-    dot: 'bg-zinc-400',
-    badge: 'bg-zinc-50 text-zinc-600 border-zinc-200',
+    dot: 'bg-red-400',
+    badge: 'bg-red-50 text-red-600 border-red-200',
     label: 'Offline',
   },
 }
