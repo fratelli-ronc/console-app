@@ -131,44 +131,46 @@ export const ServerCard: React.FC<ServerCardProps> = ({ snapshot }) => {
 
       {/* Resources section */}
       {server.isReachable && <div className="border-t border-border mx-5" />}
-      {server.isReachable && <div className="px-5 py-3">
-        <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
-          Risorse
-        </span>
+      {server.isReachable && (
+        <div className="px-5 py-3">
+          <span className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
+            Risorse
+          </span>
 
-        <div className="mt-2 flex flex-col gap-1.5">
-          {resources.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nessuna risorsa</p>
-          ) : (
-            resources.map((resource) => {
-              const config =
-                resourceStatusConfig[resource.status] ?? fallbackResourceStatus
-              return (
-                <div
-                  key={resource.uuid}
-                  className="flex items-center justify-between gap-3"
-                >
-                  <span className="text-xs text-foreground truncate">
-                    {resource.name}
-                  </span>
-                  <span className="flex items-center gap-1.5 shrink-0">
-                    <span
-                      className={cn(
-                        'w-1.5 h-1.5 rounded-full shrink-0',
-                        config.dot,
-                      )}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {config.label}
+          <div className="mt-2 flex flex-col gap-1.5">
+            {!resources || resources.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nessuna risorsa</p>
+            ) : (
+              resources.map((resource) => {
+                const config =
+                  resourceStatusConfig[resource.status] ??
+                  fallbackResourceStatus
+                return (
+                  <div
+                    key={resource.uuid}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="text-xs text-foreground truncate">
+                      {resource.name}
                     </span>
-                  </span>
-                </div>
-              )
-            })
-          )}
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <span
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full shrink-0',
+                          config.dot,
+                        )}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {config.label}
+                      </span>
+                    </span>
+                  </div>
+                )
+              })
+            )}
+          </div>
         </div>
-      </div>
-      }
+      )}
     </div>
   )
 }
