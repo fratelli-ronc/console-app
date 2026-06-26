@@ -5,15 +5,15 @@ import { withErrorHandling } from '../withErrorHandling'
 
 export const requestStopResource = (uuid: string): Promise<void | null> =>
   withErrorHandling(async () => {
-    await coolifyClient.get(`/resources/${uuid}/stop`)
+    await coolifyClient.get(`/services/${uuid}/stop`)
   })
 
 export const requestStartResource = (uuid: string): Promise<void | null> =>
   withErrorHandling(async () => {
-    await coolifyClient.get(`/resources/${uuid}/start`)
+    await coolifyClient.get(`/services/${uuid}/start`)
   })
 
 export const requestRestartResource = (uuid: string): Promise<void | null> =>
   withErrorHandling(async () => {
-    await coolifyClient.get(`/resources/${uuid}/restart`)
+    await coolifyClient.get(`/services/${uuid}/restart`)
   })
