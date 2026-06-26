@@ -1,3 +1,27 @@
+export interface CoolifyProject {
+  id: number
+  uuid: string
+  name: string
+}
+
+export interface ServiceByImage {
+  uuid: string
+  name: string
+  type: string
+  status: string
+  createdAt: string
+  updatedAt: string
+  image: string
+  serverName: string
+  serverUUID: string
+}
+
+// { version -> services[] }
+export type ServicesByVersionMap = Record<string, ServiceByImage[]>
+
+// { imageName -> { version -> services[] } }
+export type ServicesByImageMap = Record<string, ServicesByVersionMap>
+
 export type ServerStatus = 'online' | 'offline'
 
 export interface Server {

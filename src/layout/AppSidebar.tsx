@@ -10,6 +10,7 @@ import {
   LogOut,
   Server,
   TestTube,
+  HardDriveDownload,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { clearToken, clearRefreshToken } from '@/client/tokenStore'
@@ -41,12 +42,17 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: 'Deploy',
+    title: 'Infrastruttura',
     items: [
       {
         label: 'Server',
         href: '/servers',
         icon: <Server size={20} />,
+      },
+      {
+        label: 'Deploy',
+        href: '/deploy',
+        icon: <HardDriveDownload size={20} />,
       },
     ],
   },

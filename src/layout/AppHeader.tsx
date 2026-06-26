@@ -11,6 +11,7 @@ const ROUTE_LABELS: Record<string, string> = {
   settings: 'Impostazioni',
   new: 'Nuovo',
   test: 'Test',
+  deploy: 'Deploy',
 }
 
 function isStaticSegment(seg: string): boolean {

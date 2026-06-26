@@ -1,4 +1,5 @@
 export { AuthPage } from './auth/AuthPage'
+export { DeployPage } from './deploy/DeployPage'
 export { ServersPage } from './servers/ServersPage'
 export { HomePage } from './home/HomePage'
 export { ResoucesPage } from './resources/ResourcesPage'
