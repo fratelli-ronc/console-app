@@ -10,6 +10,8 @@ import {
 import type {
   DashboardSnapshot,
   MetricsEvent,
+  ResourceAddedEvent,
+  ResourceRemovedEvent,
   ResourceStatusEvent,
   ServerReachabilityEvent,
 } from '@/client/coolify/dtos'
@@ -58,6 +60,35 @@ function applyResourceStatus(
                 ? { ...r, status: event.status }
                 : r,
             ),
+          }
+        : ss,
+    ),
+  }
+}
+
+function applyResourceAdded(
+  prev: DashboardSnapshot,
+  event: ResourceAddedEvent,
+): DashboardSnapshot {
+  return {
+    servers: prev.servers.map((ss) =>
+      ss.server.uuid === event.serverUUID
+        ? { ...ss, resources: [...ss.resources, event.resource] }
+        : ss,
+    ),
+  }
+}
+
+function applyResourceRemoved(
+  prev: DashboardSnapshot,
+  event: ResourceRemovedEvent,
+): DashboardSnapshot {
+  return {
+    servers: prev.servers.map((ss) =>
+      ss.server.uuid === event.serverUUID
+        ? {
+            ...ss,
+            resources: ss.resources.filter((r) => r.uuid !== event.resourceUUID),
           }
         : ss,
     ),
@@ -252,6 +283,20 @@ function applyEvent(name: string, data: unknown) {
       useDashboardStore.setState((prev) => ({
         snapshot: prev.snapshot
           ? applyResourceStatus(prev.snapshot, data as ResourceStatusEvent)
+          : prev.snapshot,
+      }))
+      break
+    case 'resource_added':
+      useDashboardStore.setState((prev) => ({
+        snapshot: prev.snapshot
+          ? applyResourceAdded(prev.snapshot, data as ResourceAddedEvent)
+          : prev.snapshot,
+      }))
+      break
+    case 'resource_removed':
+      useDashboardStore.setState((prev) => ({
+        snapshot: prev.snapshot
+          ? applyResourceRemoved(prev.snapshot, data as ResourceRemovedEvent)
           : prev.snapshot,
       }))
       break

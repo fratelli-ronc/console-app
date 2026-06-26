@@ -63,3 +63,13 @@ export interface ServerReachabilityEvent {
   serverUUID: string
   isReachable: boolean
 }
+
+export interface ResourceAddedEvent {
+  serverUUID: string
+  resource: ServerResouce
+}
+
+export interface ResourceRemovedEvent {
+  serverUUID: string
+  resourceUUID: string
+}
