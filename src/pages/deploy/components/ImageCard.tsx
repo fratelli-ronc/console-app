@@ -1,20 +1,35 @@
-import { Container } from 'lucide-react'
+import { useState } from 'react'
+import { Container, Info, TriangleAlert, CircleCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ServicesByVersionMap } from '@/client/coolify'
+import { ServiceByImage, ServicesByVersionMap } from '@/client/coolify'
 import {
   resourceStatusConfig,
   fallbackResourceStatus,
 } from '@/data/statusConfig'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui'
 
 interface ImageCardProps {
   imageName: string
   versions: ServicesByVersionMap
 }
 
+function isHealthy(status: string): boolean {
+  return status === 'running:healthy' || status === 'running:unknown'
+}
+
 export const ImageCard: React.FC<ImageCardProps> = ({
   imageName,
   versions,
 }) => {
+  const [dialogVersion, setDialogVersion] = useState<string | null>(null)
+  const [frozenVersion, setFrozenVersion] = useState<string | null>(null)
+
   const shortName = imageName.includes('/')
     ? imageName.split('/').pop()!
     : imageName
@@ -25,78 +40,121 @@ export const ImageCard: React.FC<ImageCardProps> = ({
     b.localeCompare(a),
   )
 
+  const openDialog = (version: string) => {
+    setFrozenVersion(version)
+    setDialogVersion(version)
+  }
+
+  const dialogServices: ServiceByImage[] = frozenVersion
+    ? (versions[frozenVersion] ?? [])
+    : []
+
   return (
-    <div className="bg-card border border-border rounded-xl">
-      {/* Header */}
-      <div className="px-5 pt-5 pb-4 flex items-start gap-3">
-        <div className="mt-0.5 shrink-0 w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
-          <Container size={18} className="text-primary" />
+    <>
+      <div className="bg-card border border-border rounded-xl">
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 flex items-start gap-3">
+          <div className="mt-0.5 shrink-0 w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
+            <Container size={18} className="text-primary" />
+          </div>
+
+          <div className="min-w-0">
+            <h3 className="font-semibold text-foreground text-sm truncate leading-tight">
+              {shortName}
+            </h3>
+            {registry && (
+              <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
+                {registry}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="min-w-0">
-          <h3 className="font-semibold text-foreground text-sm truncate leading-tight">
-            {shortName}
-          </h3>
-          {registry && (
-            <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
-              {registry}
-            </p>
-          )}
+        <div className="border-t border-border mx-5" />
+
+        {/* Versions */}
+        <div className="px-5 py-4 flex flex-col gap-2">
+          {versionEntries.map(([version, services]) => {
+            const healthy = services.every((s) => isHealthy(s.status))
+            return (
+              <div key={version} className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-accent text-primary text-xs font-mono font-semibold">
+                  {version}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {services.length}{' '}
+                  {services.length === 1 ? 'istanza' : 'istanze'}
+                </span>
+                <span className="flex items-center gap-1 ml-auto shrink-0">
+                  {healthy ? (
+                    <CircleCheck size={13} className="text-green-500" />
+                  ) : (
+                    <TriangleAlert
+                      size={13}
+                      className="text-yellow-500 relative bottom-px"
+                    />
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {healthy ? 'In esecuzione' : 'Attenzione'}
+                  </span>
+                </span>
+                <button
+                  onClick={() => openDialog(version)}
+                  className="ml-1 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Info size={13} />
+                </button>
+              </div>
+            )
+          })}
         </div>
       </div>
 
-      <div className="border-t border-border mx-5" />
+      <Dialog
+        open={dialogVersion !== null}
+        onOpenChange={(open) => !open && setDialogVersion(null)}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-mono">{frozenVersion}</DialogTitle>
+            <DialogDescription>{imageName}</DialogDescription>
+          </DialogHeader>
 
-      {/* Versions */}
-      <div className="px-5 py-4 flex flex-col gap-4">
-        {versionEntries.map(([version, services]) => (
-          <div key={version}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-accent text-primary text-xs font-mono font-semibold">
-                {version}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {services.length}{' '}
-                {services.length === 1 ? 'istanza' : 'istanze'}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-1.5 pl-1">
-              {services.map((svc) => {
-                const config =
-                  resourceStatusConfig[svc.status] ?? fallbackResourceStatus
-                return (
-                  <div
-                    key={svc.uuid}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-xs text-foreground truncate">
-                        {svc.name}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground truncate">
-                        {svc.serverName}
-                      </span>
-                    </div>
-                    <span className="flex items-center gap-1.5 shrink-0">
-                      <span
-                        className={cn(
-                          'w-1.5 h-1.5 rounded-full shrink-0',
-                          config.dot,
-                        )}
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {config.label}
-                      </span>
+          <div className="flex flex-col">
+            {dialogServices.map((svc) => {
+              const config =
+                resourceStatusConfig[svc.status] ?? fallbackResourceStatus
+              return (
+                <div
+                  key={svc.uuid}
+                  className="flex items-center justify-between gap-3 py-3 border-b border-border last:border-0"
+                >
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm text-foreground truncate">
+                      {svc.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {svc.serverName} · {svc.serverIP}
                     </span>
                   </div>
-                )
-              })}
-            </div>
+                  <span className="flex items-center gap-1.5 shrink-0">
+                    <span
+                      className={cn(
+                        'w-1.5 h-1.5 rounded-full shrink-0',
+                        config.dot,
+                      )}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {config.label}
+                    </span>
+                  </span>
+                </div>
+              )
+            })}
           </div>
-        ))}
-      </div>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -111,18 +169,14 @@ export const ImageCardSkeleton: React.FC = () => (
     </div>
     <div className="border-t border-border mx-5" />
     <div className="px-5 py-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="h-5 w-14 bg-accent rounded-md" />
-        <div className="h-3 w-16 bg-accent rounded" />
-      </div>
-      <div className="flex flex-col gap-1.5 pl-1">
-        {[0, 1].map((i) => (
-          <div key={i} className="flex items-center justify-between">
-            <div className="h-3 w-28 bg-accent rounded" />
-            <div className="h-3 w-16 bg-accent rounded" />
-          </div>
-        ))}
-      </div>
+      {[0, 1].map((i) => (
+        <div key={i} className="flex items-center gap-2">
+          <div className="h-5 w-14 bg-accent rounded-md" />
+          <div className="h-3 w-16 bg-accent rounded" />
+          <div className="h-3 w-20 bg-accent rounded ml-auto" />
+          <div className="h-5 w-5 bg-accent rounded-md" />
+        </div>
+      ))}
     </div>
   </div>
 )

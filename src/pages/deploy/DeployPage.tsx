@@ -41,7 +41,11 @@ export const DeployPage: React.FC = () => {
       ) : entries.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {entries.map(([imageName, versions]) => (
-            <ImageCard key={imageName} imageName={imageName} versions={versions} />
+            <ImageCard
+              key={imageName}
+              imageName={imageName}
+              versions={versions}
+            />
           ))}
         </div>
       ) : (

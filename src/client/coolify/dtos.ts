@@ -14,6 +14,7 @@ export interface ServiceByImage {
   image: string
   serverName: string
   serverUUID: string
+  serverIP: string
 }
 
 // { version -> services[] }
