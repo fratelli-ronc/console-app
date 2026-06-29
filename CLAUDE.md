@@ -43,11 +43,11 @@ Two Axios instances:
 ### State Management (`src/store/`)
 
 - `useUserStore` — current user profile
-- `useDashboardStore` — real-time snapshot + SSE connection state. Handles `snapshot`, `metrics`, `server_reachability`, and `resource_status` events. Implements optimistic updates for resource actions and exponential backoff reconnect (1s → 30s max).
+- `useInfraStore` — real-time infrastructure snapshot + SSE connection state. Handles `snapshot`, `metrics`, `server_reachability`, and `resource_status` events. Implements optimistic updates for resource actions and exponential backoff reconnect (1s → 30s max).
 
 ### Real-Time Updates
 
-`src/layout/StreamController.tsx` manages the SSE connection lifecycle. The stream connects to `VITE_COOLIFY_BRIDGE_API_URL/stream` and feeds events into `useDashboardStore`. 401 responses from the stream trigger the same `auth:unauthorized` path as the REST clients.
+`src/layout/StreamController.tsx` manages the SSE connection lifecycle. The stream connects to `VITE_COOLIFY_BRIDGE_API_URL/stream` and feeds events into `useInfraStore`. 401 responses from the stream trigger the same `auth:unauthorized` path as the REST clients.
 
 ### Routing (`src/App.tsx`)
 
