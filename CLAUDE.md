@@ -72,6 +72,11 @@ The UI is built on shadcn/ui adapted from the [tailwind-admin](https://tailwind-
 
 Use existing components in `src/components/ui/` before creating new ones: `StatusBadge`, `Search`, `PageHeader`, `FilledButton`, `TextButton`, `EditTable`. Add new shadcn primitives via `pnpm dlx shadcn@latest add <component>`.
 
+**Naming and export rules for `src/components/ui/`:**
+- File names must be **PascalCase** (e.g. `Dialog.tsx`, not `dialog.tsx`).
+- Every component must be re-exported from `src/components/ui/index.ts`.
+- Import from the barrel: `import { ... } from '@/components/ui'`.
+
 ### Commit Convention
 
 Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, etc.).
