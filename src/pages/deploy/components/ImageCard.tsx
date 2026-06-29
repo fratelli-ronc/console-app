@@ -1,18 +1,6 @@
-import { useState } from 'react'
 import { Container, Info, TriangleAlert, CircleCheck } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { ServiceByImage, ServicesByVersionMap } from '@/client/coolify'
-import {
-  resourceStatusConfig,
-  fallbackResourceStatus,
-} from '@/data/statusConfig'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui'
+import { ServicesByVersionMap } from '@/client/coolify'
+import { useImageDetailStore } from '../store/imageDetailStore'
 
 interface ImageCardProps {
   imageName: string
@@ -27,8 +15,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
   imageName,
   versions,
 }) => {
-  const [dialogVersion, setDialogVersion] = useState<string | null>(null)
-  const [frozenVersion, setFrozenVersion] = useState<string | null>(null)
+  const openDialog = useImageDetailStore((s) => s.open)
 
   const shortName = imageName.includes('/')
     ? imageName.split('/').pop()!
@@ -40,121 +27,65 @@ export const ImageCard: React.FC<ImageCardProps> = ({
     b.localeCompare(a),
   )
 
-  const openDialog = (version: string) => {
-    setFrozenVersion(version)
-    setDialogVersion(version)
-  }
-
-  const dialogServices: ServiceByImage[] = frozenVersion
-    ? (versions[frozenVersion] ?? [])
-    : []
-
   return (
-    <>
-      <div className="bg-card border border-border rounded-xl">
-        {/* Header */}
-        <div className="px-5 pt-5 pb-4 flex items-start gap-3">
-          <div className="mt-0.5 shrink-0 w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
-            <Container size={18} className="text-primary" />
-          </div>
-
-          <div className="min-w-0">
-            <h3 className="font-semibold text-foreground text-sm truncate leading-tight">
-              {shortName}
-            </h3>
-            {registry && (
-              <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
-                {registry}
-              </p>
-            )}
-          </div>
+    <div className="bg-card border border-border rounded-xl">
+      {/* Header */}
+      <div className="px-5 pt-5 pb-4 flex items-start gap-3">
+        <div className="mt-0.5 shrink-0 w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
+          <Container size={18} className="text-primary" />
         </div>
 
-        <div className="border-t border-border mx-5" />
-
-        {/* Versions */}
-        <div className="px-5 py-4 flex flex-col gap-2">
-          {versionEntries.map(([version, services]) => {
-            const healthy = services.every((s) => isHealthy(s.status))
-            return (
-              <div key={version} className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-accent text-primary text-xs font-mono font-semibold">
-                  {version}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {services.length}{' '}
-                  {services.length === 1 ? 'istanza' : 'istanze'}
-                </span>
-                <span className="flex items-center gap-1 ml-auto shrink-0">
-                  {healthy ? (
-                    <CircleCheck size={13} className="text-green-500" />
-                  ) : (
-                    <TriangleAlert
-                      size={13}
-                      className="text-yellow-500 relative bottom-px"
-                    />
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {healthy ? 'In esecuzione' : 'Attenzione'}
-                  </span>
-                </span>
-                <button
-                  onClick={() => openDialog(version)}
-                  className="ml-1 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Info size={13} />
-                </button>
-              </div>
-            )
-          })}
+        <div className="min-w-0">
+          <h3 className="font-semibold text-foreground text-sm truncate leading-tight">
+            {shortName}
+          </h3>
+          {registry && (
+            <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
+              {registry}
+            </p>
+          )}
         </div>
       </div>
 
-      <Dialog
-        open={dialogVersion !== null}
-        onOpenChange={(open) => !open && setDialogVersion(null)}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-mono">{frozenVersion}</DialogTitle>
-            <DialogDescription>{imageName}</DialogDescription>
-          </DialogHeader>
+      <div className="border-t border-border mx-5" />
 
-          <div className="flex flex-col">
-            {dialogServices.map((svc) => {
-              const config =
-                resourceStatusConfig[svc.status] ?? fallbackResourceStatus
-              return (
-                <div
-                  key={svc.uuid}
-                  className="flex items-center justify-between gap-3 py-3 border-b border-border last:border-0"
-                >
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-sm text-foreground truncate">
-                      {svc.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {svc.serverName} · {svc.serverIP}
-                    </span>
-                  </div>
-                  <span className="flex items-center gap-1.5 shrink-0">
-                    <span
-                      className={cn(
-                        'w-1.5 h-1.5 rounded-full shrink-0',
-                        config.dot,
-                      )}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {config.label}
-                    </span>
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+      {/* Versions */}
+      <div className="px-5 py-4 flex flex-col gap-2">
+        {versionEntries.map(([version, services]) => {
+          const healthy = services.every((s) => isHealthy(s.status))
+          return (
+            <div key={version} className="flex items-center gap-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-accent text-primary text-xs font-mono font-semibold">
+                {version}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {services.length}{' '}
+                {services.length === 1 ? 'istanza' : 'istanze'}
+              </span>
+              <span className="flex items-center gap-1 ml-auto shrink-0">
+                {healthy ? (
+                  <CircleCheck size={13} className="text-green-500" />
+                ) : (
+                  <TriangleAlert
+                    size={13}
+                    className="text-yellow-500 relative bottom-px"
+                  />
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {healthy ? 'In esecuzione' : 'Attenzione'}
+                </span>
+              </span>
+              <button
+                onClick={() => openDialog(imageName, version, services)}
+                className="ml-1 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Info size={13} />
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
