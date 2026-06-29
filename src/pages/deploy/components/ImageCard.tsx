@@ -18,7 +18,9 @@ export const ImageCard: React.FC<ImageCardProps> = ({
   const shortName = imageName.includes('/')
     ? imageName.split('/').pop()!
     : imageName
-  const registry = imageName.includes('/') ? imageName.split('/')[0] : undefined
+  const registry = imageName.includes('/')
+    ? imageName.split('/')[0]
+    : 'official'
   const versionEntries = Object.entries(versions).sort(([a], [b]) =>
     b.localeCompare(a),
   )
