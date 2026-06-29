@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ServerStatus } from '@/client/coolify'
-import { useDashboardStore } from '@/store'
+import { useInfraStore } from '@/store'
 import { ServerCard, ServerCardSkeleton } from './components/ServerCard'
 import { PageHeader, Search } from '@/components'
 
 export const ServersPage: React.FC = () => {
-  const snapshot = useDashboardStore((s) => s.snapshot)
-  const connected = useDashboardStore((s) => s.connected)
+  const snapshot = useInfraStore((s) => s.snapshot)
+  const connected = useInfraStore((s) => s.connected)
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ServerStatus | 'all'>('all')

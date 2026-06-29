@@ -12,7 +12,7 @@ import {
   resourceStatusConfig,
   fallbackResourceStatus,
 } from '@/data/statusConfig'
-import { optimisticallySetResourceStatus } from '@/store/dashboardStore'
+import { optimisticallySetResourceStatus } from '@/store/infraStore'
 
 const RUNNING_STATUSES = new Set([
   'running:healthy',

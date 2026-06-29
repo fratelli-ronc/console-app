@@ -103,7 +103,7 @@ let retryDelay = 1000
 
 // --- store ---
 
-interface DashboardState {
+interface InfraState {
   snapshot: DashboardSnapshot | null
   connected: boolean
   connect: () => void
@@ -111,7 +111,7 @@ interface DashboardState {
   reconnect: () => void
 }
 
-export const useDashboardStore = create<DashboardState>((set) => ({
+export const useInfraStore = create<InfraState>((set) => ({
   snapshot: null,
   connected: false,
 
@@ -143,7 +143,7 @@ export function optimisticallySetResourceStatus(
   resourceUUID: string,
   status: string,
 ) {
-  useDashboardStore.setState((prev) => {
+  useInfraStore.setState((prev) => {
     if (!prev.snapshot) return {}
     return {
       snapshot: {
@@ -215,7 +215,7 @@ async function startStream() {
     return
   }
 
-  useDashboardStore.setState({ connected: true })
+  useInfraStore.setState({ connected: true })
   retryDelay = 1000
 
   const reader = resp.body.getReader()
@@ -246,12 +246,12 @@ async function startStream() {
     if (err?.name === 'AbortError') return
   }
 
-  useDashboardStore.setState({ connected: false })
+  useInfraStore.setState({ connected: false })
   if (!ctrl.signal.aborted) scheduleReconnect(ctrl.signal)
 }
 
 function scheduleReconnect(signal: AbortSignal) {
-  useDashboardStore.setState({ connected: false })
+  useInfraStore.setState({ connected: false })
 
   const delay = retryDelay
   retryDelay = Math.min(delay * 2, 30_000)
@@ -263,38 +263,38 @@ function scheduleReconnect(signal: AbortSignal) {
 function applyEvent(name: string, data: unknown) {
   switch (name) {
     case 'snapshot':
-      useDashboardStore.setState({ snapshot: data as DashboardSnapshot })
+      useInfraStore.setState({ snapshot: data as DashboardSnapshot })
       break
     case 'metrics':
-      useDashboardStore.setState((prev) => ({
+      useInfraStore.setState((prev) => ({
         snapshot: prev.snapshot
           ? applyMetrics(prev.snapshot, data as MetricsEvent[])
           : prev.snapshot,
       }))
       break
     case 'server_reachability':
-      useDashboardStore.setState((prev) => ({
+      useInfraStore.setState((prev) => ({
         snapshot: prev.snapshot
           ? applyReachability(prev.snapshot, data as ServerReachabilityEvent)
           : prev.snapshot,
       }))
       break
     case 'resource_status':
-      useDashboardStore.setState((prev) => ({
+      useInfraStore.setState((prev) => ({
         snapshot: prev.snapshot
           ? applyResourceStatus(prev.snapshot, data as ResourceStatusEvent)
           : prev.snapshot,
       }))
       break
     case 'resource_added':
-      useDashboardStore.setState((prev) => ({
+      useInfraStore.setState((prev) => ({
         snapshot: prev.snapshot
           ? applyResourceAdded(prev.snapshot, data as ResourceAddedEvent)
           : prev.snapshot,
       }))
       break
     case 'resource_removed':
-      useDashboardStore.setState((prev) => ({
+      useInfraStore.setState((prev) => ({
         snapshot: prev.snapshot
           ? applyResourceRemoved(prev.snapshot, data as ResourceRemovedEvent)
           : prev.snapshot,

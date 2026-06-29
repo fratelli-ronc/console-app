@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useDashboardStore } from '@/store'
+import { useInfraStore } from '@/store'
 
 function isStreamRoute(pathname: string): boolean {
   return pathname === '/servers' || pathname.startsWith('/servers/')
@@ -9,8 +9,8 @@ function isStreamRoute(pathname: string): boolean {
 export const StreamController: React.FC = () => {
   const location = useLocation()
 
-  const connect = useDashboardStore((s) => s.connect)
-  const disconnect = useDashboardStore((s) => s.disconnect)
+  const connect = useInfraStore((s) => s.connect)
+  const disconnect = useInfraStore((s) => s.disconnect)
 
   const active = isStreamRoute(location.pathname)
 

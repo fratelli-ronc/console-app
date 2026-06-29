@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { Box } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDashboardStore } from '@/store'
+import { useInfraStore } from '@/store'
 import { PageHeader, Search } from '@/components'
 import { ResourceCard, ResourceCardSkeleton } from './components/ResourceCard'
 
@@ -10,8 +10,8 @@ export const ResoucesPage: React.FC = () => {
   const { uuid } = useParams<{ uuid: string }>()
   const { state } = useLocation()
 
-  const snapshot = useDashboardStore((s) => s.snapshot)
-  const connected = useDashboardStore((s) => s.connected)
+  const snapshot = useInfraStore((s) => s.snapshot)
+  const connected = useInfraStore((s) => s.connected)
 
   const [search, setSearch] = useState('')
 
