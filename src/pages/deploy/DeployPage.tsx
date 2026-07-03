@@ -5,10 +5,12 @@ import { ServicesByImageMap } from '@/client/coolify'
 import { PageHeader, Search, FilledButton } from '@/components'
 import { ImageCard, ImageCardSkeleton } from './components/ImageCard'
 import { ImageDetailDialog } from './components/ImageDetailDialog'
+import { CloneDialog } from './components/CloneDialog'
 
 export const DeployPage: React.FC = () => {
   const [data, setData] = useState<ServicesByImageMap | null>(null)
   const [search, setSearch] = useState('')
+  const [cloneOpen, setCloneOpen] = useState(false)
 
   useEffect(() => {
     listServicesByImage().then((res) => {
@@ -25,6 +27,7 @@ export const DeployPage: React.FC = () => {
   return (
     <>
       <ImageDetailDialog />
+      <CloneDialog open={cloneOpen} onOpenChange={setCloneOpen} />
 
       <div className="space-y-6">
         <PageHeader
@@ -34,7 +37,12 @@ export const DeployPage: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <Search value={search} onChange={setSearch} />
-          <FilledButton type="button" className="flex items-center gap-2">
+
+          <FilledButton
+            type="button"
+            className="flex items-center gap-2"
+            onClick={() => setCloneOpen(true)}
+          >
             <Copy size={16} />
             Clona su nuovo server
           </FilledButton>

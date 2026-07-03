@@ -1,6 +1,19 @@
 import coolifyClient from './client'
 import { withErrorHandling } from '../withErrorHandling'
-import type { CoolifyProject, ServicesByImageMap } from './dtos'
+import type {
+  CloneProjectResponse,
+  CoolifyProject,
+  Server,
+  ServicesByImageMap,
+} from './dtos'
+
+// --- Servers ---
+
+export const listServers = (): Promise<Server[] | null> =>
+  withErrorHandling(async () => {
+    const res = await coolifyClient.get<Server[]>('/servers')
+    return res.data
+  })
 
 // --- Projects ---
 
@@ -10,15 +23,27 @@ export const listProjects = (): Promise<CoolifyProject[] | null> =>
     return res.data
   })
 
-// --- Services by image ---
-
-export const listServicesByImage = (): Promise<ServicesByImageMap | null> =>
+export const cloneProject = (
+  projectUuid: string,
+  serverUuid: string,
+  projectName: string,
+): Promise<CloneProjectResponse | null> =>
   withErrorHandling(async () => {
-    const res = await coolifyClient.get<ServicesByImageMap>('/services/by-image')
+    const res = await coolifyClient.post<CloneProjectResponse>(
+      `/projects/${projectUuid}/clone`,
+      { ServerUUID: serverUuid, projectName },
+    )
     return res.data
   })
 
-// --- Resource ---
+// --- Services ---
+
+export const listServicesByImage = (): Promise<ServicesByImageMap | null> =>
+  withErrorHandling(async () => {
+    const res =
+      await coolifyClient.get<ServicesByImageMap>('/services/by-image')
+    return res.data
+  })
 
 export const requestStopResource = (uuid: string): Promise<void | null> =>
   withErrorHandling(

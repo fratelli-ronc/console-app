@@ -4,6 +4,16 @@ export interface CoolifyProject {
   name: string
 }
 
+export interface ClonedResource {
+  name: string
+  uuid: string
+}
+
+export interface CloneProjectResponse {
+  resources: ClonedResource[]
+  uuid: string
+}
+
 export interface ServiceByImage {
   uuid: string
   name: string
