@@ -1,5 +1,6 @@
 export * from './Dialog'
 export * from './FilledButton'
+export * from './OutlinedButton'
 export * from './PageHeader'
 export * from './Search'
 export * from './StatusBadge'

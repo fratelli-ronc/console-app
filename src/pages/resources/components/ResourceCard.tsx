@@ -14,13 +14,13 @@ import {
 } from '@/data/statusConfig'
 import { optimisticallySetResourceStatus } from '@/store/infraStore'
 
-const RUNNING_STATUSES = new Set([
+export const RUNNING_STATUSES = new Set([
   'running:healthy',
   'running:unknown',
   'running:unhealthy',
 ])
 
-function getDisabledActions(status: string): Set<string> {
+export function getDisabledActions(status: string): Set<string> {
   if (RUNNING_STATUSES.has(status)) return new Set(['start'])
   if (status === 'exited') return new Set(['stop', 'restart'])
   // transient states: stopping, restarting, starting:*

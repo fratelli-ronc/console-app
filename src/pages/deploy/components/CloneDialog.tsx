@@ -80,7 +80,7 @@ export const CloneDialog: React.FC<Props> = ({ open, onOpenChange }) => {
     cloneProject(
       selectedProject.uuid,
       selectedServer.uuid,
-      `Resources ${selectedServer.name}`,
+      `Risorse ${selectedServer.name}`,
     ).then((res) => {
       if (res) setCloneResult(res)
       else setCloneError('Si è verificato un errore durante la clonazione.')

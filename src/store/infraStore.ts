@@ -88,7 +88,9 @@ function applyResourceRemoved(
       ss.server.uuid === event.serverUUID
         ? {
             ...ss,
-            resources: ss.resources.filter((r) => r.uuid !== event.resourceUUID),
+            resources: ss.resources.filter(
+              (r) => r.uuid !== event.resourceUUID,
+            ),
           }
         : ss,
     ),
@@ -261,6 +263,10 @@ function scheduleReconnect(signal: AbortSignal) {
 }
 
 function applyEvent(name: string, data: unknown) {
+  if (name != 'metrics') {
+    console.log('name:', name, 'data:', data)
+  }
+
   switch (name) {
     case 'snapshot':
       useInfraStore.setState({ snapshot: data as DashboardSnapshot })
