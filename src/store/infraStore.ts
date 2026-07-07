@@ -102,6 +102,7 @@ function applyResourceRemoved(
 let abortCtrl: AbortController | null = null
 let retryTimer: ReturnType<typeof setTimeout> | null = null
 let retryDelay = 1000
+let streamGeneration = 0
 
 // --- store ---
 
@@ -123,6 +124,7 @@ export const useInfraStore = create<InfraState>((set) => ({
   },
 
   disconnect: () => {
+    streamGeneration++
     abortCtrl?.abort()
     abortCtrl = null
     if (retryTimer) {
@@ -163,6 +165,8 @@ export function optimisticallySetResourceStatus(
 // --- SSE connection logic ---
 
 async function startStream() {
+  const generation = ++streamGeneration
+
   abortCtrl?.abort()
 
   if (retryTimer) {
@@ -171,6 +175,7 @@ async function startStream() {
   }
 
   const token = await getToken()
+  if (generation !== streamGeneration) return
   if (!token) return
 
   const ctrl = new AbortController()
@@ -187,9 +192,12 @@ async function startStream() {
     )
   } catch (err: any) {
     if (err?.name === 'AbortError') return
+    if (generation !== streamGeneration) return
     scheduleReconnect(ctrl.signal)
     return
   }
+
+  if (generation !== streamGeneration) return
 
   if (resp.status === 401) {
     try {
@@ -201,8 +209,8 @@ async function startStream() {
       })
 
       await setToken(data.token)
-      await setRefreshToken(data.refresh_token)
-      if (!ctrl.signal.aborted) startStream()
+      await setRefreshToken(data.refreshToken)
+      if (!ctrl.signal.aborted && generation === streamGeneration) startStream()
     } catch {
       await clearToken()
       await clearRefreshToken()
@@ -247,6 +255,8 @@ async function startStream() {
   } catch (err: any) {
     if (err?.name === 'AbortError') return
   }
+
+  if (generation !== streamGeneration) return
 
   useInfraStore.setState({ connected: false })
   if (!ctrl.signal.aborted) scheduleReconnect(ctrl.signal)
