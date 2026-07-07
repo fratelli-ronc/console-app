@@ -11,7 +11,7 @@ export type UserAuthLevel = (typeof UserAuthLevel)[keyof typeof UserAuthLevel]
 
 export interface LoginResponse {
   token: string
-  refresh_token: string
+  refreshToken: string
 }
 
 export interface UserProfile {

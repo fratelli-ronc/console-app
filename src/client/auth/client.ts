@@ -14,7 +14,7 @@ export const authenticatedAuthClient = withAuthInterceptors(
   async (rt) => {
     const { data } = await authClient.post<{
       token: string
-      refresh_token: string
+      refreshToken: string
     }>('/refresh', { refreshToken: rt })
     return data
   },

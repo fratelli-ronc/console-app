@@ -25,7 +25,7 @@ export const AuthPage: React.FC = () => {
       const data = await login(username, password)
 
       await setToken(data.token)
-      await setRefreshToken(data.refresh_token)
+      await setRefreshToken(data.refreshToken)
 
       navigate('/')
     } catch (err) {

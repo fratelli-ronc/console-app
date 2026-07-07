@@ -8,7 +8,7 @@ import {
   setToken,
 } from './tokenStore'
 
-type RefreshResult = { token: string; refresh_token: string }
+type RefreshResult = { token: string; refreshToken: string }
 
 export function withAuthInterceptors(
   instance: AxiosInstance,
@@ -37,7 +37,7 @@ export function withAuthInterceptors(
           const result = await doRefresh(rt)
 
           await setToken(result.token)
-          await setRefreshToken(result.refresh_token)
+          await setRefreshToken(result.refreshToken)
 
           original.headers.Authorization = `Bearer ${result.token}`
 
