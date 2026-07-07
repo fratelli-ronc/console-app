@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { getToken, me } from '@/client'
 import { useUserStore } from '@/store'
+import { SplashScreen } from './SplashScreen'
+
+const MIN_SPLASH_MS = 500
 
 export const AppPrivateRoute: React.FC = () => {
   const navigate = useNavigate()
@@ -12,23 +15,47 @@ export const AppPrivateRoute: React.FC = () => {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
+    let timeout: ReturnType<typeof setTimeout>
+    const start = Date.now()
+
     getToken()
       .then((token) => {
         if (!token) {
           navigate('/auth', { replace: true })
-        } else {
-          setReady(true)
-          me()
-            .then((profile) => {
-              setUser(profile)
-              setReady(true)
-            })
-            .catch(() => {})
+          return
         }
+
+        // Keep the outlet unmounted until /me settles, so no other
+        // authenticated request fires in parallel and races the
+        // interceptor's token refresh with a second, independent 401.
+        me()
+          .then((profile) => {
+            if (cancelled) return
+
+            setUser(profile)
+
+            const remaining = MIN_SPLASH_MS - (Date.now() - start)
+            if (remaining > 0) {
+              timeout = setTimeout(() => {
+                if (!cancelled) setReady(true)
+              }, remaining)
+            } else {
+              setReady(true)
+            }
+          })
+          .catch(() => {
+            navigate('/auth', { replace: true })
+          })
       })
       .catch(() => {
         navigate('/auth', { replace: true })
       })
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -42,5 +69,5 @@ export const AppPrivateRoute: React.FC = () => {
     return () => window.removeEventListener('auth:unauthorized', handler)
   }, [navigate])
 
-  return !ready ? null : <Outlet />
+  return ready ? <Outlet /> : <SplashScreen />
 }
