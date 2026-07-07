@@ -30,6 +30,11 @@ export const resourceStatusConfig: Record<
     badge: 'bg-green-50 text-green-700 border-green-200',
     label: 'Esecuzione',
   },
+  'degraded:unhealthy': {
+    dot: 'bg-yellow-500',
+    badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    label: 'Degradato',
+  },
   'running:unhealthy': {
     dot: 'bg-yellow-500',
     badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
