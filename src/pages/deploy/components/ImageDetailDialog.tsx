@@ -34,10 +34,10 @@ export const ImageDetailDialog: React.FC = () => {
               >
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm text-foreground truncate">
-                    {svc.name}
+                    {svc.serverName}
                   </span>
                   <span className="text-xs text-muted-foreground truncate">
-                    {svc.serverName} · {svc.serverIP}
+                    {svc.serverIP}
                   </span>
                 </div>
                 <span className="flex items-center gap-1.5 shrink-0">

@@ -59,3 +59,26 @@ export const requestRestartResource = (uuid: string): Promise<void | null> =>
   withErrorHandling(
     async () => await coolifyClient.get(`/services/${uuid}/restart`),
   )
+
+export const updateServiceImageTag = (
+  uuid: string,
+  tag: string,
+): Promise<void | null> =>
+  withErrorHandling(
+    async () =>
+      await coolifyClient.patch(`/services/${uuid}`, {
+        dockerRegistryImageTag: tag,
+      }),
+  )
+
+// --- Registry ---
+
+export const listImageTags = (
+  image: string,
+): Promise<{ tags: string[] } | null> =>
+  withErrorHandling(async () => {
+    const res = await coolifyClient.get<{ tags: string[] }>('/registry/tags', {
+      params: { image },
+    })
+    return res.data
+  })

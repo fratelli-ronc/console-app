@@ -1,6 +1,13 @@
-import { Container, Info, TriangleAlert, CircleCheck } from 'lucide-react'
+import {
+  CircleFadingArrowUp,
+  Container,
+  Info,
+  TriangleAlert,
+  CircleCheck,
+} from 'lucide-react'
 import { ServicesByVersionMap } from '@/client/coolify'
 import { useImageDetailStore } from '../store/imageDetailStore'
+import { useUpdateImageStore } from '../store/updateImageStore'
 
 interface ImageCardProps {
   imageName: string
@@ -16,6 +23,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
   versions,
 }) => {
   const openDialog = useImageDetailStore((s) => s.open)
+  const openUpdateDialog = useUpdateImageStore((s) => s.open)
 
   const shortName = imageName.includes('/')
     ? imageName.split('/').pop()!
@@ -30,21 +38,31 @@ export const ImageCard: React.FC<ImageCardProps> = ({
   return (
     <div className="bg-card border border-border rounded-xl">
       {/* Header */}
-      <div className="px-5 pt-5 pb-4 flex items-start gap-3">
-        <div className="mt-0.5 shrink-0 w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
-          <Container size={18} className="text-primary" />
+      <div className="px-5 pt-5 pb-4 flex justify-between items-center">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 shrink-0 w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
+            <Container size={18} className="text-primary" />
+          </div>
+
+          <div className="min-w-0">
+            <h3 className="font-semibold text-foreground text-sm truncate leading-tight">
+              {shortName}
+            </h3>
+
+            {registry && (
+              <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
+                {registry}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="min-w-0">
-          <h3 className="font-semibold text-foreground text-sm truncate leading-tight">
-            {shortName}
-          </h3>
-          {registry && (
-            <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
-              {registry}
-            </p>
-          )}
-        </div>
+        <button
+          onClick={() => openUpdateDialog(imageName, versions)}
+          className="ml-1 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <CircleFadingArrowUp size={20} />
+        </button>
       </div>
 
       <div className="border-t border-border mx-5" />

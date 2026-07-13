@@ -1,22 +1,40 @@
 import { useEffect, useState } from 'react'
-import { Container, Copy } from 'lucide-react'
+import { Container, Copy, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { listServicesByImage } from '@/client/coolify/requests'
 import { ServicesByImageMap } from '@/client/coolify'
 import { PageHeader, Search, FilledButton } from '@/components'
 import { ImageCard, ImageCardSkeleton } from './components/ImageCard'
 import { ImageDetailDialog } from './components/ImageDetailDialog'
+import { UpdateImageDialog } from './components/UpdateImageDialog'
 import { CloneDialog } from './components/CloneDialog'
+import { useUpdateImageStore } from './store/updateImageStore'
 
 export const DeployPage: React.FC = () => {
   const [data, setData] = useState<ServicesByImageMap | null>(null)
   const [search, setSearch] = useState('')
   const [cloneOpen, setCloneOpen] = useState(false)
+  const [reloading, setReloading] = useState(false)
+  const updateCompletedAt = useUpdateImageStore((s) => s.completedAt)
+
+  const fetchData = async () => {
+    const res = await listServicesByImage()
+    if (res) setData(res)
+  }
+
+  const handleReload = async () => {
+    setReloading(true)
+    await fetchData()
+    setReloading(false)
+  }
 
   useEffect(() => {
-    listServicesByImage().then((res) => {
-      if (res) setData(res)
-    })
+    fetchData()
   }, [])
+
+  useEffect(() => {
+    if (updateCompletedAt !== null) fetchData()
+  }, [updateCompletedAt])
 
   const loading = data === null
 
@@ -27,6 +45,9 @@ export const DeployPage: React.FC = () => {
   return (
     <>
       <ImageDetailDialog />
+
+      <UpdateImageDialog />
+
       <CloneDialog open={cloneOpen} onOpenChange={setCloneOpen} />
 
       <div className="space-y-6">
@@ -46,6 +67,14 @@ export const DeployPage: React.FC = () => {
             <Copy size={16} />
             Clona su nuovo server
           </FilledButton>
+
+          <button
+            onClick={handleReload}
+            className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <RefreshCw size={14} className={cn(reloading && 'animate-spin')} />
+            Aggiorna
+          </button>
         </div>
 
         {loading ? (
