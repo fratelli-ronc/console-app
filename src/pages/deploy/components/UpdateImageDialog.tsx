@@ -15,11 +15,14 @@ import {
   DialogHeader,
   DialogTitle,
   FilledButton,
+  RunSpinner,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Spinner,
+  StatusDot,
   TextButton,
 } from '@/components/ui'
 
@@ -30,42 +33,6 @@ const POLL_INTERVAL_MS = 8000
 type ServiceRunStatus = 'processing' | 'success' | 'failed'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const Spinner: React.FC<{ className?: string }> = ({ className }) => (
-  <span
-    className={cn(
-      'inline-block rounded-full border-2 border-current/25 border-t-current animate-spin',
-      className,
-    )}
-  />
-)
-
-const RunSpinner: React.FC<{ className?: string }> = ({ className }) => (
-  <span className={cn('relative inline-flex shrink-0', className)}>
-    <span className="absolute inset-0 rounded-full border-2 border-secondary/25 border-t-secondary animate-spin" />
-    <span className="absolute inset-0.75 rounded-full bg-secondary" />
-  </span>
-)
-
-const StatusDot: React.FC<{
-  className?: string
-  variant: 'success' | 'failed'
-}> = ({ className, variant }) => (
-  <span className={cn('relative inline-flex shrink-0', className)}>
-    <span
-      className={cn(
-        'absolute inset-0 rounded-full border-2',
-        variant === 'success' ? 'border-green-500/25' : 'border-destructive/25',
-      )}
-    />
-    <span
-      className={cn(
-        'absolute inset-0.75 rounded-full',
-        variant === 'success' ? 'bg-green-500' : 'bg-destructive',
-      )}
-    />
-  </span>
-)
 
 export const UpdateImageDialog: React.FC = () => {
   const { isOpen, imageName, versions, close, markCompleted } =

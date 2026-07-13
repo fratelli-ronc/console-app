@@ -4,6 +4,7 @@ import { Server as ServerIcon } from 'lucide-react'
 import { ServerSnapshot } from '@/client/coolify'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
+import { RunSpinner } from '@/components/ui'
 import {
   resourceStatusConfig,
   fallbackResourceStatus,
@@ -154,12 +155,19 @@ export const ServerCard: React.FC<ServerCardProps> = ({ snapshot }) => {
                       {resource.name}
                     </span>
                     <span className="flex items-center gap-1.5 shrink-0">
-                      <span
-                        className={cn(
-                          'w-1.5 h-1.5 rounded-full shrink-0',
-                          config.dot,
-                        )}
-                      />
+                      {config.pending ? (
+                        <RunSpinner
+                          className="h-2 w-2"
+                          color={config.spinnerColor}
+                        />
+                      ) : (
+                        <span
+                          className={cn(
+                            'w-1.5 h-1.5 rounded-full shrink-0',
+                            config.dot,
+                          )}
+                        />
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {config.label}
                       </span>

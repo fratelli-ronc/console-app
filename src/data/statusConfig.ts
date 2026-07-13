@@ -18,7 +18,13 @@ export const serverStatusConfig: Record<
 
 export const resourceStatusConfig: Record<
   string,
-  { dot: string; badge: string; label: string }
+  {
+    dot: string
+    badge: string
+    label: string
+    pending?: boolean
+    spinnerColor?: 'secondary' | 'muted'
+  }
 > = {
   'running:healthy': {
     dot: 'bg-green-500',
@@ -44,11 +50,15 @@ export const resourceStatusConfig: Record<
     dot: 'bg-yellow-500',
     badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
     label: 'Avvio',
+    pending: true,
+    spinnerColor: 'secondary',
   },
   'starting:healthy': {
     dot: 'bg-yellow-500',
     badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
     label: 'Avvio',
+    pending: true,
+    spinnerColor: 'secondary',
   },
   exited: {
     dot: 'bg-red-500',
@@ -59,11 +69,15 @@ export const resourceStatusConfig: Record<
     dot: 'bg-zinc-400',
     badge: 'bg-zinc-50 text-zinc-600 border-zinc-200',
     label: 'Fermando',
+    pending: true,
+    spinnerColor: 'muted',
   },
   restarting: {
     dot: 'bg-yellow-500',
     badge: 'bg-yellow-50 text-yellow-700 border-yellow-200',
     label: 'Riavvio',
+    pending: true,
+    spinnerColor: 'secondary',
   },
 }
 

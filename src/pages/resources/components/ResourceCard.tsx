@@ -89,7 +89,13 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <StatusBadge dot={cfg.dot} badge={cfg.badge} label={cfg.label} />
+          <StatusBadge
+            dot={cfg.dot}
+            badge={cfg.badge}
+            label={cfg.label}
+            pending={cfg.pending}
+            spinnerColor={cfg.spinnerColor}
+          />
 
           <div className="relative" ref={menuRef}>
             <button
