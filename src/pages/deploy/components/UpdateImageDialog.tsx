@@ -27,7 +27,7 @@ import {
 } from '@/components/ui'
 
 const REGISTRY_HOST = '10.0.10.69'
-const CALL_DELAY_MS = 1500
+const CALL_DELAY_MS = 2000
 const POLL_INTERVAL_MS = 8000
 
 type ServiceRunStatus = 'processing' | 'success' | 'failed'
