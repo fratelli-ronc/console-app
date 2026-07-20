@@ -4,6 +4,8 @@ import { RefreshCw, Users, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilterPills, PageHeader, Search } from '@/components'
 import {
+  DataTable,
+  type DataTableColumn,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -54,23 +56,6 @@ const StatusBadge: React.FC<{ enabled: boolean }> = ({ enabled }) => (
     />
     {enabled ? 'Attivo' : 'Disattivo'}
   </span>
-)
-
-const TableSkeleton: React.FC = () => (
-  <>
-    {Array.from({ length: 5 }).map((_, i) => (
-      <tr key={i} className="border-b border-border last:border-0">
-        {Array.from({ length: 5 }).map((_, j) => (
-          <td key={j} className="px-4 py-7">
-            <div
-              className="h-4 bg-muted rounded animate-pulse"
-              style={{ width: j === 0 ? '60%' : j === 1 ? '80%' : '50%' }}
-            />
-          </td>
-        ))}
-      </tr>
-    ))}
-  </>
 )
 
 export const UsersPage: React.FC = () => {
@@ -139,6 +124,65 @@ export const UsersPage: React.FC = () => {
     return matchesSearch && matchesRole && matchesStatus
   })
 
+  const columns: DataTableColumn<AuthUser>[] = [
+    {
+      key: 'name',
+      header: 'Nome',
+      render: (user) => (
+        <>
+          <div className="font-medium text-foreground">{user.name}</div>
+          <div className="text-xs text-muted-foreground">
+            {user.username}
+          </div>
+        </>
+      ),
+    },
+    {
+      key: 'contacts',
+      header: 'Contatti',
+      cellClassName: 'text-muted-foreground',
+      render: (user) => (
+        <>
+          <p>{user.email || '—'}</p>
+          <p className="mt-1 text-sm">{user.phone || '-'}</p>
+        </>
+      ),
+    },
+    {
+      key: 'role',
+      header: 'Ruolo',
+      render: (user) => <RoleBadge level={user.authorization} />,
+    },
+    {
+      key: 'status',
+      header: 'Stato',
+      render: (user) => <StatusBadge enabled={user.enabled} />,
+    },
+    {
+      key: 'actions',
+      header: '',
+      cellClassName: 'text-right',
+      render: (user) => (
+        <div className="inline-flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/users/${user.id}`)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
+          >
+            <Pencil size={12} />
+            Modifica
+          </button>
+          <button
+            onClick={() => setUserToDelete(user)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border transition-colors cursor-pointer"
+          >
+            <Trash2 size={12} />
+            Elimina
+          </button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -187,91 +231,18 @@ export const UsersPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      {!loading && filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center mb-3">
-            <Users size={22} className="text-primary" />
-          </div>
-          <p className="text-sm font-medium text-foreground">
-            Nessun utente trovato
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Prova a modificare la ricerca o aggiungi un nuovo utente.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/50 border-b border-border">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Nome
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Contatti
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Ruolo
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Stato
-                </th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="bg-card divide-y divide-border">
-              {loading ? (
-                <TableSkeleton />
-              ) : (
-                filtered.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="px-4 py-3.5">
-                      <div className="font-medium text-foreground">
-                        {user.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {user.username}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-muted-foreground">
-                      <p>{user.email || '—'}</p>
-
-                      <p className="mt-1 text-sm">{user.phone || '-'}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <RoleBadge level={user.authorization} />
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <StatusBadge enabled={user.enabled} />
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <button
-                          onClick={() => navigate(`/users/${user.id}`)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
-                        >
-                          <Pencil size={12} />
-                          Modifica
-                        </button>
-                        <button
-                          onClick={() => setUserToDelete(user)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border transition-colors cursor-pointer"
-                        >
-                          <Trash2 size={12} />
-                          Elimina
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={filtered}
+        loading={loading}
+        getRowKey={(user) => user.id}
+        emptyState={{
+          icon: <Users size={22} className="text-primary" />,
+          title: 'Nessun utente trovato',
+          description:
+            'Prova a modificare la ricerca o aggiungi un nuovo utente.',
+        }}
+      />
 
       <Dialog
         open={userToDelete !== null}
