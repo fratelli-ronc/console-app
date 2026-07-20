@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils'
 import { clearToken, clearRefreshToken } from '@/client/tokenStore'
 import { useUserStore } from '@/store'
+import { logout } from '@/client'
 
 interface NavChild {
   label: string
@@ -77,6 +78,7 @@ export const AppSidebar: React.FC = () => {
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set())
 
   async function handleLogout() {
+    await logout()
     await Promise.all([clearToken(), clearRefreshToken()])
     navigate('/auth', { replace: true })
   }

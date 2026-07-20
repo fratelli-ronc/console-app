@@ -20,15 +20,15 @@ export const login = async (
   return data
 }
 
-export const logout = async (): Promise<void> => {
-  await authClient.get('/logout')
-}
-
 export const refreshToken = async (token: string): Promise<LoginResponse> => {
   const { data } = await authClient.post<LoginResponse>('/refresh', {
     refreshToken: token,
   })
   return data
+}
+
+export const logout = async (): Promise<void> => {
+  await authenticatedAuthClient.get('/logout')
 }
 
 export const me = async (): Promise<UserProfile> => {
