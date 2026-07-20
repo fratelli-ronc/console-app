@@ -21,7 +21,7 @@ export const login = async (
 }
 
 export const logout = async (): Promise<void> => {
-  await authClient.post('/logout')
+  await authClient.get('/logout')
 }
 
 export const refreshToken = async (token: string): Promise<LoginResponse> => {
