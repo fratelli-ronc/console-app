@@ -24,6 +24,7 @@ This is a **Tauri 2 desktop application**: React 19 + TypeScript frontend built 
 ### Environment Variables
 
 Required in `.env`:
+
 - `VITE_AUTH_API_URL` — authentication service
 - `VITE_CONSOLE_API_URL` — main API
 - `VITE_COOLIFY_BRIDGE_API_URL` — SSE stream endpoint for real-time updates
@@ -35,6 +36,7 @@ Tokens are stored in the OS keyring via Tauri commands defined in `src-tauri/src
 ### API Clients (`src/client/`)
 
 Two Axios instances:
+
 - `client/auth/client.ts` — unauthenticated, hits `VITE_AUTH_API_URL`
 - `client/console/client.ts` — authenticated, hits `VITE_CONSOLE_API_URL`
 
@@ -60,22 +62,23 @@ The UI is built on shadcn/ui adapted from the [tailwind-admin](https://tailwind-
 
 **Always use the semantic CSS tokens from `src/App.css`** — never hard-code colors. The brand palette (mapped via `@theme inline` to Tailwind utilities like `bg-primary`, `text-foreground`, `border-border`, etc.):
 
-| Token | Purpose | Brand value |
-|---|---|---|
-| `--primary` | Green CTA / active states | #0D7023 |
-| `--secondary` | Yellow accent | #F4C03B |
-| `--accent` | Subtle green tint | #283C3A |
-| `--destructive` | Errors / delete actions | red |
-| `--muted` / `--muted-foreground` | Disabled / secondary text | — |
-| `--border` / `--input` | Borders and inputs | — |
-| `--sidebar-*` | Sidebar-specific variants | — |
+| Token                            | Purpose                   | Brand value |
+| -------------------------------- | ------------------------- | ----------- |
+| `--primary`                      | Green CTA / active states | #0D7023     |
+| `--secondary`                    | Yellow accent             | #F4C03B     |
+| `--accent`                       | Subtle green tint         | #283C3A     |
+| `--destructive`                  | Errors / delete actions   | red         |
+| `--muted` / `--muted-foreground` | Disabled / secondary text | —           |
+| `--border` / `--input`           | Borders and inputs        | —           |
+| `--sidebar-*`                    | Sidebar-specific variants | —           |
 
 Use existing components in `src/components/ui/` before creating new ones: `StatusBadge`, `Search`, `PageHeader`, `FilledButton`, `TextButton`, `EditTable`. Add new shadcn primitives via `pnpm dlx shadcn@latest add <component>`.
 
 **Naming and export rules for `src/components/ui/`:**
+
 - File names must be **PascalCase** (e.g. `Dialog.tsx`, not `dialog.tsx`).
 - Every component must be re-exported from `src/components/ui/index.ts`.
-- Import from the barrel: `import { ... } from '@/components/ui'`.
+- Import from the barrel: `import { ... } from '@/components'`.
 
 ### Commit Convention
 
