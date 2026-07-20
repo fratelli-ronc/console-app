@@ -47,7 +47,7 @@ const TableSkeleton: React.FC = () => (
     {Array.from({ length: 5 }).map((_, i) => (
       <tr key={i} className="border-b border-border last:border-0">
         {Array.from({ length: 5 }).map((_, j) => (
-          <td key={j} className="px-4 py-[20.5px]">
+          <td key={j} className="px-4 py-7">
             <div
               className="h-4 bg-muted rounded animate-pulse"
               style={{ width: j === 0 ? '60%' : j === 1 ? '80%' : '50%' }}
@@ -111,7 +111,8 @@ export const UsersPage: React.FC = () => {
     return (
       u.name.toLowerCase().includes(q) ||
       u.username.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q)
+      u.email.toLowerCase().includes(q) ||
+      u.phone.includes(q)
     )
   })
 
@@ -159,7 +160,7 @@ export const UsersPage: React.FC = () => {
                   Nome
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Email
+                  Contatti
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   Ruolo
@@ -188,7 +189,9 @@ export const UsersPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-muted-foreground">
-                      {user.email || '—'}
+                      <p>{user.email || '—'}</p>
+
+                      <p className="mt-1 text-sm">{user.phone || '-'}</p>
                     </td>
                     <td className="px-4 py-3.5">
                       <RoleBadge level={user.authorization} />
