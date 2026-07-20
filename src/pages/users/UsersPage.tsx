@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Users, Pencil } from 'lucide-react'
+import { RefreshCw, Users, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PageHeader, Search } from '@/components'
-import { listUsers, AuthUser, UserAuthLevel } from '@/client'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  FilledButton,
+  TextButton,
+} from '@/components'
+import { listUsers, deleteUser, AuthUser, UserAuthLevel } from '@/client'
 import { ROLE_LABELS } from '@/data'
 
 const RoleBadge: React.FC<{ level: UserAuthLevel }> = ({ level }) => {
@@ -55,6 +65,8 @@ export const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<AuthUser[] | null>(null)
   const [reloading, setReloading] = useState(false)
   const [search, setSearch] = useState('')
+  const [userToDelete, setUserToDelete] = useState<AuthUser | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchUsers = async () => {
     const res = await listUsers()
@@ -74,6 +86,17 @@ export const UsersPage: React.FC = () => {
     setReloading(true)
     await fetchUsers()
     setReloading(false)
+  }
+
+  const handleDelete = async () => {
+    if (!userToDelete) return
+    setDeleting(true)
+    const res = await deleteUser(userToDelete.id)
+    setDeleting(false)
+    if (res !== null) {
+      setUserToDelete(null)
+      await fetchUsers()
+    }
   }
 
   useEffect(() => {
@@ -107,7 +130,7 @@ export const UsersPage: React.FC = () => {
 
         <button
           onClick={handleReload}
-          className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors"
+          className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
         >
           <RefreshCw size={14} className={cn(reloading && 'animate-spin')} />
           Aggiorna
@@ -174,13 +197,22 @@ export const UsersPage: React.FC = () => {
                       <StatusBadge enabled={user.enabled} />
                     </td>
                     <td className="px-4 py-3.5 text-right">
-                      <button
-                        onClick={() => navigate(`/users/${user.id}`)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors"
-                      >
-                        <Pencil size={12} />
-                        Modifica
-                      </button>
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/users/${user.id}`)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
+                        >
+                          <Pencil size={12} />
+                          Modifica
+                        </button>
+                        <button
+                          onClick={() => setUserToDelete(user)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={12} />
+                          Elimina
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -189,6 +221,41 @@ export const UsersPage: React.FC = () => {
           </table>
         </div>
       )}
+
+      <Dialog
+        open={userToDelete !== null}
+        onOpenChange={(open) => !open && !deleting && setUserToDelete(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Elimina utente</DialogTitle>
+            <DialogDescription>
+              Stai per eliminare{' '}
+              <span className="font-medium text-foreground">
+                {userToDelete?.name}
+              </span>
+              . Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <TextButton
+              type="button"
+              disabled={deleting}
+              onClick={() => setUserToDelete(null)}
+            >
+              Annulla
+            </TextButton>
+            <FilledButton
+              type="button"
+              disabled={deleting}
+              onClick={handleDelete}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              {deleting ? 'Eliminazione…' : 'Elimina'}
+            </FilledButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
