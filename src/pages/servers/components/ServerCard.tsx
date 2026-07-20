@@ -5,10 +5,7 @@ import { ServerSnapshot } from '@/client/coolify'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
 import { RunSpinner } from '@/components/ui'
-import {
-  resourceStatusConfig,
-  fallbackResourceStatus,
-} from '@/data/statusConfig'
+import { resourceStatusConfig, fallbackResourceStatus } from '@/data'
 
 function formatBytes(bytes: number): string {
   if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`

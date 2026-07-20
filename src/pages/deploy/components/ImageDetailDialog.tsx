@@ -7,10 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui'
-import {
-  resourceStatusConfig,
-  fallbackResourceStatus,
-} from '@/data/statusConfig'
+import { resourceStatusConfig, fallbackResourceStatus } from '@/data'
 
 export const ImageDetailDialog: React.FC = () => {
   const { isOpen, imageName, version, services, close } = useImageDetailStore()

@@ -1,6 +1,6 @@
 import { ServerStatus } from '@/client/coolify'
 import { StatusBadge as StatusBadgeBase } from '@/components/ui/StatusBadge'
-import { serverStatusConfig } from '@/data/statusConfig'
+import { serverStatusConfig } from '@/data'
 
 interface StatusBadgeProps {
   status: ServerStatus

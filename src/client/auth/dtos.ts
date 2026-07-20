@@ -23,3 +23,28 @@ export interface UserProfile {
   phone: string
   avatar: string
 }
+
+export interface AuthUser {
+  id: number
+  username: string
+  authorization: UserAuthLevel
+  name: string
+  email: string
+  phone: string
+  avatar: string
+  enabled: boolean
+}
+
+export interface ListUsersResponse {
+  users: AuthUser[]
+}
+
+export interface UpsertUserRequest {
+  username: string
+  password?: string
+  name: string
+  email: string
+  phone: string
+  authLevel: UserAuthLevel
+  enabled?: boolean
+}

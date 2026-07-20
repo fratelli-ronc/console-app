@@ -3,35 +3,32 @@ import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Users, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PageHeader, Search } from '@/components'
-import { MOCK_USERS, User } from './mockUsers'
+import { listUsers, AuthUser, UserAuthLevel } from '@/client'
+import { ROLE_LABELS } from '@/data'
 
-const RoleBadge: React.FC<{ ruolo: User['ruolo'] }> = ({ ruolo }) => {
-  const colors: Record<User['ruolo'], string> = {
-    Admin: 'bg-primary/10 text-primary',
-    Operatore: 'bg-secondary/20 text-amber-700',
-    Lettore: 'bg-muted text-muted-foreground',
-  }
+const RoleBadge: React.FC<{ level: UserAuthLevel }> = ({ level }) => {
+  const { label, className } = ROLE_LABELS[level]
   return (
     <span
       className={cn(
         'inline-flex px-2 py-0.5 rounded-md text-xs font-medium',
-        colors[ruolo],
+        className,
       )}
     >
-      {ruolo}
+      {label}
     </span>
   )
 }
 
-const StatusBadge: React.FC<{ attivo: boolean }> = ({ attivo }) => (
+const StatusBadge: React.FC<{ enabled: boolean }> = ({ enabled }) => (
   <span className="inline-flex items-center gap-1.5 text-xs font-medium">
     <span
       className={cn(
         'w-1.5 h-1.5 rounded-full',
-        attivo ? 'bg-primary' : 'bg-muted-foreground',
+        enabled ? 'bg-primary' : 'bg-muted-foreground',
       )}
     />
-    {attivo ? 'Attivo' : 'Disattivo'}
+    {enabled ? 'Attivo' : 'Disattivo'}
   </span>
 )
 
@@ -55,29 +52,42 @@ const TableSkeleton: React.FC = () => (
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate()
 
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
+  const [users, setUsers] = useState<AuthUser[] | null>(null)
+  const [reloading, setReloading] = useState(false)
   const [search, setSearch] = useState('')
 
   const fetchUsers = async () => {
-    setLoading(true)
+    const res = await listUsers()
+    if (res)
+      setUsers(
+        res.sort((a, b) =>
+          a.authorization > b.authorization
+            ? -1
+            : a.authorization < b.authorization
+              ? 1
+              : 0,
+        ),
+      )
+  }
 
-    await new Promise((r) => setTimeout(r, 600))
-
-    setUsers(MOCK_USERS)
-    setLoading(false)
+  const handleReload = async () => {
+    setReloading(true)
+    await fetchUsers()
+    setReloading(false)
   }
 
   useEffect(() => {
     fetchUsers()
   }, [])
 
-  const filtered = users.filter((u) => {
+  const loading = users === null
+
+  const filtered = (users ?? []).filter((u) => {
     const q = search.toLowerCase()
 
     return (
-      u.nome.toLowerCase().includes(q) ||
-      u.cognome.toLowerCase().includes(q) ||
+      u.name.toLowerCase().includes(q) ||
+      u.username.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q)
     )
   })
@@ -96,10 +106,10 @@ export const UsersPage: React.FC = () => {
         <Search value={search} onChange={setSearch} />
 
         <button
-          onClick={fetchUsers}
+          onClick={handleReload}
           className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors"
         >
-          <RefreshCw size={14} className={cn(loading && 'animate-spin')} />
+          <RefreshCw size={14} className={cn(reloading && 'animate-spin')} />
           Aggiorna
         </button>
       </div>
@@ -146,17 +156,22 @@ export const UsersPage: React.FC = () => {
                     key={user.id}
                     className="hover:bg-muted/30 transition-colors"
                   >
-                    <td className="px-4 py-3.5 font-medium text-foreground">
-                      {user.nome} {user.cognome}
+                    <td className="px-4 py-3.5">
+                      <div className="font-medium text-foreground">
+                        {user.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {user.username}
+                      </div>
                     </td>
                     <td className="px-4 py-3.5 text-muted-foreground">
-                      {user.email}
+                      {user.email || '—'}
                     </td>
                     <td className="px-4 py-3.5">
-                      <RoleBadge ruolo={user.ruolo} />
+                      <RoleBadge level={user.authorization} />
                     </td>
                     <td className="px-4 py-3.5">
-                      <StatusBadge attivo={user.attivo} />
+                      <StatusBadge enabled={user.enabled} />
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <button

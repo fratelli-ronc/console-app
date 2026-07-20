@@ -8,10 +8,7 @@ import {
 } from '@/client/coolify'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import {
-  resourceStatusConfig,
-  fallbackResourceStatus,
-} from '@/data/statusConfig'
+import { resourceStatusConfig, fallbackResourceStatus } from '@/data'
 import { optimisticallySetResourceStatus } from '@/store/infraStore'
 
 export const RUNNING_STATUSES = new Set([
@@ -129,7 +126,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
                         'w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2',
                         key === 'stop' &&
                           'text-destructive hover:bg-destructive/10',
-                        disabled && 'opacity-40 cursor-not-allowed hover:bg-transparent',
+                        disabled &&
+                          'opacity-40 cursor-not-allowed hover:bg-transparent',
                       )}
                     >
                       <Icon className="relative bottom-px" size={13} />

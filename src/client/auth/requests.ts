@@ -1,5 +1,12 @@
 import authClient, { authenticatedAuthClient } from './client'
-import { LoginResponse, UserProfile } from './dtos'
+import {
+  AuthUser,
+  ListUsersResponse,
+  LoginResponse,
+  UpsertUserRequest,
+  UserProfile,
+} from './dtos'
+import { withErrorHandling } from '../withErrorHandling'
 
 export const login = async (
   username: string,
@@ -8,7 +15,7 @@ export const login = async (
   const { data } = await authClient.post<LoginResponse>('', {
     username,
     password,
-    target: "console",
+    target: 'console',
   })
   return data
 }
@@ -28,3 +35,29 @@ export const me = async (): Promise<UserProfile> => {
   const { data } = await authenticatedAuthClient.get<UserProfile>('/me')
   return data
 }
+
+export const listUsers = (): Promise<AuthUser[] | null> =>
+  withErrorHandling(async () => {
+    const { data } =
+      await authenticatedAuthClient.get<ListUsersResponse>('/list')
+    return data.users
+  })
+
+export const getUser = (id: number): Promise<AuthUser | null> =>
+  withErrorHandling(async () => {
+    const { data } = await authenticatedAuthClient.get<AuthUser>(`/${id}`)
+    return data
+  })
+
+export const createUser = (payload: UpsertUserRequest): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await authenticatedAuthClient.post('/new', payload)
+  })
+
+export const updateUser = (
+  id: number,
+  payload: UpsertUserRequest,
+): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await authenticatedAuthClient.put(`/${id}`, payload)
+  })

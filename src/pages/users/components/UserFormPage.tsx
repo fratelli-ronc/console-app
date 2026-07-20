@@ -1,17 +1,45 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import { TextInput } from '@/components'
-import { FilledButton } from '@/components'
+import { TextInput, FilledButton } from '@/components'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui'
 import { cn } from '@/lib/utils'
-import { User, UserRole } from '../mockUsers'
+import { AuthUser, UserAuthLevel, createUser, updateUser } from '@/client'
+import { ROLE_LABELS, ROLE_LEVELS } from '@/data'
 
 interface UserFormPageProps {
   mode: 'create' | 'edit'
-  initialValues?: Partial<User>
+  initialValues?: AuthUser
 }
 
-const ROLES: UserRole[] = ['Admin', 'Operatore', 'Lettore']
+const ToggleSwitch: React.FC<{
+  checked: boolean
+  onChange: (value: boolean) => void
+}> = ({ checked, onChange }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    onClick={() => onChange(!checked)}
+    className={cn(
+      'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200',
+      checked ? 'bg-primary' : 'bg-input',
+    )}
+  >
+    <span
+      className={cn(
+        'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200',
+        checked ? 'translate-x-5' : 'translate-x-0',
+      )}
+    />
+  </button>
+)
 
 export const UserFormPage: React.FC<UserFormPageProps> = ({
   mode,
@@ -19,14 +47,16 @@ export const UserFormPage: React.FC<UserFormPageProps> = ({
 }) => {
   const navigate = useNavigate()
 
-  const [nome, setNome] = useState(initialValues?.nome ?? '')
-  const [cognome, setCognome] = useState(initialValues?.cognome ?? '')
+  const [username, setUsername] = useState(initialValues?.username ?? '')
+  const [name, setName] = useState(initialValues?.name ?? '')
   const [email, setEmail] = useState(initialValues?.email ?? '')
-  const [ruolo, setRuolo] = useState<UserRole>(
-    initialValues?.ruolo ?? 'Lettore',
+  const [phone, setPhone] = useState(initialValues?.phone ?? '')
+  const [authLevel, setAuthLevel] = useState<UserAuthLevel>(
+    initialValues?.authorization ?? UserAuthLevel.ReadOnly,
   )
   const [password, setPassword] = useState('')
-  const [attivo, setAttivo] = useState(initialValues?.attivo ?? true)
+  const [changePassword, setChangePassword] = useState(false)
+  const [enabled, setEnabled] = useState(initialValues?.enabled ?? true)
   const [loading, setLoading] = useState(false)
 
   const isCreate = mode === 'create'
@@ -38,9 +68,23 @@ export const UserFormPage: React.FC<UserFormPageProps> = ({
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 800))
+
+    const payload = {
+      username,
+      name,
+      email,
+      phone,
+      authLevel,
+      ...(isCreate || changePassword ? { password } : {}),
+      ...(isCreate ? {} : { enabled }),
+    }
+
+    const res = isCreate
+      ? await createUser(payload)
+      : await updateUser(initialValues!.id, payload)
+
     setLoading(false)
-    navigate('/users')
+    if (res !== null) navigate('/users')
   }
 
   return (
@@ -67,45 +111,58 @@ export const UserFormPage: React.FC<UserFormPageProps> = ({
             <TextInput
               required
               label="Nome"
-              value={nome}
-              placeholder="Marco"
-              onChange={setNome}
+              value={name}
+              placeholder="Marco Rossi"
+              onChange={setName}
             />
             <TextInput
               required
-              label="Cognome"
-              value={cognome}
-              placeholder="Rossi"
-              onChange={setCognome}
+              label="Username"
+              value={username}
+              placeholder="marco.rossi"
+              onChange={setUsername}
             />
           </div>
 
-          <TextInput
-            required
-            label="Email"
-            value={email}
-            type="email"
-            placeholder="nome@fratellironc.it"
-            onChange={setEmail}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <TextInput
+              required
+              label="Email"
+              value={email}
+              type="email"
+              placeholder="nome@fratellironc.it"
+              onChange={setEmail}
+            />
+            <TextInput
+              label="Telefono"
+              value={phone}
+              type="tel"
+              placeholder="+393332227777"
+              onChange={setPhone}
+            />
+          </div>
 
           {/* Ruolo */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-foreground">Ruolo</label>
-            <select
-              value={ruolo}
-              onChange={(e) => setRuolo(e.target.value as UserRole)}
-              className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+            <Select
+              value={String(authLevel)}
+              onValueChange={(v) => setAuthLevel(Number(v) as UserAuthLevel)}
             >
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_LEVELS.map((level) => (
+                  <SelectItem key={level} value={String(level)}>
+                    {ROLE_LABELS[level].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {isCreate && (
+          {isCreate ? (
             <TextInput
               required
               label="Password"
@@ -114,6 +171,34 @@ export const UserFormPage: React.FC<UserFormPageProps> = ({
               placeholder="••••••••"
               onChange={setPassword}
             />
+          ) : (
+            <div className="flex flex-col gap-3 py-3 px-4 rounded-lg border border-border bg-muted/40">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Cambia password
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Lascia disattivato per mantenere la password attuale.
+                  </p>
+                </div>
+                <ToggleSwitch
+                  checked={changePassword}
+                  onChange={setChangePassword}
+                />
+              </div>
+
+              {changePassword && (
+                <TextInput
+                  required
+                  label="Nuova password"
+                  value={password}
+                  type="password"
+                  placeholder="••••••••"
+                  onChange={setPassword}
+                />
+              )}
+            </div>
           )}
 
           {!isCreate && (
@@ -123,28 +208,12 @@ export const UserFormPage: React.FC<UserFormPageProps> = ({
                   Stato account
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {attivo
+                  {enabled
                     ? "L'utente può accedere al sistema."
                     : "L'utente non può accedere al sistema."}
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={attivo}
-                onClick={() => setAttivo((v) => !v)}
-                className={cn(
-                  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200',
-                  attivo ? 'bg-primary' : 'bg-input',
-                )}
-              >
-                <span
-                  className={cn(
-                    'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200',
-                    attivo ? 'translate-x-5' : 'translate-x-0',
-                  )}
-                />
-              </button>
+              <ToggleSwitch checked={enabled} onChange={setEnabled} />
             </div>
           )}
 
