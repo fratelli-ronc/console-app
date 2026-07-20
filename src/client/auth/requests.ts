@@ -61,3 +61,8 @@ export const updateUser = (
   withErrorHandling(async () => {
     await authenticatedAuthClient.put(`/${id}`, payload)
   })
+
+export const deleteUser = (id: number): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await authenticatedAuthClient.delete(`/${id}`)
+  })

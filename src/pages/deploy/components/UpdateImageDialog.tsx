@@ -24,7 +24,7 @@ import {
   Spinner,
   StatusDot,
   TextButton,
-} from '@/components/ui'
+} from '@/components'
 
 const REGISTRY_HOST = '10.0.10.69'
 const CALL_DELAY_MS = 2000

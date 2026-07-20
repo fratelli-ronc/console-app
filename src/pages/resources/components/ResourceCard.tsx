@@ -7,7 +7,7 @@ import {
   ServerResouce,
 } from '@/client/coolify'
 import { cn } from '@/lib/utils'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import { StatusBadge } from '@/components'
 import { resourceStatusConfig, fallbackResourceStatus } from '@/data'
 import { optimisticallySetResourceStatus } from '@/store/infraStore'
 

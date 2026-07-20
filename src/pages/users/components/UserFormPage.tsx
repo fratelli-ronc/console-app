@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui'
+} from '@/components'
 import { cn } from '@/lib/utils'
 import { AuthUser, UserAuthLevel, createUser, updateUser } from '@/client'
 import { ROLE_LABELS, ROLE_LEVELS } from '@/data'

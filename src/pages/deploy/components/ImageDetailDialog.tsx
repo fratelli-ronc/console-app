@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui'
+} from '@/components'
 import { resourceStatusConfig, fallbackResourceStatus } from '@/data'
 
 export const ImageDetailDialog: React.FC = () => {

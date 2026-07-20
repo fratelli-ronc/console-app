@@ -4,7 +4,7 @@ import { Server as ServerIcon } from 'lucide-react'
 import { ServerSnapshot } from '@/client/coolify'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
-import { RunSpinner } from '@/components/ui'
+import { RunSpinner } from '@/components'
 import { resourceStatusConfig, fallbackResourceStatus } from '@/data'
 
 function formatBytes(bytes: number): string {

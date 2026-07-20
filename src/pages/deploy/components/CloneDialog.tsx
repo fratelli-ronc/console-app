@@ -26,7 +26,7 @@ import {
   DialogFooter,
   FilledButton,
   TextButton,
-} from '@/components/ui'
+} from '@/components'
 
 const STEPS = ['Server', 'Progetto', 'Risultato'] as const
 

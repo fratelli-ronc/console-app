@@ -14,7 +14,7 @@ import {
   ResourceCardSkeleton,
   getDisabledActions,
 } from './components/ResourceCard'
-import { OutlinedButton } from '@/components/ui'
+import { OutlinedButton } from '@/components'
 
 const BULK_ACTION_DELAY_MS = 500
 
@@ -27,9 +27,7 @@ async function runBulkAction(
     await action(resources[i])
     onProgress(i + 1, resources.length)
     if (i < resources.length - 1) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, BULK_ACTION_DELAY_MS),
-      )
+      await new Promise((resolve) => setTimeout(resolve, BULK_ACTION_DELAY_MS))
     }
   }
 }
