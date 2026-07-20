@@ -93,7 +93,7 @@ export const TestPage: React.FC = () => {
                 key={label}
                 onClick={() => setTag(value)}
                 className={cn(
-                  'px-3 py-1 rounded-md text-xs font-medium transition-colors',
+                  'px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer',
                   tag === value
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',

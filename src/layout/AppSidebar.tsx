@@ -134,7 +134,7 @@ export const AppSidebar: React.FC = () => {
                       <button
                         onClick={() => toggleSubmenu(item.label)}
                         className={cn(
-                          'w-full flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors',
+                          'w-full flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors cursor-pointer',
                           'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                         )}
                       >
@@ -217,7 +217,7 @@ export const AppSidebar: React.FC = () => {
             <button
               onClick={handleLogout}
               title="Logout"
-              className="shrink-0 rounded-md p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              className="shrink-0 rounded-md p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer"
             >
               <LogOut size={16} />
             </button>
@@ -226,7 +226,7 @@ export const AppSidebar: React.FC = () => {
           <button
             onClick={handleLogout}
             className={cn(
-              'w-full flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors',
+              'w-full flex items-center rounded-md px-3 py-3 text-sm font-medium transition-colors cursor-pointer',
               'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
             )}
           >

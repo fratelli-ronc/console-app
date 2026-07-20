@@ -46,7 +46,7 @@ export const ServersPage: React.FC = () => {
               key={f}
               onClick={() => setStatusFilter(f)}
               className={cn(
-                'px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize',
+                'px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize cursor-pointer',
                 statusFilter === f
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',

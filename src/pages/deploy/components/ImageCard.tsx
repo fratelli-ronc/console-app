@@ -59,7 +59,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
 
         <button
           onClick={() => openUpdateDialog(imageName, versions)}
-          className="ml-1 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+          className="ml-1 p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           <CircleFadingArrowUp size={20} />
         </button>
@@ -95,7 +95,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
               </span>
               <button
                 onClick={() => openDialog(imageName, version, services)}
-                className="ml-1 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                className="ml-1 p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 <Info size={13} />
               </button>

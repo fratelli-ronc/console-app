@@ -22,7 +22,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       </div>
 
       {newLabel && (
-        <button onClick={onNewClick} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:bg-primary/80 transition-colors shrink-0">
+        <button onClick={onNewClick} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:bg-primary/80 transition-colors shrink-0 cursor-pointer">
           <Plus size={16} />
           {newLabel}
         </button>

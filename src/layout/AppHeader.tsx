@@ -94,7 +94,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ scrollContainer }) => {
       {parentHref !== null && (
         <button
           onClick={() => navigate(parentHref)}
-          className="shrink-0 flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="shrink-0 flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
         >
           <ArrowLeft size={18} />
         </button>

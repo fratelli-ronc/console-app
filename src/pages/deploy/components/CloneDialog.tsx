@@ -297,7 +297,7 @@ const StepPickServer: React.FC<StepPickServerProps> = ({
                   type="button"
                   onClick={() => onSelect(server)}
                   className={cn(
-                    'flex items-center gap-3 w-full rounded-lg border px-4 py-3 text-left transition-colors',
+                    'flex items-center gap-3 w-full rounded-lg border px-4 py-3 text-left transition-colors cursor-pointer',
                     isSelected
                       ? 'border-primary bg-accent/60'
                       : 'border-border hover:border-primary/50 hover:bg-accent/30',
@@ -398,7 +398,7 @@ const StepPickProject: React.FC<StepPickProjectProps> = ({
                   type="button"
                   onClick={() => onSelect(project)}
                   className={cn(
-                    'flex items-center gap-3 w-full rounded-lg border px-4 py-3 text-left transition-colors',
+                    'flex items-center gap-3 w-full rounded-lg border px-4 py-3 text-left transition-colors cursor-pointer',
                     isSelected
                       ? 'border-primary bg-accent/60'
                       : 'border-border hover:border-primary/50 hover:bg-accent/30',

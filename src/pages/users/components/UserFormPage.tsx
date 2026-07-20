@@ -93,7 +93,7 @@ export const UserFormPage: React.FC<UserFormPageProps> = ({
       <div className="flex items-start gap-3">
         <button
           onClick={() => navigate(-1)}
-          className="mt-0.5 h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
+          className="mt-0.5 h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0 cursor-pointer"
         >
           <ChevronLeft size={16} />
         </button>
@@ -228,7 +228,7 @@ export const UserFormPage: React.FC<UserFormPageProps> = ({
             <button
               type="button"
               onClick={() => navigate('/users')}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               Annulla
             </button>

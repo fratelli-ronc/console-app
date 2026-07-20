@@ -430,7 +430,7 @@ function EditTableInner<
           <button
             onClick={prevPage}
             disabled={activePage === 0}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors text-sm"
+            className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors text-sm cursor-pointer"
           >
             ‹
           </button>
@@ -448,7 +448,7 @@ function EditTableInner<
                 key={p}
                 onClick={() => goToPage(p)}
                 className={cn(
-                  'inline-flex items-center justify-center w-7 h-7 rounded-md text-xs tabular-nums transition-colors',
+                  'inline-flex items-center justify-center w-7 h-7 rounded-md text-xs tabular-nums transition-colors cursor-pointer',
                   p === activePage
                     ? 'bg-primary text-primary-foreground font-medium'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border',
@@ -462,7 +462,7 @@ function EditTableInner<
           <button
             onClick={nextPage}
             disabled={activePage === pageCount - 1}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors text-sm"
+            className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors text-sm cursor-pointer"
           >
             ›
           </button>

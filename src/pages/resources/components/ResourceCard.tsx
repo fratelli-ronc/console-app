@@ -100,7 +100,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
                 e.stopPropagation()
                 setMenuOpen((v) => !v)
               }}
-              className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
             >
               <MoreVertical size={15} />
             </button>
@@ -123,7 +123,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({ resource }) => {
                         setMenuOpen(false)
                       }}
                       className={cn(
-                        'w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2',
+                        'w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2 cursor-pointer',
                         key === 'stop' &&
                           'text-destructive hover:bg-destructive/10',
                         disabled &&
