@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Users, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { PageHeader, Search } from '@/components'
+import { FilterPills, PageHeader, Search } from '@/components'
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,24 @@ import {
   DialogDescription,
   DialogFooter,
   FilledButton,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   TextButton,
 } from '@/components'
 import { listUsers, deleteUser, AuthUser, UserAuthLevel } from '@/client'
-import { ROLE_LABELS } from '@/data'
+import { ROLE_LABELS, ROLE_LEVELS } from '@/data'
+
+const STATUS_FILTERS: {
+  label: string
+  value: 'all' | 'enabled' | 'disabled'
+}[] = [
+  { label: 'Tutti', value: 'all' },
+  { label: 'Attivo', value: 'enabled' },
+  { label: 'Disattivo', value: 'disabled' },
+]
 
 const RoleBadge: React.FC<{ level: UserAuthLevel }> = ({ level }) => {
   const { label, className } = ROLE_LABELS[level]
@@ -65,6 +79,10 @@ export const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<AuthUser[] | null>(null)
   const [reloading, setReloading] = useState(false)
   const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState<UserAuthLevel | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'enabled' | 'disabled'
+  >('all')
   const [userToDelete, setUserToDelete] = useState<AuthUser | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -108,12 +126,17 @@ export const UsersPage: React.FC = () => {
   const filtered = (users ?? []).filter((u) => {
     const q = search.toLowerCase()
 
-    return (
+    const matchesSearch =
       u.name.toLowerCase().includes(q) ||
       u.username.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
       u.phone.includes(q)
-    )
+    const matchesRole = roleFilter === 'all' || u.authorization === roleFilter
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'enabled' ? u.enabled : !u.enabled)
+
+    return matchesSearch && matchesRole && matchesStatus
   })
 
   return (
@@ -128,6 +151,31 @@ export const UsersPage: React.FC = () => {
       {/* Toolbar */}
       <div className="flex items-center gap-3">
         <Search value={search} onChange={setSearch} />
+
+        <Select
+          value={String(roleFilter)}
+          onValueChange={(v) =>
+            setRoleFilter(v === 'all' ? 'all' : (Number(v) as UserAuthLevel))
+          }
+        >
+          <SelectTrigger className="w-72 bg-background">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti i ruoli</SelectItem>
+            {ROLE_LEVELS.map((level) => (
+              <SelectItem key={level} value={String(level)}>
+                {ROLE_LABELS[level].label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <FilterPills
+          options={STATUS_FILTERS}
+          value={statusFilter}
+          onChange={setStatusFilter}
+        />
 
         <button
           onClick={handleReload}

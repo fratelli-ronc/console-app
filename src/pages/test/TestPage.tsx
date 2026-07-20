@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react'
-import { cn } from '@/lib/utils'
 import {
   CellSelect,
   EditTablePanel,
+  FilterPills,
   Search,
   type EditTableColumn,
   type FetchParams,
@@ -84,25 +84,14 @@ export const TestPage: React.FC = () => {
         <>
           <Search value={search} onChange={setSearch} />
 
-          <div className="flex items-center gap-1.5 bg-muted rounded-lg p-1">
-            {[
+          <FilterPills
+            options={[
               { label: 'Tutti', value: null },
-              ...TAGS.map((t) => ({ label: t.label, value: t.key })),
-            ].map(({ label, value }) => (
-              <button
-                key={label}
-                onClick={() => setTag(value)}
-                className={cn(
-                  'px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer',
-                  tag === value
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+              ...TAGS.map((t) => ({ label: t.label, value: t.key as string | null })),
+            ]}
+            value={tag}
+            onChange={setTag}
+          />
         </>
       }
     />

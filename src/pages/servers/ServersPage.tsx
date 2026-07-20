@@ -4,7 +4,13 @@ import { cn } from '@/lib/utils'
 import { ServerStatus } from '@/client/coolify'
 import { useInfraStore } from '@/store'
 import { ServerCard, ServerCardSkeleton } from './components/ServerCard'
-import { PageHeader, Search } from '@/components'
+import { FilterPills, PageHeader, Search } from '@/components'
+
+const STATUS_FILTERS: { label: string; value: ServerStatus | 'all' }[] = [
+  { label: 'Tutti', value: 'all' },
+  { label: 'Online', value: 'online' },
+  { label: 'Offline', value: 'offline' },
+]
 
 export const ServersPage: React.FC = () => {
   const snapshot = useInfraStore((s) => s.snapshot)
@@ -40,22 +46,11 @@ export const ServersPage: React.FC = () => {
         <Search value={search} onChange={setSearch} />
 
         {/* Status filter pills */}
-        <div className="flex items-center gap-1.5 bg-muted rounded-lg p-1">
-          {(['all', 'online', 'offline'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={cn(
-                'px-3 py-1 rounded-md text-xs font-medium transition-colors capitalize cursor-pointer',
-                statusFilter === f
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {f === 'all' ? 'Tutti' : f === 'online' ? 'Online' : 'Offline'}
-            </button>
-          ))}
-        </div>
+        <FilterPills
+          options={STATUS_FILTERS}
+          value={statusFilter}
+          onChange={setStatusFilter}
+        />
 
         <div
           className={cn(
