@@ -68,7 +68,8 @@ export const TreeRow: React.FC<TreeRowProps> = ({
           paddingLeft:
             depth === 0
               ? BASE_PADDING
-              : CHILD_BASE_PADDING + (depth - 1) * INDENT,
+              : CHILD_BASE_PADDING +
+                (depth - 1) * (depth > 1 ? INDENT * 2 : INDENT),
         }}
         className={cn(
           'relative flex h-11 items-center gap-2 rounded-lg pr-2 transition-colors outline-none',
@@ -85,9 +86,11 @@ export const TreeRow: React.FC<TreeRowProps> = ({
           <div
             className="pointer-events-none absolute inset-y-0 left-3"
             style={{
-              width: depth * INDENT,
+              width: depth * (depth > 1 ? INDENT * 2 : INDENT),
               backgroundImage:
-                'repeating-linear-gradient(to right, transparent 0 10px, var(--border) 10px 11px, transparent 11px 24px)',
+                depth > 1
+                  ? 'repeating-linear-gradient(to right, transparent 0 10px, var(--border) 10px 11px, transparent 11px 48px)'
+                  : 'repeating-linear-gradient(to right, transparent 0 10px, var(--border) 10px 11px, transparent 11px 24px)',
             }}
           />
         )}
