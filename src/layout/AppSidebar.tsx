@@ -12,6 +12,7 @@ import {
   TestTube,
   HardDriveDownload,
   UserCog,
+  Network,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { clearToken, clearRefreshToken } from '@/client/tokenStore'
@@ -55,6 +56,11 @@ const navSections: NavSection[] = [
         label: 'Deploy',
         href: '/deploy',
         icon: <HardDriveDownload size={20} />,
+      },
+      {
+        label: 'Alberatura',
+        href: '/server-tree',
+        icon: <Network size={20} />,
       },
     ],
   },

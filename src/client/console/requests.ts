@@ -1,9 +1,21 @@
 import consoleClient from './client'
-import { Container } from './dtos'
+import { ServerTreeRelation } from './dtos'
 import { withErrorHandling } from '../withErrorHandling'
 
-export const getContainers = (): Promise<Container[] | null> =>
+export const getServerTree = (): Promise<ServerTreeRelation[] | null> =>
   withErrorHandling(async () => {
-    const { data } = await consoleClient.get<Container[]>('/containers')
+    const { data } =
+      await consoleClient.get<ServerTreeRelation[]>('/server-tree')
+    return data
+  })
+
+export const saveServerTree = (
+  relations: ServerTreeRelation[],
+): Promise<ServerTreeRelation[] | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.put<ServerTreeRelation[]>(
+      '/server-tree',
+      relations,
+    )
     return data
   })

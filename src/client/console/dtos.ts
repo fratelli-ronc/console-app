@@ -1,4 +1,5 @@
-export interface Container {
+export interface ServerTreeRelation {
   id: string
-  name: string
+  serverId: string
+  childrenServerIds: string[]
 }

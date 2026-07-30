@@ -10,6 +10,7 @@ const ROUTE_LABELS: Record<string, string> = {
   profilation: 'Profilazione',
   resources: 'Risorse',
   servers: 'Server',
+  'server-tree': 'Alberatura',
   settings: 'Impostazioni',
   test: 'Test',
   users: 'Utenti',

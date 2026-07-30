@@ -9,6 +9,7 @@ import {
   ProfilationPage,
   ResoucesPage,
   ServersPage,
+  ServerTreePage,
   SettingsPage,
   TestPage,
   UsersPage,
@@ -29,6 +30,8 @@ function App() {
           <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />
 
           <Route path="/deploy" element={<DeployPage />} />
+
+          <Route path="/server-tree" element={<ServerTreePage />} />
 
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/new" element={<NewUserPage />} />
