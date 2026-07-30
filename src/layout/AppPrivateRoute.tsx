@@ -26,9 +26,8 @@ export const AppPrivateRoute: React.FC = () => {
           return
         }
 
-        // Keep the outlet unmounted until /me settles, so no other
-        // authenticated request fires in parallel and races the
-        // interceptor's token refresh with a second, independent 401.
+        // Keep the outlet unmounted until /me settles, so authenticated
+        // pages never flash before we know the profile actually loaded.
         me()
           .then((profile) => {
             if (cancelled) return

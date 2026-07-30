@@ -10,6 +10,37 @@ import {
 
 type RefreshResult = { token: string; refreshToken: string }
 
+// Shared across every instance wrapped by this factory (consoleClient,
+// coolifyClient, ...) so concurrent 401s from any of them — the common
+// case when a page fires multiple requests at once — piggyback on a
+// single refresh instead of each racing their own, which previously let
+// a later, now-stale refresh token wipe out the tokens a prior refresh
+// had just set.
+let refreshPromise: Promise<RefreshResult> | null = null
+
+function refreshTokens(
+  doRefresh: (refreshToken: string) => Promise<RefreshResult>,
+): Promise<RefreshResult> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const rt = await getRefreshToken()
+
+      if (!rt) throw new Error('no refresh token')
+
+      const result = await doRefresh(rt)
+
+      await setToken(result.token)
+      await setRefreshToken(result.refreshToken)
+
+      return result
+    })().finally(() => {
+      refreshPromise = null
+    })
+  }
+
+  return refreshPromise
+}
+
 export function withAuthInterceptors(
   instance: AxiosInstance,
   doRefresh: (refreshToken: string) => Promise<RefreshResult>,
@@ -30,14 +61,7 @@ export function withAuthInterceptors(
         original._retry = true
 
         try {
-          const rt = await getRefreshToken()
-
-          if (!rt) throw new Error('no refresh token')
-
-          const result = await doRefresh(rt)
-
-          await setToken(result.token)
-          await setRefreshToken(result.refreshToken)
+          const result = await refreshTokens(doRefresh)
 
           original.headers.Authorization = `Bearer ${result.token}`
 
