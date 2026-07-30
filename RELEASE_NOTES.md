@@ -2,13 +2,12 @@
 
 ### New Features
 
-- **Update service image tag from the deploy page** — Clicking the new update icon on an `ImageCard` opens an `UpdateImageDialog` where you can pick a tag from the registry (or enter a custom one), select which services to update, and apply it. Progress is tracked per service with polling against `listServicesByImage` until each one comes back up on the new tag, showing success/failed indicators live. Backed by new `updateServiceImageTag` and `listImageTags` API calls.
-- **Manual refresh on the Deploy page** — An "Aggiorna" button reloads the images list on demand, and it's also triggered automatically once an image update completes.
-- **Splash screen on app load** — `AppPrivateRoute` now shows a new `SplashScreen` (logo + spinner) while the session is being validated, instead of rendering nothing. The private outlet only mounts once `/me` has resolved, avoiding a race where other authenticated requests could fire in parallel and trigger a duplicate token refresh.
-- **Pending/running status indicators** — `StatusBadge` gained a `pending` state that swaps its static dot for an animated `RunSpinner`, and a new `StatusIndicator` module (`Spinner`, `RunSpinner`, `StatusDot`) is now shared across `ResourceCard`, `ServerCard`, and the deploy update flow. Transitional resource states (`starting`, `stopping`, `restarting`) now render with a spinner instead of a static dot.
-- **`degraded:unhealthy` resource status** — Added to `resourceStatusConfig` with its own yellow badge/label, alongside the existing `running:unhealthy` state.
+- **Server tree management** — New "Alberatura server" page for organizing servers into a parent/child hierarchy. Drag and drop a server onto another to re-parent it, or use the "Sposta" menu to search for a target and move it without dragging. Branches can be collapsed/expanded, search highlights matches plus their ancestors, and pending moves are staged locally with "Salva modifiche"/"Annulla" before being persisted.
+- **User profilation page** — New "Profilazione" page listing each user's access scope (Completo/Limitato) with search and an access-level filter.
+- **Users table filters and delete** — The users table now supports filtering by role and by active/disabled status, shows each user's phone number alongside their email, and supports deleting a user (with a confirmation dialog).
 
 ### Fixes
 
-- **Stale SSE data after reconnects** — `infraStore`'s stream logic now tracks a `streamGeneration` counter so that a superseded connection attempt (e.g. after a fast `disconnect`/reconnect) can no longer resolve and apply state from an old, in-flight request.
-- **Refresh token field naming** — Standardized on `refreshToken` (was inconsistently `refresh_token` in places) across `client/auth/client.ts`, `dtos.ts`, `withAuthInterceptors.ts`, `AuthPage.tsx`, and the SSE reconnect path in `infraStore.ts`.
+- **Concurrent 401s could clear valid tokens** — Token refresh is now serialized across all API clients, so simultaneous 401s from different requests share a single refresh instead of racing independent ones; a stale refresh could previously overwrite tokens a prior refresh had just set, effectively logging the user out.
+- **Logout wasn't calling the auth service** — Logging out now correctly calls the auth service's logout endpoint before clearing local tokens, instead of only clearing them locally.
+- **Server tree guide lines** — Fixed misplaced and "ghost" vertical guide lines in the server tree view.
