@@ -89,8 +89,8 @@ export const TreeRow: React.FC<TreeRowProps> = ({
               width: depth * (depth > 1 ? INDENT * 2 : INDENT),
               backgroundImage:
                 depth > 1
-                  ? 'repeating-linear-gradient(to right, transparent 0 10px, var(--border) 10px 11px, transparent 11px 48px)'
-                  : 'repeating-linear-gradient(to right, transparent 0 10px, var(--border) 10px 11px, transparent 11px 24px)',
+                  ? 'repeating-linear-gradient(to right, transparent 0 10px, color-mix(in oklch, var(--muted-foreground) 45%, transparent) 10px 11px, transparent 11px 48px)'
+                  : 'repeating-linear-gradient(to right, transparent 0 10px, color-mix(in oklch, var(--muted-foreground) 45%, transparent) 10px 11px, transparent 11px 24px)',
             }}
           />
         )}
