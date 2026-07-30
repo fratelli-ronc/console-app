@@ -4,6 +4,7 @@ import {
   ListUsersResponse,
   LoginResponse,
   UpsertUserRequest,
+  UserProfilation,
   UserProfile,
 } from './dtos'
 import { withErrorHandling } from '../withErrorHandling'
@@ -65,4 +66,11 @@ export const updateUser = (
 export const deleteUser = (id: number): Promise<void | null> =>
   withErrorHandling(async () => {
     await authenticatedAuthClient.delete(`/${id}`)
+  })
+
+export const listProfilations = (): Promise<UserProfilation[] | null> =>
+  withErrorHandling(async () => {
+    const { data } =
+      await authenticatedAuthClient.get<UserProfilation[]>('/profilation')
+    return data
   })

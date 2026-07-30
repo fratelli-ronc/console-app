@@ -48,3 +48,12 @@ export interface UpsertUserRequest {
   authLevel: UserAuthLevel
   enabled?: boolean
 }
+
+export interface UserProfilationScope {
+  allowAll: boolean
+}
+
+export interface UserProfilation {
+  user: AuthUser
+  scope: UserProfilationScope
+}

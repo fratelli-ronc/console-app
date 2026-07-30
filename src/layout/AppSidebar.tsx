@@ -11,6 +11,7 @@ import {
   Server,
   TestTube,
   HardDriveDownload,
+  UserCog,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { clearToken, clearRefreshToken } from '@/client/tokenStore'
@@ -58,9 +59,19 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: 'Altro',
+    title: 'Amministrazione',
     items: [
       { label: 'Utenti', href: '/users', icon: <Users size={20} /> },
+      {
+        label: 'Profilazione',
+        href: '/profilation',
+        icon: <UserCog size={20} />,
+      },
+    ],
+  },
+  {
+    title: 'Altro',
+    items: [
       {
         label: 'Impostazioni',
         href: '/settings',

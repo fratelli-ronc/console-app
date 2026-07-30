@@ -6,6 +6,7 @@ import {
   EditUserPage,
   HomePage,
   NewUserPage,
+  ProfilationPage,
   ResoucesPage,
   ServersPage,
   SettingsPage,
@@ -32,6 +33,8 @@ function App() {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/new" element={<NewUserPage />} />
           <Route path="/users/:userId" element={<EditUserPage />} />
+
+          <Route path="/profilation" element={<ProfilationPage />} />
 
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

@@ -5,13 +5,14 @@ import { ArrowLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const ROUTE_LABELS: Record<string, string> = {
-  servers: 'Server',
-  resources: 'Risorse',
-  users: 'Utenti',
-  settings: 'Impostazioni',
-  new: 'Nuovo',
-  test: 'Test',
   deploy: 'Deploy',
+  new: 'Nuovo',
+  profilation: 'Profilazione',
+  resources: 'Risorse',
+  servers: 'Server',
+  settings: 'Impostazioni',
+  test: 'Test',
+  users: 'Utenti',
 }
 
 function isStaticSegment(seg: string): boolean {
