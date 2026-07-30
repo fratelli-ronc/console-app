@@ -1,5 +1,5 @@
 import consoleClient from './client'
-import { ServerTreeRelation } from './dtos'
+import { ServerTreeRelation, ServerTreeRelationRequest } from './dtos'
 import { withErrorHandling } from '../withErrorHandling'
 
 export const getServerTree = (): Promise<ServerTreeRelation[] | null> =>
@@ -10,7 +10,7 @@ export const getServerTree = (): Promise<ServerTreeRelation[] | null> =>
   })
 
 export const saveServerTree = (
-  relations: ServerTreeRelation[],
+  relations: ServerTreeRelationRequest[],
 ): Promise<ServerTreeRelation[] | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.put<ServerTreeRelation[]>(

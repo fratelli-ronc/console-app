@@ -11,11 +11,6 @@ export interface TreeServer {
 // Static IP of the center node — the root of the tree.
 export const CENTRAL_SERVER_IP = '10.0.10.69'
 
-// The console /server-tree endpoint doesn't exist yet, so relations are
-// mocked as empty for now (every server falls back to being a direct child
-// of the center). Swap for a real getServerTree() call once it ships.
-export const MOCK_SERVER_TREE_RELATIONS: ServerTreeRelation[] = []
-
 // Numeric comparison of dotted IPv4 addresses (a plain string sort would put
 // "10.0.10.10" before "10.0.10.9").
 export function compareIp(a: string, b: string): number {

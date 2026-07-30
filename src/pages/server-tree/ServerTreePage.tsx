@@ -18,13 +18,10 @@ import {
   Search,
   TextButton,
 } from '@/components'
+import { getServerTree, saveServerTree } from '@/client/console'
+import type { ServerTreeRelationRequest } from '@/client/console'
 import { listServers } from '@/client/coolify'
-import {
-  buildTreeServers,
-  compareIp,
-  MOCK_SERVER_TREE_RELATIONS,
-  type TreeServer,
-} from './data'
+import { buildTreeServers, compareIp, type TreeServer } from './data'
 import { TreeRow } from './components/TreeRow'
 import type { MoveTarget } from './components/MoveMenu'
 
@@ -42,12 +39,16 @@ export const ServerTreePage: React.FC = () => {
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [dragId, setDragId] = useState<string | null>(null)
   const [menuFor, setMenuFor] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
-      const serverList = await listServers()
+      const [serverList, relations] = await Promise.all([
+        listServers(),
+        getServerTree(),
+      ])
       if (serverList) {
-        setServers(buildTreeServers(serverList, MOCK_SERVER_TREE_RELATIONS))
+        setServers(buildTreeServers(serverList, relations ?? []))
       }
       setLoading(false)
     }
@@ -194,7 +195,21 @@ export const ServerTreePage: React.FC = () => {
 
   const dirtyCount = Object.keys(draft).length
 
-  function handleSave() {
+  async function handleSave() {
+    // The center's own children are implied (any server absent from the
+    // saved relations falls back to being its direct child) so that relation
+    // is omitted here.
+    const relations: ServerTreeRelationRequest[] = Array.from(
+      childrenMap.entries(),
+    )
+      .filter(([serverId]) => serverId !== root?.id)
+      .map(([serverId, childrenServerIds]) => ({ serverId, childrenServerIds }))
+
+    setSaving(true)
+    const result = await saveServerTree(relations)
+    setSaving(false)
+    if (!result) return
+
     setServers((prev) =>
       prev.map((s) =>
         draft[s.id] !== undefined ? { ...s, parent: draft[s.id] } : s,
@@ -336,12 +351,16 @@ export const ServerTreePage: React.FC = () => {
 
           <span className="ml-auto" />
 
-          <OutlinedButton type="button" onClick={() => setDraft({})}>
+          <OutlinedButton
+            type="button"
+            disabled={saving}
+            onClick={() => setDraft({})}
+          >
             Annulla
           </OutlinedButton>
 
-          <FilledButton type="button" onClick={handleSave}>
-            Salva modifiche
+          <FilledButton type="button" disabled={saving} onClick={handleSave}>
+            {saving ? 'Salvataggio...' : 'Salva modifiche'}
           </FilledButton>
         </div>
       )}
