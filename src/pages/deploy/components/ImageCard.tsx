@@ -32,7 +32,7 @@ export const ImageCard: React.FC<ImageCardProps> = ({
     ? imageName.split('/')[0]
     : 'official'
   const versionEntries = Object.entries(versions).sort(([a], [b]) =>
-    b.localeCompare(a),
+    b.localeCompare(a, undefined, { numeric: true }),
   )
 
   return (

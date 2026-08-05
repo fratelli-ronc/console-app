@@ -150,7 +150,11 @@ export const UpdateImageDialog: React.FC = () => {
     if (!imageNameWithoutRegistry) return
 
     listImageTags(imageNameWithoutRegistry).then((res) =>
-      setTags((res?.tags ?? []).sort((a, b) => (a > b ? -1 : 1)).slice(0, 6)),
+      setTags(
+        (res?.tags ?? [])
+          .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+          .slice(0, 6),
+      ),
     )
   }, [isOpen, imageName, isPrivateImage, rows])
 
