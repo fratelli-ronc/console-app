@@ -2,6 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TextInput, FormPage, ToggleSwitch } from '@/components'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components'
+import {
   Station,
   StationPhotoRef,
   createStation,
@@ -140,12 +147,24 @@ export const StationFormPage: React.FC<StationFormPageProps> = ({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <TextInput
-          label="Modalità manutenzione"
-          value={maintenanceMode}
-          placeholder="none"
-          onChange={setMaintenanceMode}
-        />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-foreground">
+            Modalità manutenzione
+          </label>
+          <Select
+            value={maintenanceMode || 'none'}
+            onValueChange={(v) => setMaintenanceMode(v === 'none' ? '' : v)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nessuna</SelectItem>
+              <SelectItem value="station">Stazione</SelectItem>
+              <SelectItem value="group">Gruppo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <TextInput
           label="Ordine di stampa"
           value={ordPrint}
