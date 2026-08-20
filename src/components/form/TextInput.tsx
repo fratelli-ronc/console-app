@@ -5,6 +5,7 @@ interface TextInputProps {
   label: string
   value: string
   required?: boolean
+  disabled?: boolean
   type?: React.HTMLInputTypeAttribute
   placeholder?: string
   onChange: (value: string) => void
@@ -14,6 +15,7 @@ export const TextInput: React.FC<TextInputProps> = ({
   label,
   value,
   required = false,
+  disabled = false,
   type = 'text',
   placeholder,
   onChange,
@@ -42,10 +44,15 @@ export const TextInput: React.FC<TextInputProps> = ({
           id={label.toLowerCase()}
           type={resolvedType}
           required={required}
+          disabled={disabled}
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition pr-10 [&::-ms-reveal]:hidden"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          className={`h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition disabled:opacity-50 disabled:cursor-not-allowed [&::-ms-reveal]:hidden ${isPassword ? 'pr-10' : ''}`}
         />
 
         {isPassword && (

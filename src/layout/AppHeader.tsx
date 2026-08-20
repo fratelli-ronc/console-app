@@ -12,6 +12,7 @@ const ROUTE_LABELS: Record<string, string> = {
   servers: 'Server',
   'server-tree': 'Alberatura',
   settings: 'Impostazioni',
+  stations: 'Stazioni',
   test: 'Test',
   users: 'Utenti',
 }
@@ -37,7 +38,9 @@ function resolveDynamicLabel(
     case 'servers':
       return state?.serverName ?? fallback
     case 'users':
-      return 'Modifica'
+      return 'Modifica utente'
+    case 'stations':
+      return 'Modifica stazione'
     default:
       return fallback
   }
@@ -55,8 +58,10 @@ function buildCrumbs(segments: string[], state: RouteState): Crumb[] {
 
 function resolveParentHref(crumbs: Crumb[]): string | null {
   if (crumbs.length === 0) return null
-  const navigable = crumbs.filter((c) => c.navigable)
-  return navigable.length <= 1 ? '/' : navigable[navigable.length - 2].href
+  for (let i = crumbs.length - 2; i >= 0; i--) {
+    if (crumbs[i].navigable) return crumbs[i].href
+  }
+  return '/'
 }
 
 interface AppHeaderProps {

@@ -3,35 +3,77 @@ import { Route, Routes } from 'react-router-dom'
 import { AppLayout, AppPrivateRoute, SplashScreen } from '@/layout'
 import './App.css'
 
-const AuthPage = lazy(() => import('@/pages/auth/AuthPage').then((m) => ({ default: m.AuthPage })))
-const DeployPage = lazy(() =>
-  import('@/pages/deploy/DeployPage').then((m) => ({ default: m.DeployPage }))
+// --- Auth ---
+const AuthPage = lazy(() =>
+  import('@/pages/auth/AuthPage').then((m) => ({ default: m.AuthPage })),
 )
-const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
-const ProfilationPage = lazy(() =>
-  import('@/pages/profilation/ProfilationPage').then((m) => ({ default: m.ProfilationPage }))
+
+// --- Menu ---
+const HomePage = lazy(() =>
+  import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })),
+)
+const TestPage = lazy(() =>
+  import('@/pages/test/TestPage').then((m) => ({ default: m.TestPage })),
+)
+const StationsPage = lazy(() =>
+  import('@/pages/stations/StationsPage').then((m) => ({
+    default: m.StationsPage,
+  })),
+)
+const NewStationPage = lazy(() =>
+  import('@/pages/stations/NewStationPage').then((m) => ({
+    default: m.NewStationPage,
+  })),
+)
+const EditStationPage = lazy(() =>
+  import('@/pages/stations/EditStationPage').then((m) => ({
+    default: m.EditStationPage,
+  })),
+)
+
+// --- Infrastruttura ---
+const ServersPage = lazy(() =>
+  import('@/pages/servers/ServersPage').then((m) => ({
+    default: m.ServersPage,
+  })),
 )
 const ResoucesPage = lazy(() =>
-  import('@/pages/resources/ResourcesPage').then((m) => ({ default: m.ResoucesPage }))
+  import('@/pages/resources/ResourcesPage').then((m) => ({
+    default: m.ResoucesPage,
+  })),
+)
+const DeployPage = lazy(() =>
+  import('@/pages/deploy/DeployPage').then((m) => ({ default: m.DeployPage })),
 )
 const ServerTreePage = lazy(() =>
-  import('@/pages/server-tree/ServerTreePage').then((m) => ({ default: m.ServerTreePage }))
+  import('@/pages/server-tree/ServerTreePage').then((m) => ({
+    default: m.ServerTreePage,
+  })),
 )
-const ServersPage = lazy(() =>
-  import('@/pages/servers/ServersPage').then((m) => ({ default: m.ServersPage }))
-)
-const SettingsPage = lazy(() =>
-  import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage }))
-)
-const TestPage = lazy(() => import('@/pages/test/TestPage').then((m) => ({ default: m.TestPage })))
+
+// --- Amministrazione ---
 const UsersPage = lazy(() =>
-  import('@/pages/users/UsersPage').then((m) => ({ default: m.UsersPage }))
+  import('@/pages/users/UsersPage').then((m) => ({ default: m.UsersPage })),
 )
 const NewUserPage = lazy(() =>
-  import('@/pages/users/NewUserPage').then((m) => ({ default: m.NewUserPage }))
+  import('@/pages/users/NewUserPage').then((m) => ({ default: m.NewUserPage })),
 )
 const EditUserPage = lazy(() =>
-  import('@/pages/users/EditUserPage').then((m) => ({ default: m.EditUserPage }))
+  import('@/pages/users/EditUserPage').then((m) => ({
+    default: m.EditUserPage,
+  })),
+)
+const ProfilationPage = lazy(() =>
+  import('@/pages/profilation/ProfilationPage').then((m) => ({
+    default: m.ProfilationPage,
+  })),
+)
+
+// --- Altro ---
+const SettingsPage = lazy(() =>
+  import('@/pages/settings/SettingsPage').then((m) => ({
+    default: m.SettingsPage,
+  })),
 )
 
 function App() {
@@ -44,6 +86,9 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/test" element={<TestPage />} />
+            <Route path="/stations" element={<StationsPage />} />
+            <Route path="/stations/new" element={<NewStationPage />} />
+            <Route path="/stations/:id" element={<EditStationPage />} />
 
             <Route path="/servers" element={<ServersPage />} />
             <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />

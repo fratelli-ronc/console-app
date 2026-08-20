@@ -13,6 +13,7 @@ import {
   HardDriveDownload,
   UserCog,
   Network,
+  Radio,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { clearToken, clearRefreshToken } from '@/client/tokenStore'
@@ -42,6 +43,7 @@ const navSections: NavSection[] = [
     items: [
       { label: 'Dashboard', href: '/', icon: <LayoutDashboard size={20} /> },
       { label: 'Test', href: '/test', icon: <TestTube size={20} /> },
+      { label: 'Stazioni', href: '/stations', icon: <Radio size={20} /> },
     ],
   },
   {
