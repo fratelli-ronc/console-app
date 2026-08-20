@@ -47,17 +47,17 @@ export const listServicesByImage = (): Promise<ServicesByImageMap | null> =>
 
 export const requestStopResource = (uuid: string): Promise<void | null> =>
   withErrorHandling(
-    async () => await coolifyClient.get(`/services/${uuid}/stop`),
+    async () => await coolifyClient.post(`/services/${uuid}/stop`),
   )
 
 export const requestStartResource = (uuid: string): Promise<void | null> =>
   withErrorHandling(
-    async () => await coolifyClient.get(`/services/${uuid}/start`),
+    async () => await coolifyClient.post(`/services/${uuid}/start`),
   )
 
 export const requestRestartResource = (uuid: string): Promise<void | null> =>
   withErrorHandling(
-    async () => await coolifyClient.get(`/services/${uuid}/restart`),
+    async () => await coolifyClient.post(`/services/${uuid}/restart`),
   )
 
 export const updateServiceImageTag = (
