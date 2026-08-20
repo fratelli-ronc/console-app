@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Users, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FilterPills, PageHeader, Search } from '@/components'
+import { FilterPills, PageHeader, Search, SyncStatusIndicator } from '@/components'
 import {
   DataTable,
   type DataTableColumn,
@@ -22,6 +22,7 @@ import {
 } from '@/components'
 import { listUsers, deleteUser, AuthUser, UserAuthLevel } from '@/client'
 import { ROLE_LABELS, ROLE_LEVELS } from '@/data'
+import { useUserStore } from '@/store'
 
 const STATUS_FILTERS: {
   label: string
@@ -60,6 +61,9 @@ const StatusBadge: React.FC<{ enabled: boolean }> = ({ enabled }) => (
 
 export const UsersPage: React.FC = () => {
   const navigate = useNavigate()
+  const currentUser = useUserStore((s) => s.user)
+  const canViewSyncStatus =
+    !!currentUser && currentUser.authorization >= UserAuthLevel.Admin
 
   const [users, setUsers] = useState<AuthUser[] | null>(null)
   const [reloading, setReloading] = useState(false)
@@ -131,9 +135,7 @@ export const UsersPage: React.FC = () => {
       render: (user) => (
         <>
           <div className="font-medium text-foreground">{user.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {user.username}
-          </div>
+          <div className="text-xs text-muted-foreground">{user.username}</div>
         </>
       ),
     },
@@ -190,6 +192,7 @@ export const UsersPage: React.FC = () => {
         subtitle="Gestisci gli utenti e i loro permessi di accesso."
         newLabel="Nuovo utente"
         onNewClick={() => navigate('/users/new')}
+        trailing={canViewSyncStatus ? <SyncStatusIndicator /> : undefined}
       />
 
       {/* Toolbar */}

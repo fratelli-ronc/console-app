@@ -57,3 +57,25 @@ export interface UserProfilation {
   user: AuthUser
   scope: UserProfilationScope
 }
+
+export type SyncEventType = 'upsert' | 'delete'
+
+export interface SyncFailingOp {
+  id: string
+  userId: number
+  eventType: SyncEventType
+  attempts: number
+  lastError: string
+  updatedAt: string
+}
+
+export interface SyncNodeStatus {
+  name: string
+  bootstrapped: boolean
+  pending: number
+  failing: SyncFailingOp[]
+}
+
+export interface SyncStatusResponse {
+  nodes: SyncNodeStatus[]
+}

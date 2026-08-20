@@ -3,6 +3,8 @@ import {
   AuthUser,
   ListUsersResponse,
   LoginResponse,
+  SyncNodeStatus,
+  SyncStatusResponse,
   UpsertUserRequest,
   UserProfilation,
   UserProfile,
@@ -73,4 +75,12 @@ export const listProfilations = (): Promise<UserProfilation[] | null> =>
     const { data } =
       await authenticatedAuthClient.get<UserProfilation[]>('/profilation')
     return data
+  })
+
+export const getSyncStatus = (): Promise<SyncNodeStatus[] | null> =>
+  withErrorHandling(async () => {
+    const { data } = await authenticatedAuthClient.get<SyncStatusResponse>(
+      '/internal/sync/status',
+    )
+    return data.nodes
   })
