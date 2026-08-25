@@ -175,7 +175,11 @@ export const StationsPage: React.FC = () => {
       render: (station) => (
         <div className="inline-flex items-center gap-2">
           <button
-            onClick={() => navigate(`/stations/${station.id}`)}
+            onClick={() =>
+              navigate(`/stations/${station.id}`, {
+                state: { name: station.name },
+              })
+            }
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
           >
             <Pencil size={12} />

@@ -38,9 +38,9 @@ function resolveDynamicLabel(
     case 'servers':
       return state?.serverName ?? fallback
     case 'users':
-      return 'Modifica utente'
+      return state?.name ? `Modifica ${state.name}` : fallback
     case 'stations':
-      return 'Modifica stazione'
+      return state?.name ? `Modifica ${state.name}` : fallback
     default:
       return fallback
   }

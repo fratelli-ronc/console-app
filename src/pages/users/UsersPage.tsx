@@ -173,7 +173,9 @@ export const UsersPage: React.FC = () => {
       render: (user) => (
         <div className="inline-flex items-center gap-2">
           <button
-            onClick={() => navigate(`/users/${user.id}`)}
+            onClick={() =>
+              navigate(`/users/${user.id}`, { state: { name: user.name } })
+            }
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
           >
             <Pencil size={12} />
