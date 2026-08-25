@@ -2,12 +2,16 @@
 
 ### New Features
 
-- **Server tree management** — New "Alberatura server" page for organizing servers into a parent/child hierarchy. Drag and drop a server onto another to re-parent it, or use the "Sposta" menu to search for a target and move it without dragging. Branches can be collapsed/expanded, search highlights matches plus their ancestors, and pending moves are staged locally with "Salva modifiche"/"Annulla" before being persisted.
-- **User profilation page** — New "Profilazione" page listing each user's access scope (Completo/Limitato) with search and an access-level filter.
-- **Users table filters and delete** — The users table now supports filtering by role and by active/disabled status, shows each user's phone number alongside their email, and supports deleting a user (with a confirmation dialog).
+- **Station management** — New "Stazioni" section for full station CRUD: list with search, active/disabled filter, tag badges, maintenance mode, create/edit forms with photo upload, and a tag picker for assigning existing tags.
+- **Station tag management page** — New "Gestisci tag" page (reachable from the Stazioni toolbar) listing station tags with search, showing each tag's assigned stations on hover, and supporting create/rename/delete.
+- **Groups management** — New "Gruppi" section mirroring the stations CRUD: list with search and active/disabled filter, associated station and protocol/network-type info, create/edit forms, and a dedicated group tag management page with its own picker.
+- **Users sync status indicator** — Admins now see a live sync-status badge in the Utenti page header, polling every 30s and showing per-node bootstrap state, pending operations, and failing sync events on hover.
+- **Splash screen and lazy-loaded pages** — Routes are now code-split and lazy-loaded behind a splash screen shown while a page chunk is loading, reducing initial load time.
+- **Maintenance mode as a dropdown** — The station form's "Modalità manutenzione" field is now a select (Nessuna/Stazione/Gruppo) instead of free text, and the stations table renders the corresponding label instead of the raw value.
+- **Clearer edit breadcrumbs** — Editing a user or station now shows "Modifica <nome>" in the breadcrumb instead of a generic "Modifica utente"/"Modifica stazione".
 
 ### Fixes
 
-- **Concurrent 401s could clear valid tokens** — Token refresh is now serialized across all API clients, so simultaneous 401s from different requests share a single refresh instead of racing independent ones; a stale refresh could previously overwrite tokens a prior refresh had just set, effectively logging the user out.
-- **Logout wasn't calling the auth service** — Logging out now correctly calls the auth service's logout endpoint before clearing local tokens, instead of only clearing them locally.
-- **Server tree guide lines** — Fixed misplaced and "ghost" vertical guide lines in the server tree view.
+- **Numeric sort in image version/tag pickers** — Deploy image versions and tags are now sorted numerically-aware, so e.g. "10" sorts after "9" instead of before it.
+- **Coolify start/stop/restart used the wrong HTTP method** — Resource start, stop, and restart requests now correctly `POST` instead of `GET`, matching the Coolify API.
+- **Station tag picker allowed accidental deletion** — Removed the inline delete button from the station tag picker used in the station form; tags are now only deleted from the dedicated tag management page.
