@@ -84,3 +84,90 @@ export interface UpdateStationPhotoRequest {
   contentType: string
   data: string
 }
+
+export interface GroupTag {
+  id: number
+  name: string
+}
+
+export interface GroupTagGroupRef {
+  id: number
+  name: string | null
+}
+
+export interface GroupTagDetailed {
+  id: number
+  name: string
+  groups: GroupTagGroupRef[]
+}
+
+export interface Group {
+  id: number
+  groupId: number
+  stationId: number | null
+  name: string | null
+  enabled: boolean | null
+  unitId: number | null
+  ordPrint: number | null
+  lat: number | null
+  long: number | null
+  webcamUrl: string | null
+  driveDocUrl: string | null
+  drivePhotoUrl: string | null
+  tel: string | null
+  ipAddress: string | null
+  portNumber: number | null
+  connectionTimeout: number | null
+  transactionTimeout: number | null
+  protocol: string
+  networkType: string
+  unitIdModBusSlave: number | null
+  tags: GroupTag[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateGroupRequest {
+  groupId: number
+  stationId?: number | null
+  name?: string
+  enabled?: boolean
+  unitId?: number
+  ordPrint?: number
+  lat?: number
+  long?: number
+  webcamUrl?: string
+  driveDocUrl?: string
+  drivePhotoUrl?: string
+  tel?: string
+  ipAddress?: string
+  portNumber?: number
+  connectionTimeout?: number
+  transactionTimeout?: number
+  protocol: string
+  networkType: string
+  unitIdModBusSlave?: number
+  tagIds?: number[]
+}
+
+export interface UpdateGroupRequest {
+  stationId?: number | null
+  name?: string
+  enabled?: boolean
+  unitId?: number
+  ordPrint?: number
+  lat?: number
+  long?: number
+  webcamUrl?: string
+  driveDocUrl?: string
+  drivePhotoUrl?: string
+  tel?: string
+  ipAddress?: string
+  portNumber?: number
+  connectionTimeout?: number
+  transactionTimeout?: number
+  protocol?: string
+  networkType?: string
+  unitIdModBusSlave?: number
+  tagIds?: number[]
+}

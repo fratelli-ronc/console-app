@@ -12,8 +12,10 @@ const ROUTE_LABELS: Record<string, string> = {
   servers: 'Server',
   'server-tree': 'Alberatura',
   settings: 'Impostazioni',
+  groups: 'Gruppi',
+  'group-tags': 'Tag Gruppi',
   stations: 'Stazioni',
-  'station-tags': 'Tag stazioni',
+  'station-tags': 'Tag Stazioni',
   test: 'Test',
   users: 'Utenti',
 }
@@ -41,6 +43,8 @@ function resolveDynamicLabel(
     case 'users':
       return state?.name ? `Modifica ${state.name}` : fallback
     case 'stations':
+      return state?.name ? `Modifica ${state.name}` : fallback
+    case 'groups':
       return state?.name ? `Modifica ${state.name}` : fallback
     default:
       return fallback

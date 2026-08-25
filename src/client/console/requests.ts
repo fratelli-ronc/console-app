@@ -1,12 +1,17 @@
 import consoleClient from './client'
 import {
+  CreateGroupRequest,
   CreateStationRequest,
+  Group,
+  GroupTag,
+  GroupTagDetailed,
   ServerTreeRelation,
   ServerTreeRelationRequest,
   Station,
   StationPhoto,
   StationTag,
   StationTagDetailed,
+  UpdateGroupRequest,
   UpdateStationPhotoRequest,
   UpdateStationRequest,
 } from './dtos'
@@ -128,4 +133,78 @@ export const updateStationPhoto = (
       payload,
     )
     return data
+  })
+
+export const listGroups = (): Promise<Group[] | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<Group[]>('/groups')
+    return data
+  })
+
+export const getGroup = (id: number | string): Promise<Group | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<Group>(`/groups/${id}`)
+    return data
+  })
+
+export const createGroup = (
+  payload: CreateGroupRequest,
+): Promise<Group | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.post<Group>('/groups', payload)
+    return data
+  })
+
+export const updateGroup = (
+  id: number | string,
+  payload: UpdateGroupRequest,
+): Promise<Group | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.put<Group>(`/groups/${id}`, payload)
+    return data
+  })
+
+export const deleteGroup = (id: number | string): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await consoleClient.delete(`/groups/${id}`)
+  })
+
+export const listGroupTags = (): Promise<GroupTag[] | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<GroupTag[]>('/group-tags')
+    return data
+  })
+
+export const listGroupTagsDetailed = (): Promise<
+  GroupTagDetailed[] | null
+> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<GroupTagDetailed[]>(
+      '/group-tags/detailed',
+    )
+    return data
+  })
+
+export const createGroupTag = (name: string): Promise<GroupTag | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.post<GroupTag>('/group-tags', {
+      name,
+    })
+    return data
+  })
+
+export const updateGroupTag = (
+  id: number,
+  name: string,
+): Promise<GroupTag | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.put<GroupTag>(`/group-tags/${id}`, {
+      name,
+    })
+    return data
+  })
+
+export const deleteGroupTag = (id: number): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await consoleClient.delete(`/group-tags/${id}`)
   })

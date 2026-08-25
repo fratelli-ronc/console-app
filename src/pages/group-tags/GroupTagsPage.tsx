@@ -18,27 +18,25 @@ import {
   HoverCardContent,
 } from '@/components'
 import {
-  listStationTagsDetailed,
-  deleteStationTag,
-  StationTagDetailed,
+  listGroupTagsDetailed,
+  deleteGroupTag,
+  GroupTagDetailed,
 } from '@/client'
-import { TagFormDialog } from './components/TagFormDialog'
+import { GroupTagFormDialog } from './components/GroupTagFormDialog'
 
-export const StationTagsPage: React.FC = () => {
-  const [tags, setTags] = useState<StationTagDetailed[] | null>(null)
+export const GroupTagsPage: React.FC = () => {
+  const [tags, setTags] = useState<GroupTagDetailed[] | null>(null)
   const [reloading, setReloading] = useState(false)
   const [search, setSearch] = useState('')
 
-  const [formTag, setFormTag] = useState<StationTagDetailed | null>(null)
+  const [formTag, setFormTag] = useState<GroupTagDetailed | null>(null)
   const [formOpen, setFormOpen] = useState(false)
 
-  const [tagToDelete, setTagToDelete] = useState<StationTagDetailed | null>(
-    null,
-  )
+  const [tagToDelete, setTagToDelete] = useState<GroupTagDetailed | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   const fetchTags = async () => {
-    const res = await listStationTagsDetailed()
+    const res = await listGroupTagsDetailed()
     if (res) setTags(res.sort((a, b) => a.name.localeCompare(b.name)))
   }
 
@@ -51,7 +49,7 @@ export const StationTagsPage: React.FC = () => {
   const handleDelete = async () => {
     if (!tagToDelete) return
     setDeleting(true)
-    const res = await deleteStationTag(tagToDelete.id)
+    const res = await deleteGroupTag(tagToDelete.id)
     setDeleting(false)
     if (res !== null) {
       setTagToDelete(null)
@@ -69,7 +67,7 @@ export const StationTagsPage: React.FC = () => {
     tag.name.toLowerCase().includes(search.toLowerCase()),
   )
 
-  const columns: DataTableColumn<StationTagDetailed>[] = [
+  const columns: DataTableColumn<GroupTagDetailed>[] = [
     {
       key: 'name',
       header: 'Nome',
@@ -78,29 +76,29 @@ export const StationTagsPage: React.FC = () => {
       ),
     },
     {
-      key: 'stations',
-      header: 'Stazioni',
+      key: 'groups',
+      header: 'Gruppi',
       render: (tag) =>
-        tag.stations.length === 0 ? (
+        tag.groups.length === 0 ? (
           <span className="text-muted-foreground">—</span>
         ) : (
           <HoverCard openDelay={100}>
             <HoverCardTrigger asChild>
               <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full text-xs font-medium bg-muted text-muted-foreground cursor-default">
-                {tag.stations.length}
+                {tag.groups.length}
               </span>
             </HoverCardTrigger>
             <HoverCardContent className="w-auto max-w-xs p-3">
               <p className="text-xs font-semibold text-foreground mb-1.5">
-                Stazioni assegnate
+                Gruppi assegnati
               </p>
               <div className="flex flex-wrap gap-1">
-                {tag.stations.map((station) => (
+                {tag.groups.map((group) => (
                   <span
-                    key={station.id}
+                    key={group.id}
                     className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-muted text-muted-foreground"
                   >
-                    {station.name || `ID ${station.id}`}
+                    {group.name || `ID ${group.id}`}
                   </span>
                 ))}
               </div>
@@ -139,8 +137,8 @@ export const StationTagsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tag Stazioni"
-        subtitle="Gestisci i tag utilizzati per organizzare le stazioni."
+        title="Tag Gruppi"
+        subtitle="Gestisci i tag utilizzati per organizzare i gruppi."
         newLabel="Nuovo tag"
         onNewClick={() => {
           setFormTag(null)
@@ -174,7 +172,7 @@ export const StationTagsPage: React.FC = () => {
         }}
       />
 
-      <TagFormDialog
+      <GroupTagFormDialog
         open={formOpen}
         tag={formTag}
         onOpenChange={setFormOpen}
@@ -194,15 +192,14 @@ export const StationTagsPage: React.FC = () => {
                 {tagToDelete?.name}
               </span>
               .{' '}
-              {tagToDelete && tagToDelete.stations.length > 0 && (
+              {tagToDelete && tagToDelete.groups.length > 0 && (
                 <>
-                  È utilizzato da {tagToDelete.stations.length}{' '}
-                  {tagToDelete.stations.length === 1 ? 'stazione' : 'stazioni'}{' '}
-                  (
-                  {tagToDelete.stations
-                    .map((s) => s.name || `ID ${s.id}`)
+                  È utilizzato da {tagToDelete.groups.length}{' '}
+                  {tagToDelete.groups.length === 1 ? 'gruppo' : 'gruppi'} (
+                  {tagToDelete.groups
+                    .map((g) => g.name || `ID ${g.id}`)
                     .join(', ')}
-                  ) e verrà rimosso automaticamente da tutte.{' '}
+                  ) e verrà rimosso automaticamente da tutti.{' '}
                 </>
               )}
               Questa azione non può essere annullata.

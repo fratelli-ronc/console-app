@@ -35,6 +35,26 @@ const StationTagsPage = lazy(() =>
     default: m.StationTagsPage,
   })),
 )
+const GroupsPage = lazy(() =>
+  import('@/pages/groups/GroupsPage').then((m) => ({
+    default: m.GroupsPage,
+  })),
+)
+const NewGroupPage = lazy(() =>
+  import('@/pages/groups/NewGroupPage').then((m) => ({
+    default: m.NewGroupPage,
+  })),
+)
+const EditGroupPage = lazy(() =>
+  import('@/pages/groups/EditGroupPage').then((m) => ({
+    default: m.EditGroupPage,
+  })),
+)
+const GroupTagsPage = lazy(() =>
+  import('@/pages/group-tags/GroupTagsPage').then((m) => ({
+    default: m.GroupTagsPage,
+  })),
+)
 
 // --- Infrastruttura ---
 const ServersPage = lazy(() =>
@@ -98,6 +118,10 @@ function App() {
               path="/stations/station-tags"
               element={<StationTagsPage />}
             />
+            <Route path="/groups" element={<GroupsPage />} />
+            <Route path="/groups/new" element={<NewGroupPage />} />
+            <Route path="/groups/:id" element={<EditGroupPage />} />
+            <Route path="/groups/group-tags" element={<GroupTagsPage />} />
 
             <Route path="/servers" element={<ServersPage />} />
             <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />
