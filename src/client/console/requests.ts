@@ -6,6 +6,7 @@ import {
   Station,
   StationPhoto,
   StationTag,
+  StationTagDetailed,
   UpdateStationPhotoRequest,
   UpdateStationRequest,
 } from './dtos'
@@ -72,11 +73,33 @@ export const listStationTags = (): Promise<StationTag[] | null> =>
     return data
   })
 
+export const listStationTagsDetailed = (): Promise<
+  StationTagDetailed[] | null
+> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<StationTagDetailed[]>(
+      '/station-tags/detailed',
+    )
+    return data
+  })
+
 export const createStationTag = (name: string): Promise<StationTag | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.post<StationTag>('/station-tags', {
       name,
     })
+    return data
+  })
+
+export const updateStationTag = (
+  id: number,
+  name: string,
+): Promise<StationTag | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.put<StationTag>(
+      `/station-tags/${id}`,
+      { name },
+    )
     return data
   })
 

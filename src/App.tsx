@@ -30,6 +30,11 @@ const EditStationPage = lazy(() =>
     default: m.EditStationPage,
   })),
 )
+const StationTagsPage = lazy(() =>
+  import('@/pages/station-tags/StationTagsPage').then((m) => ({
+    default: m.StationTagsPage,
+  })),
+)
 
 // --- Infrastruttura ---
 const ServersPage = lazy(() =>
@@ -89,6 +94,10 @@ function App() {
             <Route path="/stations" element={<StationsPage />} />
             <Route path="/stations/new" element={<NewStationPage />} />
             <Route path="/stations/:id" element={<EditStationPage />} />
+            <Route
+              path="/stations/station-tags"
+              element={<StationTagsPage />}
+            />
 
             <Route path="/servers" element={<ServersPage />} />
             <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />

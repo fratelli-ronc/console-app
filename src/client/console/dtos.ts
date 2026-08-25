@@ -14,6 +14,17 @@ export interface StationTag {
   name: string
 }
 
+export interface StationTagStationRef {
+  id: number
+  name: string | null
+}
+
+export interface StationTagDetailed {
+  id: number
+  name: string
+  stations: StationTagStationRef[]
+}
+
 export interface StationPhotoRef {
   id: number
   contentType: string | null

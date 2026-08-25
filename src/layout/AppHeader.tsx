@@ -13,6 +13,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'server-tree': 'Alberatura',
   settings: 'Impostazioni',
   stations: 'Stazioni',
+  'station-tags': 'Tag stazioni',
   test: 'Test',
   users: 'Utenti',
 }

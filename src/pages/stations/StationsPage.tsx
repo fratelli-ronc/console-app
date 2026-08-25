@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Radio, Pencil, Trash2 } from 'lucide-react'
+import { RefreshCw, Radio, Pencil, Trash2, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilterPills, PageHeader, Search } from '@/components'
 import {
@@ -13,6 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
   FilledButton,
+  OutlinedButton,
   TextButton,
 } from '@/components'
 import { listStations, deleteStation, Station } from '@/client'
@@ -212,6 +213,16 @@ export const StationsPage: React.FC = () => {
         subtitle="Gestisci e configura le stazioni."
         newLabel="Nuova stazione"
         onNewClick={() => navigate('/stations/new')}
+        trailing={
+          <OutlinedButton
+            type="button"
+            className="inline-flex items-center gap-2"
+            onClick={() => navigate('/stations/station-tags')}
+          >
+            <Tag size={16} />
+            Gestisci tag
+          </OutlinedButton>
+        }
       />
 
       {/* Toolbar */}
