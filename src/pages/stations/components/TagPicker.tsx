@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { listStationTags, createStationTag, deleteStationTag } from '@/client'
+import { listStationTags, createStationTag } from '@/client'
 import type { StationTag } from '@/client'
 
 interface TagPickerProps {
@@ -16,7 +16,6 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   const [tags, setTags] = useState<StationTag[] | null>(null)
   const [newTagName, setNewTagName] = useState('')
   const [creating, setCreating] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   useEffect(() => {
     listStationTags().then((res) => {
@@ -45,16 +44,6 @@ export const TagPicker: React.FC<TagPickerProps> = ({
     }
   }
 
-  const handleDelete = async (id: number) => {
-    setDeletingId(id)
-    const res = await deleteStationTag(id)
-    setDeletingId(null)
-    if (res !== null) {
-      setTags((prev) => (prev ?? []).filter((t) => t.id !== id))
-      onChange(selectedIds.filter((i) => i !== id))
-    }
-  }
-
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-sm font-medium text-foreground">Tag</label>
@@ -74,24 +63,13 @@ export const TagPicker: React.FC<TagPickerProps> = ({
                 key={tag.id}
                 onClick={() => toggle(tag.id)}
                 className={cn(
-                  'group inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer',
+                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer',
                   selected
                     ? 'bg-primary/10 border-primary/30 text-primary'
                     : 'bg-background border-border text-muted-foreground hover:text-foreground',
                 )}
               >
                 {tag.name}
-                <button
-                  type="button"
-                  disabled={deletingId === tag.id}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(tag.id)
-                  }}
-                  className="opacity-0 group-hover:opacity-100 rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive transition disabled:opacity-50"
-                >
-                  <X size={10} />
-                </button>
               </span>
             )
           })
