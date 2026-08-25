@@ -161,7 +161,15 @@ export const StationsPage: React.FC = () => {
       key: 'maintenance',
       header: 'Manut.',
       cellClassName: 'text-muted-foreground',
-      render: (station) => <p>{station.maintenanceMode || '—'}</p>,
+      render: (station) => (
+        <p>
+          {station.maintenanceMode === 'station'
+            ? 'Stazione'
+            : station.maintenanceMode === 'group'
+              ? 'Gruppo'
+              : '—'}
+        </p>
+      ),
     },
     {
       key: 'status',
