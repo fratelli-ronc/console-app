@@ -1,18 +1,46 @@
-name: Release Windows
+name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  release:
     permissions:
       contents: write
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ""
+          - platform: ubuntu-22.04
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+
     steps:
+      - name: Require a tag ref
+        if: github.ref_type != 'tag'
+        run: |
+          echo "::error::Run this workflow from a tag (Run workflow → Tags tab), not a branch."
+          exit 1
+
       - uses: actions/checkout@v6
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libssl-dev \
+            patchelf \
+            build-essential \
+            file
 
       - uses: pnpm/action-setup@v6
         with:
@@ -46,3 +74,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
+          args: ${{ matrix.args }}
