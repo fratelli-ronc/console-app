@@ -3,3 +3,4 @@ minimumReleaseAgeExclude:
   - axios@1.19.0
   - lucide-react@1.28.0
   - vite@8.2.0
+  - '@rolldown/binding-openharmony-arm64@1.2.6'

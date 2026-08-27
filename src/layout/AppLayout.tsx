@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
 import { StreamController } from './StreamController'
+import { UpdateController } from './UpdateController'
 
 export const AppLayout: React.FC = () => {
   const scrollRef = useRef<HTMLElement>(null)
@@ -11,6 +12,7 @@ export const AppLayout: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <StreamController />
+      <UpdateController />
 
       <AppSidebar />
 

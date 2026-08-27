@@ -38,8 +38,11 @@ jobs:
           VITE_AUTH_API_URL: ${{ secrets.VITE_AUTH_API_URL }}
           VITE_COOLIFY_BRIDGE_API_URL: ${{ secrets.VITE_COOLIFY_BRIDGE_API_URL }}
           VITE_CONSOLE_API_URL: ${{ secrets.VITE_CONSOLE_API_URL }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
           releaseDraft: true
           prerelease: false
+          includeUpdaterJson: true
