@@ -52,7 +52,7 @@ export const TextInput: React.FC<TextInputProps> = ({
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className={`h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition disabled:opacity-50 disabled:cursor-not-allowed [&::-ms-reveal]:hidden ${isPassword ? 'pr-10' : ''}`}
+          className={`h-10 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground placeholder:text-placeholder outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition disabled:opacity-50 disabled:cursor-not-allowed [&::-ms-reveal]:hidden ${isPassword ? 'pr-10' : ''}`}
         />
 
         {isPassword && (

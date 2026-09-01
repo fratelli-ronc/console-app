@@ -51,7 +51,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           type="button"
           className={cn(
             'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
-            !selected && 'text-muted-foreground',
+            !selected && 'text-placeholder',
             className,
           )}
         >
@@ -78,7 +78,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={searchPlaceholder}
             autoComplete="off"
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-placeholder"
           />
         </div>
 

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TextInput, FormPage, ToggleSwitch, SearchableSelect } from '@/components'
+import {
+  TextInput,
+  FormPage,
+  ToggleSwitch,
+  SearchableSelect,
+} from '@/components'
 import {
   Select,
   SelectContent,
@@ -27,8 +32,8 @@ export const PROTOCOL_OPTIONS: { value: string; label: string }[] = [
   { value: 'RtuOverTcp', label: 'RTU over TCP' },
   { value: 'M-Bus', label: 'M-Bus' },
   { value: 'Leitwind', label: 'Leitwind' },
-  { value: 'HTTP/img', label: 'HTTP (immagine)' },
-  { value: 'TCP/img', label: 'TCP (immagine)' },
+  { value: 'HTTP/img', label: 'Immagine - HTTP' },
+  { value: 'TCP/img', label: 'Immagine - TCP' },
 ]
 
 export const NETWORK_TYPE_OPTIONS: { value: string; label: string }[] = [

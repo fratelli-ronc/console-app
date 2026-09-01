@@ -88,7 +88,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
               handleCreate()
             }
           }}
-          className="h-8 flex-1 rounded-md border border-input bg-card px-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+          className="h-8 flex-1 rounded-md border border-input bg-card px-2.5 text-xs text-foreground placeholder:text-placeholder outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
         />
         <button
           type="button"

@@ -87,7 +87,10 @@ export const TestPage: React.FC = () => {
           <FilterPills
             options={[
               { label: 'Tutti', value: null },
-              ...TAGS.map((t) => ({ label: t.label, value: t.key as string | null })),
+              ...TAGS.map((t) => ({
+                label: t.label,
+                value: t.key as string | null,
+              })),
             ]}
             value={tag}
             onChange={setTag}
