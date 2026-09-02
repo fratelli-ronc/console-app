@@ -80,7 +80,7 @@ export const CellSelect: React.FC<CellSelectProps> = ({
         ref={listRef}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="absolute left-0 top-full mt-1 z-50 min-w-full bg-popover border border-border rounded-lg shadow-md py-1 outline-none"
+        className="absolute -left-4 top-[calc(100%+12px)] mt-1 z-50 w-[calc(100%+32px)] min-w-50 bg-popover border border-border rounded-lg shadow-md py-1 outline-none"
       >
         {options.map((option, i) => (
           <li
