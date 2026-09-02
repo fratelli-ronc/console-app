@@ -12,30 +12,20 @@ import {
 import type {
   EditTableChanges,
   EditTableSaveFn,
-  FetchParams,
-  FetchResult,
   RowKey,
 } from './useEditTable'
 
-export type {
-  EditTableChanges,
-  EditTableColumn,
-  EditTableSaveFn,
-  FetchParams,
-  FetchResult,
-  RowKey,
-}
+export type { EditTableChanges, EditTableColumn, EditTableSaveFn, RowKey }
 
 interface EditTablePanelProps<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
   columns: EditTableColumn<T>[]
-  fetchFn: (params: FetchParams) => Promise<FetchResult<T>>
+  fetchFn: () => Promise<T[]>
   // Receives only the touched rows; return false to keep the table dirty
   // (e.g. when the save request failed).
   onSave?: EditTableSaveFn<T>
   rowKey?: (row: T) => RowKey | null | undefined
-  pageSize?: number
   className?: string
   filters?: React.ReactNode
   // When set, an add button appends newRow() to the grid.
@@ -44,6 +34,7 @@ interface EditTablePanelProps<
   addDisabled?: boolean
   // Renders a per-row trash button.
   deletable?: boolean
+  emptyMessage?: React.ReactNode
   onDirtyChange?: (isDirty: boolean) => void
 }
 
@@ -54,13 +45,13 @@ export function EditTablePanel<
   fetchFn,
   onSave,
   rowKey,
-  pageSize,
   className,
   filters,
   newRow,
   addLabel = 'Aggiungi',
   addDisabled = false,
   deletable = false,
+  emptyMessage,
   onDirtyChange,
 }: EditTablePanelProps<T>) {
   const tableRef = useRef<EditTableHandle<T>>(null)
@@ -121,11 +112,11 @@ export function EditTablePanel<
         onSave={onSave}
         rowKey={rowKey}
         deletable={deletable}
+        emptyMessage={emptyMessage}
         onDirtyChange={(dirty) => {
           setIsDirty(dirty)
           onDirtyChange?.(dirty)
         }}
-        pageSize={pageSize}
       />
     </div>
   )

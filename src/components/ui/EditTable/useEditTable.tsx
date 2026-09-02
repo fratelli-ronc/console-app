@@ -1,15 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-export type FetchParams = {
-  page: number
-  pageSize: number
-}
-
-export type FetchResult<T> = {
-  data: T[]
-  total: number
-}
-
 export type RowKey = string | number
 
 export type EditTableChanges<T> = {
@@ -19,16 +9,15 @@ export type EditTableChanges<T> = {
 }
 
 // Returning false keeps the table dirty (e.g. the API call failed);
-// anything else counts as success and reloads the current page.
+// anything else counts as success and reloads the data.
 export type EditTableSaveFn<T> = (
   changes: EditTableChanges<T>,
 ) => boolean | void | Promise<boolean | void>
 
 export interface UseEditTableOptions<T> {
-  fetchFn: (params: FetchParams) => Promise<FetchResult<T>>
+  fetchFn: () => Promise<T[]>
   onSave?: EditTableSaveFn<T>
   onDirtyChange?: (isDirty: boolean) => void
-  pageSize?: number
   // Stable identity of a row; rows without a key count as newly created.
   rowKey?: (row: T) => RowKey | null | undefined
 }
@@ -39,7 +28,6 @@ export function useEditTable<T extends Record<string, unknown>>({
   fetchFn,
   onSave,
   onDirtyChange,
-  pageSize = 20,
   rowKey = (row) => row.id as RowKey | null | undefined,
 }: UseEditTableOptions<T>) {
   const [initialRows, setInitialRows] = useState<T[]>([])
@@ -54,8 +42,6 @@ export function useEditTable<T extends Record<string, unknown>>({
     key: string
   } | null>(null)
   const [inputValue, setInputValue] = useState('')
-  const [page, setPage] = useState(0)
-  const [total, setTotal] = useState(0)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const historyIndexRef = useRef(historyIndex)
@@ -109,40 +95,27 @@ export function useEditTable<T extends Record<string, unknown>>({
   const isDirtyRef = useRef(isDirty)
   isDirtyRef.current = isDirty
 
-  const pageCount = Math.max(1, Math.ceil(total / pageSize))
-  const activePage = page
-  const pageRef = useRef(page)
-  pageRef.current = page
-
-  const doLoad = useCallback(
-    (targetPage: number) => {
-      fetchFn({ page: targetPage, pageSize }).then(({ data, total }) => {
-        setInitialRows(data)
-        setHistory([data])
-        setHistoryIndex(0)
-        setTotal(total)
-        setPage(targetPage)
-        setEditingCell(null)
-        setSelectedCell(null)
-      })
-    },
-    [fetchFn, pageSize],
-  )
+  const doLoad = useCallback(() => {
+    fetchFn().then((data) => {
+      setInitialRows(data)
+      setHistory([data])
+      setHistoryIndex(0)
+      setEditingCell(null)
+      setSelectedCell(null)
+    })
+  }, [fetchFn])
 
   // Guards unsaved changes: declining the prompt keeps the current data
   // (the caller's filter state may then be ahead of the grid until the
   // user saves or discards).
-  const loadPage = useCallback(
-    (targetPage: number) => {
-      if (isDirtyRef.current && !window.confirm(DISCARD_PROMPT)) return
-      doLoad(targetPage)
-    },
-    [doLoad],
-  )
+  const load = useCallback(() => {
+    if (isDirtyRef.current && !window.confirm(DISCARD_PROMPT)) return
+    doLoad()
+  }, [doLoad])
 
   useEffect(() => {
-    loadPage(0)
-  }, [loadPage])
+    load()
+  }, [load])
 
   useEffect(() => {
     onDirtyChange?.(isDirty)
@@ -205,7 +178,7 @@ export function useEditTable<T extends Record<string, unknown>>({
     const ok = await onSave(changes)
     if (ok === false) return
 
-    doLoad(pageRef.current)
+    doLoad()
   }
 
   const handleDiscard = () => {
@@ -224,17 +197,9 @@ export function useEditTable<T extends Record<string, unknown>>({
     return String(current[key] ?? '') !== String(initial[key] ?? '')
   }
 
-  const nextPage = () => loadPage(Math.min(activePage + 1, pageCount - 1))
-  const prevPage = () => loadPage(Math.max(activePage - 1, 0))
-  const goToPage = (p: number) => loadPage(p)
-
   return {
     containerRef,
     currentData,
-    activePage,
-    pageCount,
-    pageSize,
-    total,
     editingCell,
     selectedCell,
     inputValue,
@@ -249,8 +214,5 @@ export function useEditTable<T extends Record<string, unknown>>({
     setSelectedCell,
     handleDiscard,
     handleSave,
-    nextPage,
-    prevPage,
-    goToPage,
   }
 }

@@ -8,8 +8,6 @@ import {
   SearchableSelect,
   type EditTableChanges,
   type EditTableColumn,
-  type FetchParams,
-  type FetchResult,
 } from '@/components'
 import {
   Group,
@@ -170,13 +168,11 @@ export const VariablesPage: React.FC = () => {
   }, [searchInput])
 
   const stationOptions = useMemo(
-    () => [
-      { value: '', label: 'Tutte le stazioni' },
-      ...(stations ?? []).map((station) => ({
+    () =>
+      (stations ?? []).map((station) => ({
         value: String(station.id),
         label: station.name || `ID ${station.stationId}`,
       })),
-    ],
     [stations],
   )
 
@@ -204,24 +200,30 @@ export const VariablesPage: React.FC = () => {
     }
   }
 
-  const fetchFn = useCallback(
-    async ({
-      page,
-      pageSize,
-    }: FetchParams): Promise<FetchResult<VariableRow>> => {
-      const res = await listVariables({
-        groupId: groupId ? Number(groupId) : undefined,
-        stationId: stationId ? Number(stationId) : undefined,
-        classType: classType ?? undefined,
-        search: search || undefined,
-        page,
-        pageSize,
-      })
-      if (!res) return { data: [], total: 0 }
-      return { data: res.data.map(toRow), total: res.total }
-    },
-    [groupId, stationId, classType, search],
-  )
+  // Picking a group also selects its station, so the table always stays
+  // scoped to one station.
+  const handleGroupChange = (value: string) => {
+    setGroupId(value)
+    if (value) {
+      const group = (groups ?? []).find((g) => String(g.id) === value)
+      if (group?.stationId != null) setStationId(String(group.stationId))
+    }
+  }
+
+  // The grid is scoped to a station (or group) — no pagination, so we
+  // never fetch the unfiltered variable set.
+  const hasScope = stationId !== '' || groupId !== ''
+
+  const fetchFn = useCallback(async (): Promise<VariableRow[]> => {
+    if (!hasScope) return []
+    const res = await listVariables({
+      groupId: groupId ? Number(groupId) : undefined,
+      stationId: stationId ? Number(stationId) : undefined,
+      classType: classType ?? undefined,
+      search: search || undefined,
+    })
+    return res ? res.data.map(toRow) : []
+  }, [hasScope, groupId, stationId, classType, search])
 
   const handleSave = useCallback(
     async (changes: EditTableChanges<VariableRow>) => {
@@ -254,8 +256,12 @@ export const VariablesPage: React.FC = () => {
         columns={COLUMNS}
         fetchFn={fetchFn}
         onSave={handleSave}
-        pageSize={50}
         deletable
+        emptyMessage={
+          hasScope
+            ? 'Nessuna variabile trovata.'
+            : 'Seleziona una stazione per visualizzare le variabili.'
+        }
         addLabel="Aggiungi variabile"
         addDisabled={!groupId}
         newRow={() => ({
@@ -283,7 +289,7 @@ export const VariablesPage: React.FC = () => {
                 className="w-48"
                 value={stationId}
                 onValueChange={handleStationChange}
-                placeholder="Tutte le stazioni"
+                placeholder="Seleziona stazione"
                 searchPlaceholder="Cerca stazione…"
                 emptyMessage="Nessuna stazione trovata."
                 options={stationOptions}
@@ -292,7 +298,7 @@ export const VariablesPage: React.FC = () => {
               <SearchableSelect
                 className="w-48"
                 value={groupId}
-                onValueChange={setGroupId}
+                onValueChange={handleGroupChange}
                 placeholder="Tutti i gruppi"
                 searchPlaceholder="Cerca gruppo…"
                 emptyMessage="Nessun gruppo trovato."

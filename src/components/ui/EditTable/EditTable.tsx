@@ -5,12 +5,8 @@ import { CellSelect } from './CellSelect'
 import {
   useEditTable,
   type EditTableSaveFn,
-  type FetchParams,
-  type FetchResult,
   type RowKey,
 } from './useEditTable'
-
-export type { FetchParams, FetchResult }
 
 export type EditTableCellType = 'text' | 'number' | 'boolean' | 'select'
 
@@ -48,14 +44,15 @@ interface EditTableProps<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
   columns: EditTableColumn<T>[]
-  pageSize?: number
   className?: string
-  fetchFn: (params: FetchParams) => Promise<FetchResult<T>>
+  fetchFn: () => Promise<T[]>
   onSave?: EditTableSaveFn<T>
   onDirtyChange?: (isDirty: boolean) => void
   rowKey?: (row: T) => RowKey | null | undefined
   // Renders a trailing trash-button column that removes the row.
   deletable?: boolean
+  // Shown centered in the body when there are no rows.
+  emptyMessage?: React.ReactNode
 }
 
 function isColEditable(col: EditTableColumn<any>): boolean {
@@ -154,23 +151,19 @@ function EditTableInner<
 >(
   {
     columns,
-    pageSize,
     className,
     fetchFn,
     onSave,
     onDirtyChange,
     rowKey,
     deletable,
+    emptyMessage = 'Nessun elemento.',
   }: EditTableProps<T>,
   ref: React.ForwardedRef<EditTableHandle<T>>,
 ) {
   const {
     containerRef,
     currentData,
-    activePage,
-    pageCount,
-    pageSize: ps,
-    total,
     editingCell,
     selectedCell,
     inputValue,
@@ -183,10 +176,7 @@ function EditTableInner<
     setSelectedCell,
     handleDiscard,
     handleSave,
-    nextPage,
-    prevPage,
-    goToPage,
-  } = useEditTable<T>({ fetchFn, onSave, onDirtyChange, pageSize, rowKey })
+  } = useEditTable<T>({ fetchFn, onSave, onDirtyChange, rowKey })
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -247,9 +237,6 @@ function EditTableInner<
   }
 
   const hasWidths = columns.some((c) => c.width)
-  const pageNumbers = getPageNumbers(activePage, pageCount)
-  const startRow = total === 0 ? 0 : activePage * ps + 1
-  const endRow = activePage * ps + currentData.length
 
   return (
     <div
@@ -555,72 +542,21 @@ function EditTableInner<
             ))}
           </tbody>
         </table>
+
+        {currentData.length === 0 && (
+          <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+            {emptyMessage}
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/20 border-t border-border">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={prevPage}
-            disabled={activePage === 0}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors text-sm cursor-pointer"
-          >
-            ‹
-          </button>
-
-          {pageNumbers.map((p, i) =>
-            p === '...' ? (
-              <span
-                key={`ellipsis-${i}`}
-                className="inline-flex items-center justify-center w-7 h-7 text-xs text-muted-foreground"
-              >
-                …
-              </span>
-            ) : (
-              <button
-                key={p}
-                onClick={() => goToPage(p)}
-                className={cn(
-                  'inline-flex items-center justify-center w-7 h-7 rounded-md text-xs tabular-nums transition-colors cursor-pointer',
-                  p === activePage
-                    ? 'bg-primary text-primary-foreground font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border',
-                )}
-              >
-                {p + 1}
-              </button>
-            ),
-          )}
-
-          <button
-            onClick={nextPage}
-            disabled={activePage === pageCount - 1}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-30 disabled:pointer-events-none transition-colors text-sm cursor-pointer"
-          >
-            ›
-          </button>
-        </div>
-
+      <div className="flex items-center justify-end px-4 py-2.5 bg-muted/20 border-t border-border">
         <span className="text-xs text-muted-foreground tabular-nums">
-          {total === 0 ? '0' : `${startRow}–${endRow}`} di {total}
+          {currentData.length === 1 ? '1 riga' : `${currentData.length} righe`}
         </span>
       </div>
     </div>
   )
-}
-
-function getPageNumbers(page: number, pageCount: number): (number | '...')[] {
-  if (pageCount <= 7) return Array.from({ length: pageCount }, (_, i) => i)
-  const pages: (number | '...')[] = [0]
-  if (page > 2) pages.push('...')
-  for (
-    let i = Math.max(1, page - 1);
-    i <= Math.min(pageCount - 2, page + 1);
-    i++
-  )
-    pages.push(i)
-  if (page < pageCount - 3) pages.push('...')
-  pages.push(pageCount - 1)
-  return pages
 }
 
 export const EditTable = forwardRef(EditTableInner) as <
