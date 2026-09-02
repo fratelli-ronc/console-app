@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   EditTablePanel,
@@ -12,6 +12,7 @@ import {
   SelectValue,
   type EditTableChanges,
   type EditTableColumn,
+  type EditTablePanelHandle,
   type EditTableSelectOption,
 } from '@/components'
 import {
@@ -156,6 +157,8 @@ const buildColumns = (
 ]
 
 export const VariablesPage: React.FC = () => {
+  const panelRef = useRef<EditTablePanelHandle<VariableRow>>(null)
+
   const [stations, setStations] = useState<Station[] | null>(null)
   const [groups, setGroups] = useState<Group[] | null>(null)
 
@@ -302,14 +305,40 @@ export const VariablesPage: React.FC = () => {
     [],
   )
 
+  const addVariableRow = useCallback(() => {
+    panelRef.current?.addRow({
+      id: null,
+      variableId: null,
+      groupId,
+      name: '',
+      classType: 'analog',
+      format: null,
+      driver: null,
+      measureUnit: null,
+      ordPrint: null,
+      minValue: null,
+      maxValue: null,
+      enableLogs: false,
+      cumul: false,
+      hidden: false,
+      preview: false,
+      tags: '',
+    })
+  }, [groupId])
+
   return (
     <div className="h-full flex flex-col gap-6">
       <PageHeader
         title="Variabili"
         subtitle="Gestisci le variabili dei gruppi."
+        newLabel="Aggiungi variabile"
+        newDisabled={!groupId}
+        newDisabledReason="Seleziona un gruppo per aggiungere una variabile."
+        onNewClick={addVariableRow}
       />
 
       <EditTablePanel<VariableRow>
+        ref={panelRef}
         className="flex-1 min-h-0"
         columns={columns}
         fetchFn={fetchFn}
@@ -321,27 +350,6 @@ export const VariablesPage: React.FC = () => {
             ? 'Nessuna variabile trovata.'
             : 'Seleziona una stazione per visualizzare le variabili.'
         }
-        addLabel="Aggiungi variabile"
-        addDisabled={!groupId}
-        disabledReason="Seleziona un gruppo per aggiungere una variabile."
-        newRow={() => ({
-          id: null,
-          variableId: null,
-          groupId,
-          name: '',
-          classType: 'analog',
-          format: null,
-          driver: null,
-          measureUnit: null,
-          ordPrint: null,
-          minValue: null,
-          maxValue: null,
-          enableLogs: false,
-          cumul: false,
-          hidden: false,
-          preview: false,
-          tags: '',
-        })}
         filters={
           <div className="flex flex-1 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">

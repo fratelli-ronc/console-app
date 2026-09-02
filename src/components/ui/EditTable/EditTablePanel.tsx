@@ -1,23 +1,31 @@
-import { useEffect, useRef, useState } from 'react'
-import { Plus } from 'lucide-react'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import { cn } from '@/lib/utils'
 import { useUnsavedChangesPrompt } from '../ConfirmDialog'
 import { FilledButton } from '../FilledButton'
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '../HoverCard'
-import { OutlinedButton } from '../OutlinedButton'
 import { TextButton } from '../TextButton'
 import {
   EditTable,
   type EditTableColumn,
   type EditTableHandle,
 } from './EditTable'
-import type {
-  EditTableChanges,
-  EditTableSaveFn,
-  RowKey,
-} from './useEditTable'
+import type { EditTableChanges, EditTableSaveFn, RowKey } from './useEditTable'
 
 export type { EditTableChanges, EditTableColumn, EditTableSaveFn, RowKey }
+
+export interface EditTablePanelHandle<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
+  // Appends a seeded row to the grid and scrolls it into view. Drive the
+  // "add" affordance from wherever it makes sense for the page (e.g. the
+  // PageHeader) and call this on click.
+  addRow: (seed: T) => void
+}
 
 interface EditTablePanelProps<
   T extends Record<string, unknown> = Record<string, unknown>,
@@ -33,41 +41,37 @@ interface EditTablePanelProps<
   filterFn?: (row: T) => boolean
   className?: string
   filters?: React.ReactNode
-  // When set, an add button appends newRow() to the grid.
-  newRow?: () => T
-  addLabel?: string
-  addDisabled?: boolean
-  // When the add button is disabled, hovering it reveals this text in a
-  // popover explaining why.
-  disabledReason?: string
   // Renders a per-row trash button.
   deletable?: boolean
   emptyMessage?: React.ReactNode
   onDirtyChange?: (isDirty: boolean) => void
 }
 
-export function EditTablePanel<
+function EditTablePanelInner<
   T extends Record<string, unknown> = Record<string, unknown>,
->({
-  columns,
-  fetchFn,
-  onSave,
-  rowKey,
-  filterFn,
-  className,
-  filters,
-  newRow,
-  addLabel = 'Aggiungi',
-  addDisabled = false,
-  disabledReason,
-  deletable = false,
-  emptyMessage,
-  onDirtyChange,
-}: EditTablePanelProps<T>) {
+>(
+  {
+    columns,
+    fetchFn,
+    onSave,
+    rowKey,
+    filterFn,
+    className,
+    filters,
+    deletable = false,
+    emptyMessage,
+    onDirtyChange,
+  }: EditTablePanelProps<T>,
+  ref: React.ForwardedRef<EditTablePanelHandle<T>>,
+) {
   const tableRef = useRef<EditTableHandle<T>>(null)
   const [isDirty, setIsDirty] = useState(false)
 
   const { unsavedChangesDialog } = useUnsavedChangesPrompt(isDirty)
+
+  useImperativeHandle(ref, () => ({
+    addRow: (seed: T) => tableRef.current?.addRow(seed),
+  }))
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -86,38 +90,6 @@ export function EditTablePanel<
         {filters}
 
         <div className="ml-auto flex shrink-0 items-center gap-3">
-          {newRow &&
-            (() => {
-              const button = (
-                <OutlinedButton
-                  type="button"
-                  disabled={addDisabled}
-                  onClick={() => tableRef.current?.addRow(newRow())}
-                  className="inline-flex items-center gap-1.5"
-                >
-                  <Plus size={14} />
-                  {addLabel}
-                </OutlinedButton>
-              )
-
-              if (!addDisabled || !disabledReason) return button
-
-              return (
-                <HoverCard openDelay={100}>
-                  <HoverCardTrigger asChild>
-                    <span className="inline-flex cursor-not-allowed">
-                      {button}
-                    </span>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="w-auto max-w-xs p-3">
-                    <p className="text-xs text-muted-foreground">
-                      {disabledReason}
-                    </p>
-                  </HoverCardContent>
-                </HoverCard>
-              )
-            })()}
-
           <TextButton
             type="button"
             disabled={!isDirty}
@@ -156,3 +128,11 @@ export function EditTablePanel<
     </div>
   )
 }
+
+export const EditTablePanel = forwardRef(EditTablePanelInner) as <
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(
+  props: EditTablePanelProps<T> & {
+    ref?: React.Ref<EditTablePanelHandle<T>>
+  },
+) => React.ReactElement | null
