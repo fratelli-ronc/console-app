@@ -1,21 +1,50 @@
 import { useEffect, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilledButton } from '../FilledButton'
+import { OutlinedButton } from '../OutlinedButton'
 import { TextButton } from '../TextButton'
-import { EditTable, type EditTableColumn, type EditTableHandle } from './EditTable'
-import type { FetchParams, FetchResult } from './useEditTable'
+import {
+  EditTable,
+  type EditTableColumn,
+  type EditTableHandle,
+} from './EditTable'
+import type {
+  EditTableChanges,
+  EditTableSaveFn,
+  FetchParams,
+  FetchResult,
+  RowKey,
+} from './useEditTable'
 
-export type { EditTableColumn, FetchParams, FetchResult }
+export type {
+  EditTableChanges,
+  EditTableColumn,
+  EditTableSaveFn,
+  FetchParams,
+  FetchResult,
+  RowKey,
+}
 
 interface EditTablePanelProps<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
-  columns: EditTableColumn[]
+  columns: EditTableColumn<T>[]
   fetchFn: (params: FetchParams) => Promise<FetchResult<T>>
-  onSave?: (data: T[]) => void | Promise<void>
+  // Receives only the touched rows; return false to keep the table dirty
+  // (e.g. when the save request failed).
+  onSave?: EditTableSaveFn<T>
+  rowKey?: (row: T) => RowKey | null | undefined
   pageSize?: number
   className?: string
   filters?: React.ReactNode
+  // When set, an add button appends newRow() to the grid.
+  newRow?: () => T
+  addLabel?: string
+  addDisabled?: boolean
+  // Renders a per-row trash button.
+  deletable?: boolean
+  onDirtyChange?: (isDirty: boolean) => void
 }
 
 export function EditTablePanel<
@@ -24,11 +53,17 @@ export function EditTablePanel<
   columns,
   fetchFn,
   onSave,
+  rowKey,
   pageSize,
   className,
   filters,
+  newRow,
+  addLabel = 'Aggiungi',
+  addDisabled = false,
+  deletable = false,
+  onDirtyChange,
 }: EditTablePanelProps<T>) {
-  const tableRef = useRef<EditTableHandle>(null)
+  const tableRef = useRef<EditTableHandle<T>>(null)
   const [isDirty, setIsDirty] = useState(false)
 
   useEffect(() => {
@@ -44,25 +79,38 @@ export function EditTablePanel<
 
   return (
     <div className={cn('h-full flex flex-col gap-6', className)}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         {filters}
 
-        <TextButton
-          type="button"
-          disabled={!isDirty}
-          onClick={() => tableRef.current?.discard()}
-          className="ml-auto"
-        >
-          Annulla
-        </TextButton>
+        <div className="ml-auto flex shrink-0 items-center gap-3">
+          {newRow && (
+            <OutlinedButton
+              type="button"
+              disabled={addDisabled}
+              onClick={() => tableRef.current?.addRow(newRow())}
+              className="inline-flex items-center gap-1.5"
+            >
+              <Plus size={14} />
+              {addLabel}
+            </OutlinedButton>
+          )}
 
-        <FilledButton
-          type="button"
-          disabled={!isDirty}
-          onClick={() => tableRef.current?.save()}
-        >
-          Salva
-        </FilledButton>
+          <TextButton
+            type="button"
+            disabled={!isDirty}
+            onClick={() => tableRef.current?.discard()}
+          >
+            Annulla
+          </TextButton>
+
+          <FilledButton
+            type="button"
+            disabled={!isDirty}
+            onClick={() => tableRef.current?.save()}
+          >
+            Salva
+          </FilledButton>
+        </div>
       </div>
 
       <EditTable
@@ -71,7 +119,12 @@ export function EditTablePanel<
         columns={columns}
         fetchFn={fetchFn}
         onSave={onSave}
-        onDirtyChange={setIsDirty}
+        rowKey={rowKey}
+        deletable={deletable}
+        onDirtyChange={(dirty) => {
+          setIsDirty(dirty)
+          onDirtyChange?.(dirty)
+        }}
         pageSize={pageSize}
       />
     </div>

@@ -1,6 +1,5 @@
 export * from './DataTable'
 export * from './Dialog'
-export * from './EditTable/CellSelect'
 export * from './EditTable/EditTable'
 export * from './EditTable/EditTablePanel'
 export * from './EditTable/useEditTable'

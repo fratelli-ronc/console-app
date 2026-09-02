@@ -18,6 +18,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'station-tags': 'Tag Stazioni',
   test: 'Test',
   users: 'Utenti',
+  variables: 'Variabili',
 }
 
 function isStaticSegment(seg: string): boolean {

@@ -2,9 +2,12 @@ import consoleClient from './client'
 import {
   CreateGroupRequest,
   CreateStationRequest,
+  CreateVariableRequest,
   Group,
   GroupTag,
   GroupTagDetailed,
+  ListVariablesParams,
+  PaginatedVariables,
   ServerTreeRelation,
   ServerTreeRelationRequest,
   Station,
@@ -14,6 +17,10 @@ import {
   UpdateGroupRequest,
   UpdateStationPhotoRequest,
   UpdateStationRequest,
+  UpdateVariableRequest,
+  Variable,
+  VariableBatchRequest,
+  VariableBatchResult,
 } from './dtos'
 import { withErrorHandling } from '../withErrorHandling'
 
@@ -207,4 +214,56 @@ export const updateGroupTag = (
 export const deleteGroupTag = (id: number): Promise<void | null> =>
   withErrorHandling(async () => {
     await consoleClient.delete(`/group-tags/${id}`)
+  })
+
+export const listVariables = (
+  params: ListVariablesParams,
+): Promise<PaginatedVariables | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<PaginatedVariables>('/variables', {
+      params,
+    })
+    return data
+  })
+
+export const getVariable = (id: number | string): Promise<Variable | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<Variable>(`/variables/${id}`)
+    return data
+  })
+
+export const createVariable = (
+  payload: CreateVariableRequest,
+): Promise<Variable | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.post<Variable>('/variables', payload)
+    return data
+  })
+
+export const updateVariable = (
+  id: number | string,
+  payload: UpdateVariableRequest,
+): Promise<Variable | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.put<Variable>(
+      `/variables/${id}`,
+      payload,
+    )
+    return data
+  })
+
+export const deleteVariable = (id: number | string): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await consoleClient.delete(`/variables/${id}`)
+  })
+
+export const saveVariablesBatch = (
+  payload: VariableBatchRequest,
+): Promise<VariableBatchResult | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.post<VariableBatchResult>(
+      '/variables/batch',
+      payload,
+    )
+    return data
   })

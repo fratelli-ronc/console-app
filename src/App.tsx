@@ -12,9 +12,6 @@ const AuthPage = lazy(() =>
 const HomePage = lazy(() =>
   import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })),
 )
-const TestPage = lazy(() =>
-  import('@/pages/test/TestPage').then((m) => ({ default: m.TestPage })),
-)
 const StationsPage = lazy(() =>
   import('@/pages/stations/StationsPage').then((m) => ({
     default: m.StationsPage,
@@ -53,6 +50,11 @@ const EditGroupPage = lazy(() =>
 const GroupTagsPage = lazy(() =>
   import('@/pages/group-tags/GroupTagsPage').then((m) => ({
     default: m.GroupTagsPage,
+  })),
+)
+const VariablesPage = lazy(() =>
+  import('@/pages/variables/VariablesPage').then((m) => ({
+    default: m.VariablesPage,
   })),
 )
 
@@ -110,7 +112,6 @@ function App() {
         <Route element={<AppPrivateRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
-            <Route path="/test" element={<TestPage />} />
             <Route path="/stations" element={<StationsPage />} />
             <Route path="/stations/new" element={<NewStationPage />} />
             <Route path="/stations/:id" element={<EditStationPage />} />
@@ -122,6 +123,7 @@ function App() {
             <Route path="/groups/new" element={<NewGroupPage />} />
             <Route path="/groups/:id" element={<EditGroupPage />} />
             <Route path="/groups/group-tags" element={<GroupTagsPage />} />
+            <Route path="/variables" element={<VariablesPage />} />
 
             <Route path="/servers" element={<ServersPage />} />
             <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />

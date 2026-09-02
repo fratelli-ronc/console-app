@@ -150,6 +150,140 @@ export interface CreateGroupRequest {
   tagIds?: number[]
 }
 
+export interface VariableHistory {
+  variableId: number
+  enabled: boolean | null
+  triggerType: string | null
+  aggregationPolicy: string | null
+  intervalNumber: number | null
+  intervalText: string | null
+  nLogsMax: number | null
+}
+
+export interface VariableMemoryMap {
+  variableId: number
+  funcType: string | null
+  funcTypeWrite: string | null
+  memAddress: number | null
+  memQuantity: number | null
+  bitId: number | null
+  page: number | null
+  tariff: number | null
+  varType: string | null
+  channelMx3: string | null
+  chunkGrouping: number | null
+}
+
+export interface VariableImageAuth {
+  type: string | null
+  user: string | null
+  password: string | null
+}
+
+export interface VariableImage {
+  variableId: number
+  snapshotPath: string | null
+  goToPresetPath: string | null
+  snapshotDelay: number | null
+  auth: VariableImageAuth | null
+}
+
+export interface VariablePresentation {
+  type: string | null
+  minPresetValue: number | null
+  maxPresetValue: number | null
+  step: number | null
+  text: string | null
+  condition: string | null
+  color: string | null
+}
+
+export interface Variable {
+  id: number
+  variableId: number
+  groupId: number | null
+  name: string | null
+  classType: string | null
+  tags: string[]
+  ordPrint: number | null
+  graphGroup: string | null
+  measureUnit: string | null
+  format: string | null
+  minValue: number | null
+  maxValue: number | null
+  exponent: number | null
+  k: number | null
+  cumul: boolean | null
+  enableLogs: boolean | null
+  preview: boolean | null
+  hidden: boolean | null
+  driver: string | null
+  isFastUpdate: boolean | null
+  history: VariableHistory | null
+  memoryMap: VariableMemoryMap | null
+  image: VariableImage | null
+  presentations: VariablePresentation[]
+  note: string | null
+  writeAuthorizationLevel: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PaginatedVariables {
+  data: Variable[]
+  total: number
+}
+
+export interface ListVariablesParams {
+  groupId?: number
+  stationId?: number
+  classType?: string
+  search?: string
+  page?: number
+  pageSize?: number
+}
+
+// variableId is optional: when omitted the server auto-assigns the next one.
+export interface CreateVariableRequest {
+  variableId?: number
+  groupId?: number | null
+  name?: string | null
+  classType?: string | null
+  tags?: string[]
+  ordPrint?: number | null
+  graphGroup?: string | null
+  measureUnit?: string | null
+  format?: string | null
+  minValue?: number | null
+  maxValue?: number | null
+  exponent?: number | null
+  k?: number | null
+  cumul?: boolean | null
+  enableLogs?: boolean | null
+  preview?: boolean | null
+  hidden?: boolean | null
+  driver?: string | null
+  isFastUpdate?: boolean | null
+  presentations?: VariablePresentation[]
+  note?: string | null
+  writeAuthorizationLevel?: number | null
+}
+
+// All fields optional: omitted/null fields are left unchanged server-side.
+export type UpdateVariableRequest = Omit<CreateVariableRequest, 'variableId'>
+
+export interface VariableBatchRequest {
+  create: CreateVariableRequest[]
+  update: (UpdateVariableRequest & { id: number })[]
+  delete: number[]
+}
+
+export interface VariableBatchResult {
+  created: Variable[]
+  updated: Variable[]
+  deleted: number[]
+}
+
 export interface UpdateGroupRequest {
   stationId?: number | null
   name?: string

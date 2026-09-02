@@ -1,44 +1,98 @@
-import { cn } from '@/lib/utils'
 import { forwardRef, useImperativeHandle, useRef } from 'react'
+import { Check, Trash2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { CellSelect } from './CellSelect'
 import {
   useEditTable,
+  type EditTableSaveFn,
   type FetchParams,
   type FetchResult,
+  type RowKey,
 } from './useEditTable'
 
 export type { FetchParams, FetchResult }
 
-export interface EditTableHandle {
-  save: () => Promise<void>
-  discard: () => void
+export type EditTableCellType = 'text' | 'number' | 'boolean' | 'select'
+
+export interface EditTableSelectOption {
+  value: string
+  label: string
 }
 
-export interface EditTableColumn {
-  key: string
+export interface EditTableColumn<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
+  key: keyof T & string
   label: string
+  // e.g. '10rem'; when any column sets it the table switches to sized
+  // columns with horizontal scroll.
+  width?: string
   editable?: boolean
-  renderFn?: (value: any) => React.JSX.Element | string
-  editRenderFn?: (
-    value: string,
-    onCommit: (value: string) => void,
-    onCancel: () => void,
-  ) => React.JSX.Element
+  // Picks the built-in cell editor. Defaults to 'text'.
+  type?: EditTableCellType
+  // Required for type 'select'.
+  options?: EditTableSelectOption[]
+  // Display-only formatting; editing always uses the built-in editor.
+  renderFn?: (value: unknown, row: T) => React.ReactNode
+}
+
+export interface EditTableHandle<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
+  save: () => Promise<void>
+  discard: () => void
+  addRow: (seed: T) => void
 }
 
 interface EditTableProps<
   T extends Record<string, unknown> = Record<string, unknown>,
 > {
-  columns: EditTableColumn[]
+  columns: EditTableColumn<T>[]
   pageSize?: number
   className?: string
   fetchFn: (params: FetchParams) => Promise<FetchResult<T>>
-  onSave?: (data: T[]) => void | Promise<void>
+  onSave?: EditTableSaveFn<T>
   onDirtyChange?: (isDirty: boolean) => void
+  rowKey?: (row: T) => RowKey | null | undefined
+  // Renders a trailing trash-button column that removes the row.
+  deletable?: boolean
 }
 
-function isColEditable(col: EditTableColumn): boolean {
-  return col.editable !== false && (!col.renderFn || !!col.editRenderFn)
+function isColEditable(col: EditTableColumn<any>): boolean {
+  return col.editable !== false
 }
+
+// Boolean cells toggle in place and never enter the editing state.
+function canEnterEdit(col: EditTableColumn<any>): boolean {
+  return isColEditable(col) && col.type !== 'boolean'
+}
+
+function coerceCellValue(
+  col: EditTableColumn<any>,
+  raw: string,
+  original: unknown,
+): unknown {
+  if (col.type === 'number') {
+    const trimmed = raw.trim()
+    if (trimmed === '') return null
+    const parsed = Number(trimmed)
+    return Number.isNaN(parsed) ? original : parsed
+  }
+  return raw
+}
+
+const BooleanCell: React.FC<{ checked: boolean }> = ({ checked }) => (
+  <span
+    className={cn(
+      'inline-flex items-center justify-center w-4 h-4 rounded border transition-colors',
+      checked
+        ? 'bg-primary border-primary text-primary-foreground'
+        : 'border-border bg-background',
+    )}
+  >
+    {checked && <Check size={11} strokeWidth={3} />}
+  </span>
+)
 
 type NavDirection = 'tab' | 'shift-tab' | 'up' | 'down' | 'left' | 'right'
 
@@ -46,7 +100,7 @@ function navigateCell(
   row: number,
   colKey: string,
   direction: NavDirection,
-  columns: EditTableColumn[],
+  columns: EditTableColumn<any>[],
   rowCount: number,
 ): { row: number; key: string } | null {
   const colIndex = columns.findIndex((c) => c.key === colKey)
@@ -105,8 +159,10 @@ function EditTableInner<
     fetchFn,
     onSave,
     onDirtyChange,
+    rowKey,
+    deletable,
   }: EditTableProps<T>,
-  ref: React.ForwardedRef<EditTableHandle>,
+  ref: React.ForwardedRef<EditTableHandle<T>>,
 ) {
   const {
     containerRef,
@@ -121,6 +177,8 @@ function EditTableInner<
     setInputValue,
     isCellModified,
     commitEdit,
+    addRow,
+    deleteRow,
     setEditingCell,
     setSelectedCell,
     handleDiscard,
@@ -128,9 +186,20 @@ function EditTableInner<
     nextPage,
     prevPage,
     goToPage,
-  } = useEditTable(fetchFn, onSave, onDirtyChange, pageSize)
+  } = useEditTable<T>({ fetchFn, onSave, onDirtyChange, pageSize, rowKey })
 
-  useImperativeHandle(ref, () => ({ save: handleSave, discard: handleDiscard }))
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    save: handleSave,
+    discard: handleDiscard,
+    addRow: (seed: T) => {
+      addRow(seed)
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+      })
+    },
+  }))
 
   const inputRef = useRef<HTMLInputElement>(null)
   const pendingNavRef = useRef<{ row: number; key: string } | null>(null)
@@ -144,6 +213,40 @@ function EditTableInner<
     })
   }
 
+  // Commits a raw editor value onto a cell; unchanged raw text closes the
+  // editor without touching history.
+  const commitCell = (rowIndex: number, col: EditTableColumn<T>, raw: string) => {
+    const original = currentData[rowIndex]?.[col.key]
+    const value =
+      String(original ?? '') === raw
+        ? original
+        : coerceCellValue(col, raw, original)
+    commitEdit(rowIndex, col.key, value)
+  }
+
+  const toggleCell = (rowIndex: number, col: EditTableColumn<T>) => {
+    commitEdit(rowIndex, col.key, !currentData[rowIndex]?.[col.key])
+  }
+
+  const startEdit = (rowIndex: number, col: EditTableColumn<T>, seed?: string) => {
+    setSelectedCell(null)
+    setEditingCell({ row: rowIndex, key: col.key })
+    setInputValue(seed ?? String(currentData[rowIndex]?.[col.key] ?? ''))
+  }
+
+  const displayValue = (col: EditTableColumn<T>, row: T): React.ReactNode => {
+    const value = row[col.key]
+    if (col.renderFn) return col.renderFn(value, row)
+    if (col.type === 'boolean') return <BooleanCell checked={!!value} />
+    if (col.type === 'select')
+      return (
+        col.options?.find((o) => o.value === value)?.label ??
+        String(value ?? '')
+      )
+    return String(value ?? '')
+  }
+
+  const hasWidths = columns.some((c) => c.width)
   const pageNumbers = getPageNumbers(activePage, pageCount)
   const startRow = total === 0 ? 0 : activePage * ps + 1
   const endRow = activePage * ps + currentData.length
@@ -156,18 +259,38 @@ function EditTableInner<
         className,
       )}
     >
-      <div className="flex-1 overflow-auto overscroll-none">
-        <table className="w-full text-sm table-fixed border-separate border-spacing-0">
+      <div ref={scrollRef} className="flex-1 overflow-auto overscroll-none">
+        <table
+          className={cn(
+            'text-sm border-separate border-spacing-0',
+            hasWidths ? 'table-auto w-max min-w-full' : 'w-full table-fixed',
+          )}
+        >
+          {hasWidths && (
+            <colgroup>
+              {columns.map((col) => (
+                <col
+                  key={col.key}
+                  style={col.width ? { width: col.width } : undefined}
+                />
+              ))}
+              {deletable && <col style={{ width: '3rem' }} />}
+            </colgroup>
+          )}
+
           <thead>
-            <tr className="sticky top-0 bg-muted">
+            <tr className="sticky top-0 bg-muted z-10">
               {columns.map(({ key, label }) => (
                 <th
                   key={key}
-                  className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-r border-border last:border-r-0"
+                  className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-r border-border last:border-r-0 whitespace-nowrap"
                 >
                   {label}
                 </th>
               ))}
+              {deletable && (
+                <th className="px-2 py-3 border-b border-border" />
+              )}
             </tr>
           </thead>
 
@@ -189,48 +312,26 @@ function EditTableInner<
                     selectedCell?.key === key
 
                   if (isEditing) {
-                    const resolveNav = (
-                      nav: { row: number; key: string } | null,
-                    ) => {
-                      if (nav) {
-                        const nextCol = columns.find((c) => c.key === nav.key)!
-                        if (isColEditable(nextCol)) {
-                          setSelectedCell(null)
-                          setEditingCell(nav)
-                          setInputValue(
-                            String(currentData[nav.row]?.[nav.key] ?? ''),
-                          )
-                        } else {
-                          setSelectedCell(nav)
-                          focusCell(nav.row, nav.key)
-                        }
-                      } else {
-                        setEditingCell(null)
-                        setSelectedCell({ row: rowIndex, key })
-                        focusCell(rowIndex, key)
-                      }
-                    }
-
-                    if (col.editRenderFn) {
+                    if (col.type === 'select' && col.options) {
                       return (
                         <td
                           key={key}
                           className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
                         >
-                          {col.editRenderFn(
-                            inputValue,
-                            (finalValue: string) => {
-                              const nav = pendingNavRef.current
-                              pendingNavRef.current = null
-                              commitEdit(rowIndex, key, finalValue)
-                              resolveNav(nav)
-                            },
-                            () => {
+                          <CellSelect
+                            value={inputValue}
+                            options={col.options}
+                            onCommit={(finalValue: string) => {
+                              commitCell(rowIndex, col, finalValue)
+                              setSelectedCell({ row: rowIndex, key })
+                              focusCell(rowIndex, key)
+                            }}
+                            onCancel={() => {
                               setEditingCell(null)
                               setSelectedCell({ row: rowIndex, key })
                               focusCell(rowIndex, key)
-                            },
-                          )}
+                            }}
+                          />
                         </td>
                       )
                     }
@@ -238,12 +339,15 @@ function EditTableInner<
                     return (
                       <td
                         key={key}
-                        className="px-4 py-3.5 border-b border-border ring-2 ring-inset ring-primary/60 bg-background"
+                        className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
                       >
                         <input
                           ref={inputRef}
                           autoFocus
                           value={inputValue}
+                          inputMode={
+                            col.type === 'number' ? 'decimal' : undefined
+                          }
                           onChange={(e) => setInputValue(e.target.value)}
                           onFocus={(e) => {
                             if (editTriggeredByTypingRef.current) {
@@ -257,12 +361,12 @@ function EditTableInner<
                           onBlur={() => {
                             const nav = pendingNavRef.current
                             pendingNavRef.current = null
-                            commitEdit(rowIndex, key, inputValue)
+                            commitCell(rowIndex, col, inputValue)
                             if (nav) {
-                              const nextEditable = isColEditable(
-                                columns.find((c) => c.key === nav.key)!,
-                              )
-                              if (nextEditable) {
+                              const nextCol = columns.find(
+                                (c) => c.key === nav.key,
+                              )!
+                              if (canEnterEdit(nextCol)) {
                                 setSelectedCell(null)
                                 setEditingCell(nav)
                                 setInputValue(
@@ -321,9 +425,11 @@ function EditTableInner<
                       data-col={key}
                       onClick={() => {
                         if (!isEditable) return
-                        setSelectedCell(null)
-                        setEditingCell({ row: rowIndex, key })
-                        setInputValue(String(item[key] ?? ''))
+                        if (col.type === 'boolean') {
+                          toggleCell(rowIndex, col)
+                          return
+                        }
+                        startEdit(rowIndex, col)
                       }}
                       onFocus={() => setSelectedCell({ row: rowIndex, key })}
                       onBlur={() => setSelectedCell(null)}
@@ -372,37 +478,45 @@ function EditTableInner<
                           case 'ArrowRight':
                             moveSelection('right')
                             break
+                          case ' ':
+                            if (isEditable && col.type === 'boolean') {
+                              e.preventDefault()
+                              toggleCell(rowIndex, col)
+                            }
+                            break
                           case 'Enter':
                           case 'F2':
-                            if (isEditable) {
-                              e.preventDefault()
-                              setSelectedCell(null)
-                              setEditingCell({ row: rowIndex, key })
-                              setInputValue(String(item[key] ?? ''))
+                            if (!isEditable) break
+                            e.preventDefault()
+                            if (col.type === 'boolean') {
+                              toggleCell(rowIndex, col)
+                            } else {
+                              startEdit(rowIndex, col)
                             }
                             break
                           default:
                             if (
-                              isEditable &&
+                              canEnterEdit(col) &&
                               e.key.length === 1 &&
                               !e.ctrlKey &&
                               !e.metaKey &&
                               !e.altKey
                             ) {
                               e.preventDefault()
-                              editTriggeredByTypingRef.current = !col.editRenderFn
-                              setSelectedCell(null)
-                              setEditingCell({ row: rowIndex, key })
-                              setInputValue(
-                                col.editRenderFn
-                                  ? String(item[key] ?? '')
-                                  : e.key,
+                              const isFreeInput =
+                                col.type !== 'select'
+                              editTriggeredByTypingRef.current = isFreeInput
+                              startEdit(
+                                rowIndex,
+                                col,
+                                isFreeInput ? e.key : undefined,
                               )
                             }
                         }
                       }}
                       className={cn(
-                        'px-4 py-3.5 text-muted-foreground focus:outline-none border-r border-border last:border-r-0',
+                        'px-4 py-3.5 text-muted-foreground focus:outline-none border-r border-border last:border-r-0 whitespace-nowrap',
+                        col.type === 'boolean' && 'text-center',
                         modified && 'bg-yellow-500/10',
                         isSelected &&
                           'ring-2 ring-inset ring-primary/40 bg-primary/5',
@@ -413,12 +527,30 @@ function EditTableInner<
                           'border-b border-border',
                       )}
                     >
-                      {col.renderFn
-                        ? col.renderFn(item[key])
-                        : String(item[key] ?? '')}
+                      {displayValue(col, item)}
                     </td>
                   )
                 })}
+
+                {deletable && (
+                  <td
+                    className={cn(
+                      'px-2 py-2 text-center align-middle',
+                      rowIndex < currentData.length - 1 &&
+                        'border-b border-border',
+                    )}
+                  >
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => deleteRow(rowIndex)}
+                      title="Elimina riga"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -494,5 +626,5 @@ function getPageNumbers(page: number, pageCount: number): (number | '...')[] {
 export const EditTable = forwardRef(EditTableInner) as <
   T extends Record<string, unknown> = Record<string, unknown>,
 >(
-  props: EditTableProps<T> & { ref?: React.Ref<EditTableHandle> },
+  props: EditTableProps<T> & { ref?: React.Ref<EditTableHandle<T>> },
 ) => React.ReactElement | null
