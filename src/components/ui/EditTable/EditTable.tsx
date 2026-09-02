@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { Check, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CellSelect } from './CellSelect'
+import { SearchableCellSelect } from './SearchableCellSelect'
 import {
   useEditTable,
   type EditTableSaveFn,
@@ -28,6 +29,9 @@ export interface EditTableColumn<
   type?: EditTableCellType
   // Required for type 'select'.
   options?: EditTableSelectOption[]
+  // Only for type 'select': swap the plain option list for a searchable
+  // dropdown. Use it when the list is long (e.g. picking a group).
+  searchable?: boolean
   // Display-only formatting; editing always uses the built-in editor.
   renderFn?: (value: unknown, row: T) => React.ReactNode
 }
@@ -305,12 +309,15 @@ function EditTableInner<
 
                   if (isEditing) {
                     if (col.type === 'select' && col.options) {
+                      const SelectEditor = col.searchable
+                        ? SearchableCellSelect
+                        : CellSelect
                       return (
                         <td
                           key={key}
                           className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
                         >
-                          <CellSelect
+                          <SelectEditor
                             value={inputValue}
                             options={col.options}
                             onCommit={(finalValue: string) => {

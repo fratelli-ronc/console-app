@@ -12,6 +12,7 @@ import {
   SelectValue,
   type EditTableChanges,
   type EditTableColumn,
+  type EditTableSelectOption,
 } from '@/components'
 import {
   Group,
@@ -34,7 +35,7 @@ import {
 type VariableRow = {
   id: number | null
   variableId: number | null
-  groupId: number | null
+  groupId: string
   name: string | null
   classType: string | null
   format: string | null
@@ -53,7 +54,7 @@ type VariableRow = {
 const toRow = (variable: Variable): VariableRow => ({
   id: variable.id,
   variableId: variable.variableId,
-  groupId: variable.groupId,
+  groupId: variable.groupId == null ? '' : String(variable.groupId),
   name: variable.name,
   classType: variable.classType,
   format: variable.format,
@@ -76,7 +77,7 @@ const parseTags = (raw: string): string[] =>
     .filter(Boolean)
 
 const toFields = (row: VariableRow): UpdateVariableRequest => ({
-  groupId: row.groupId,
+  groupId: row.groupId ? Number(row.groupId) : null,
   name: row.name,
   classType: row.classType,
   format: row.format,
@@ -96,7 +97,11 @@ const toFields = (row: VariableRow): UpdateVariableRequest => ({
 // empty-string value.
 const ALL_CLASSES = 'all'
 
-const COLUMNS: EditTableColumn<VariableRow>[] = [
+// groupOptions is station-scoped and only known at runtime, so the column
+// set is built per render (see the `columns` memo below).
+const buildColumns = (
+  groupOptions: EditTableSelectOption[],
+): EditTableColumn<VariableRow>[] => [
   {
     key: 'variableId',
     label: 'ID Var',
@@ -108,6 +113,14 @@ const COLUMNS: EditTableColumn<VariableRow>[] = [
       ) : (
         String(value)
       ),
+  },
+  {
+    key: 'groupId',
+    label: 'Gruppo',
+    width: '12rem',
+    type: 'select',
+    searchable: true,
+    options: groupOptions,
   },
   { key: 'name', label: 'Nome', width: '14rem' },
   {
@@ -179,10 +192,11 @@ export const VariablesPage: React.FC = () => {
     [stations],
   )
 
-  const groupOptions = useMemo(
-    () => [
-      { value: '', label: 'Tutti i gruppi' },
-      ...(groups ?? [])
+  // Groups of the currently-scoped station — shared by the group filter and
+  // the in-grid "Gruppo" column.
+  const scopedGroupOptions = useMemo(
+    () =>
+      (groups ?? [])
         .filter(
           (group) =>
             stationId === '' || String(group.stationId ?? '') === stationId,
@@ -191,8 +205,17 @@ export const VariablesPage: React.FC = () => {
           value: String(group.id),
           label: group.name || `ID ${group.groupId}`,
         })),
-    ],
     [groups, stationId],
+  )
+
+  const groupOptions = useMemo(
+    () => [{ value: '', label: 'Tutti i gruppi' }, ...scopedGroupOptions],
+    [scopedGroupOptions],
+  )
+
+  const columns = useMemo(
+    () => buildColumns(scopedGroupOptions),
+    [scopedGroupOptions],
   )
 
   const tagOptions = useMemo(
@@ -288,7 +311,7 @@ export const VariablesPage: React.FC = () => {
 
       <EditTablePanel<VariableRow>
         className="flex-1 min-h-0"
-        columns={COLUMNS}
+        columns={columns}
         fetchFn={fetchFn}
         filterFn={filterFn}
         onSave={handleSave}
@@ -304,7 +327,7 @@ export const VariablesPage: React.FC = () => {
         newRow={() => ({
           id: null,
           variableId: null,
-          groupId: groupId ? Number(groupId) : null,
+          groupId,
           name: '',
           classType: 'analog',
           format: null,
