@@ -45,6 +45,10 @@ interface EditTablePanelProps<
   // Renders a per-row trash button.
   deletable?: boolean
   emptyMessage?: React.ReactNode
+  // Fires when the grid gains or loses unsaved edits. Watch it to guard any
+  // control that changes the table's scope (station/group pickers, etc.):
+  // prompt before letting the change through, since a scope change refetches
+  // and drops pending edits.
   onDirtyChange?: (isDirty: boolean) => void
 }
 

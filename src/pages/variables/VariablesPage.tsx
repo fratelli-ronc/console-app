@@ -10,6 +10,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  useConfirm,
   type EditTableChanges,
   type EditTableColumn,
   type EditTablePanelHandle,
@@ -168,6 +169,11 @@ export const VariablesPage: React.FC = () => {
   const [tag, setTag] = useState('')
   const [search, setSearch] = useState('')
 
+  // Mirrors the grid's dirty state (fed by EditTablePanel.onDirtyChange) so
+  // the station/group pickers can prompt before a scope change wipes edits.
+  const [isDirty, setIsDirty] = useState(false)
+  const { confirm, confirmDialog } = useConfirm()
+
   // Every tag present in the currently-loaded (station/group-scoped) rows,
   // sorted — the option list for the tag filter.
   const [availableTags, setAvailableTags] = useState<string[]>([])
@@ -229,7 +235,19 @@ export const VariablesPage: React.FC = () => {
     [availableTags],
   )
 
-  const handleStationChange = (value: string) => {
+  // Changing the scope refetches the grid and wipes any pending edits, so
+  // confirm the discard first — and bail before touching state if the user
+  // declines, otherwise the select would show a value the grid never loaded.
+  const guardDiscard = () =>
+    !isDirty ||
+    confirm({
+      title: 'Modifiche non salvate',
+      description: 'Le modifiche non salvate andranno perse. Vuoi continuare?',
+      confirmLabel: 'Continua',
+    })
+
+  const handleStationChange = async (value: string) => {
+    if (!(await guardDiscard())) return
     setStationId(value)
     if (value && groupId) {
       const group = (groups ?? []).find((g) => String(g.id) === groupId)
@@ -239,7 +257,8 @@ export const VariablesPage: React.FC = () => {
 
   // Picking a group also selects its station, so the table always stays
   // scoped to one station.
-  const handleGroupChange = (value: string) => {
+  const handleGroupChange = async (value: string) => {
+    if (!(await guardDiscard())) return
     setGroupId(value)
     if (value) {
       const group = (groups ?? []).find((g) => String(g.id) === value)
@@ -344,6 +363,7 @@ export const VariablesPage: React.FC = () => {
         fetchFn={fetchFn}
         filterFn={filterFn}
         onSave={handleSave}
+        onDirtyChange={setIsDirty}
         deletable
         emptyMessage={
           hasScope
@@ -409,6 +429,8 @@ export const VariablesPage: React.FC = () => {
           </div>
         }
       />
+
+      {confirmDialog}
     </div>
   )
 }

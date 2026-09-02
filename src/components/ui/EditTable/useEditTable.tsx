@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useConfirm } from '../ConfirmDialog'
 
 export type RowKey = string | number
 
@@ -27,9 +26,6 @@ export interface UseEditTableOptions<T> {
   filterFn?: (row: T) => boolean
 }
 
-const DISCARD_PROMPT =
-  'Le modifiche non salvate andranno perse. Vuoi continuare?'
-
 export function useEditTable<T extends Record<string, unknown>>({
   fetchFn,
   onSave,
@@ -49,8 +45,6 @@ export function useEditTable<T extends Record<string, unknown>>({
     key: string
   } | null>(null)
   const [inputValue, setInputValue] = useState('')
-
-  const { confirm, confirmDialog } = useConfirm()
 
   const containerRef = useRef<HTMLDivElement>(null)
   const historyIndexRef = useRef(historyIndex)
@@ -130,25 +124,14 @@ export function useEditTable<T extends Record<string, unknown>>({
     })
   }, [fetchFn])
 
-  // Guards unsaved changes: declining the prompt keeps the current data
-  // (the caller's filter state may then be ahead of the grid until the
-  // user saves or discards).
-  const load = useCallback(async () => {
-    if (
-      isDirtyRef.current &&
-      !(await confirm({
-        title: 'Modifiche non salvate',
-        description: DISCARD_PROMPT,
-        confirmLabel: 'Continua',
-      }))
-    )
-      return
-    doLoad()
-  }, [doLoad, confirm])
-
+  // Refetch whenever the caller swaps in a new fetchFn (i.e. the scope
+  // changed). Protecting unsaved edits against a scope change is the
+  // caller's job: watch `onDirtyChange` and guard the control that changes
+  // scope, so that declining the prompt leaves the control — and the grid
+  // — untouched.
   useEffect(() => {
-    void load()
-  }, [load])
+    doLoad()
+  }, [doLoad])
 
   useEffect(() => {
     onDirtyChange?.(isDirty, pendingCount)
@@ -236,7 +219,6 @@ export function useEditTable<T extends Record<string, unknown>>({
   }
 
   return {
-    confirmDialog,
     containerRef,
     currentData,
     totalRowCount: fullData.length,
