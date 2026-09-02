@@ -49,6 +49,8 @@ interface EditTableProps<
   onSave?: EditTableSaveFn<T>
   onDirtyChange?: (isDirty: boolean) => void
   rowKey?: (row: T) => RowKey | null | undefined
+  // Client-side view filter: non-matching rows are hidden but kept in state.
+  filterFn?: (row: T) => boolean
   // Renders a trailing trash-button column that removes the row.
   deletable?: boolean
   // Shown centered in the body when there are no rows.
@@ -156,6 +158,7 @@ function EditTableInner<
     onSave,
     onDirtyChange,
     rowKey,
+    filterFn,
     deletable,
     emptyMessage = 'Nessun elemento.',
   }: EditTableProps<T>,
@@ -164,6 +167,7 @@ function EditTableInner<
   const {
     containerRef,
     currentData,
+    totalRowCount,
     editingCell,
     selectedCell,
     inputValue,
@@ -176,7 +180,7 @@ function EditTableInner<
     setSelectedCell,
     handleDiscard,
     handleSave,
-  } = useEditTable<T>({ fetchFn, onSave, onDirtyChange, rowKey })
+  } = useEditTable<T>({ fetchFn, onSave, onDirtyChange, rowKey, filterFn })
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -552,7 +556,11 @@ function EditTableInner<
 
       <div className="flex items-center justify-end px-4 py-2.5 bg-muted/20 border-t border-border">
         <span className="text-xs text-muted-foreground tabular-nums">
-          {currentData.length === 1 ? '1 riga' : `${currentData.length} righe`}
+          {totalRowCount !== currentData.length
+            ? `${currentData.length} di ${totalRowCount} righe`
+            : currentData.length === 1
+              ? '1 riga'
+              : `${currentData.length} righe`}
         </span>
       </div>
     </div>

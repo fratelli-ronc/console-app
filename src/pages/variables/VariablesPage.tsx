@@ -2,10 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   EditTablePanel,
-  FilterPills,
   PageHeader,
   Search,
   SearchableSelect,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   type EditTableChanges,
   type EditTableColumn,
 } from '@/components'
@@ -88,13 +92,9 @@ const toFields = (row: VariableRow): UpdateVariableRequest => ({
   tags: parseTags(row.tags),
 })
 
-const CLASS_FILTERS: { label: string; value: string | null }[] = [
-  { label: 'Tutte', value: null },
-  ...VARIABLE_CLASS_TYPE_OPTIONS.map((opt) => ({
-    label: opt.label,
-    value: opt.value as string | null,
-  })),
-]
+// Sentinel for the "no class filter" option — Radix Select can't use an
+// empty-string value.
+const ALL_CLASSES = 'all'
 
 const COLUMNS: EditTableColumn<VariableRow>[] = [
   {
@@ -149,8 +149,12 @@ export const VariablesPage: React.FC = () => {
   const [stationId, setStationId] = useState('')
   const [groupId, setGroupId] = useState('')
   const [classType, setClassType] = useState<string | null>(null)
-  const [searchInput, setSearchInput] = useState('')
+  const [tag, setTag] = useState('')
   const [search, setSearch] = useState('')
+
+  // Every tag present in the currently-loaded (station/group-scoped) rows,
+  // sorted — the option list for the tag filter.
+  const [availableTags, setAvailableTags] = useState<string[]>([])
 
   useEffect(() => {
     listStations().then((res) => {
@@ -161,11 +165,10 @@ export const VariablesPage: React.FC = () => {
     })
   }, [])
 
-  // Debounce the search box so each keystroke doesn't hit the server.
+  // Drop the tag filter when the new scope has no such tag.
   useEffect(() => {
-    const timeout = setTimeout(() => setSearch(searchInput), 300)
-    return () => clearTimeout(timeout)
-  }, [searchInput])
+    if (tag && !availableTags.includes(tag)) setTag('')
+  }, [availableTags, tag])
 
   const stationOptions = useMemo(
     () =>
@@ -192,6 +195,14 @@ export const VariablesPage: React.FC = () => {
     [groups, stationId],
   )
 
+  const tagOptions = useMemo(
+    () => [
+      { value: '', label: 'Tutti i tag' },
+      ...availableTags.map((t) => ({ value: t, label: t })),
+    ],
+    [availableTags],
+  )
+
   const handleStationChange = (value: string) => {
     setStationId(value)
     if (value && groupId) {
@@ -214,16 +225,40 @@ export const VariablesPage: React.FC = () => {
   // never fetch the unfiltered variable set.
   const hasScope = stationId !== '' || groupId !== ''
 
+  // One fetch per scope. Class / search / tag filtering is all client-side
+  // (see filterFn) so tweaking a filter never refetches or drops edits.
   const fetchFn = useCallback(async (): Promise<VariableRow[]> => {
-    if (!hasScope) return []
+    if (!hasScope) {
+      setAvailableTags([])
+      return []
+    }
     const res = await listVariables({
       groupId: groupId ? Number(groupId) : undefined,
       stationId: stationId ? Number(stationId) : undefined,
-      classType: classType ?? undefined,
-      search: search || undefined,
     })
-    return res ? res.data.map(toRow) : []
-  }, [hasScope, groupId, stationId, classType, search])
+    if (!res) return []
+
+    const tags = new Set<string>()
+    res.data.forEach((v) => v.tags?.forEach((t) => tags.add(t)))
+    setAvailableTags([...tags].sort((a, b) => a.localeCompare(b)))
+
+    return res.data.map(toRow)
+  }, [hasScope, groupId, stationId])
+
+  const filterFn = useCallback(
+    (row: VariableRow) => {
+      if (classType && row.classType !== classType) return false
+      if (tag && !parseTags(row.tags).includes(tag)) return false
+      if (search) {
+        const q = search.trim().toLowerCase()
+        const name = row.name?.toLowerCase() ?? ''
+        const id = row.variableId == null ? '' : String(row.variableId)
+        if (!name.includes(q) && !id.includes(q)) return false
+      }
+      return true
+    },
+    [classType, tag, search],
+  )
 
   const handleSave = useCallback(
     async (changes: EditTableChanges<VariableRow>) => {
@@ -255,6 +290,7 @@ export const VariablesPage: React.FC = () => {
         className="flex-1 min-h-0"
         columns={COLUMNS}
         fetchFn={fetchFn}
+        filterFn={filterFn}
         onSave={handleSave}
         deletable
         emptyMessage={
@@ -304,15 +340,38 @@ export const VariablesPage: React.FC = () => {
                 emptyMessage="Nessun gruppo trovato."
                 options={groupOptions}
               />
-
-              <Search value={searchInput} onChange={setSearchInput} />
             </div>
 
-            <div className="self-start">
-              <FilterPills
-                options={CLASS_FILTERS}
-                value={classType}
-                onChange={setClassType}
+            <div className="flex flex-wrap items-center gap-3">
+              <Search value={search} onChange={setSearch} />
+
+              <Select
+                value={classType ?? ALL_CLASSES}
+                onValueChange={(v) =>
+                  setClassType(v === ALL_CLASSES ? null : v)
+                }
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_CLASSES}>Tutte le classi</SelectItem>
+                  {VARIABLE_CLASS_TYPE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <SearchableSelect
+                className="w-48"
+                value={tag}
+                onValueChange={setTag}
+                placeholder="Tutti i tag"
+                searchPlaceholder="Cerca tag…"
+                emptyMessage="Nessun tag."
+                options={tagOptions}
               />
             </div>
           </div>

@@ -26,6 +26,9 @@ interface EditTablePanelProps<
   // (e.g. when the save request failed).
   onSave?: EditTableSaveFn<T>
   rowKey?: (row: T) => RowKey | null | undefined
+  // Client-side view filter: non-matching rows are hidden but kept in state
+  // (edits survive filtering, and changing it never triggers a refetch).
+  filterFn?: (row: T) => boolean
   className?: string
   filters?: React.ReactNode
   // When set, an add button appends newRow() to the grid.
@@ -45,6 +48,7 @@ export function EditTablePanel<
   fetchFn,
   onSave,
   rowKey,
+  filterFn,
   className,
   filters,
   newRow,
@@ -111,6 +115,7 @@ export function EditTablePanel<
         fetchFn={fetchFn}
         onSave={onSave}
         rowKey={rowKey}
+        filterFn={filterFn}
         deletable={deletable}
         emptyMessage={emptyMessage}
         onDirtyChange={(dirty) => {

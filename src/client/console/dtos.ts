@@ -234,11 +234,11 @@ export interface PaginatedVariables {
   total: number
 }
 
+// classType / search / tag filtering happens client-side (see VariablesPage);
+// the server call only scopes by station or group.
 export interface ListVariablesParams {
   groupId?: number
   stationId?: number
-  classType?: string
-  search?: string
   page?: number
   pageSize?: number
 }

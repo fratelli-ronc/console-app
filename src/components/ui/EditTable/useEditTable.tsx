@@ -20,6 +20,10 @@ export interface UseEditTableOptions<T> {
   onDirtyChange?: (isDirty: boolean) => void
   // Stable identity of a row; rows without a key count as newly created.
   rowKey?: (row: T) => RowKey | null | undefined
+  // Client-side view filter. Rows that fail the predicate are hidden from
+  // the grid but stay in state — edits, dirty tracking and save all act on
+  // the full set. Unsaved new rows are always shown regardless of the filter.
+  filterFn?: (row: T) => boolean
 }
 
 const DISCARD_PROMPT = 'Ci sono modifiche non salvate. Continuare e scartarle?'
@@ -29,6 +33,7 @@ export function useEditTable<T extends Record<string, unknown>>({
   onSave,
   onDirtyChange,
   rowKey = (row) => row.id as RowKey | null | undefined,
+  filterFn,
 }: UseEditTableOptions<T>) {
   const [initialRows, setInitialRows] = useState<T[]>([])
   const [history, setHistory] = useState<T[][]>([[]])
@@ -49,12 +54,27 @@ export function useEditTable<T extends Record<string, unknown>>({
   const historyLengthRef = useRef(history.length)
   historyLengthRef.current = history.length
 
-  const currentData = history[historyIndex] ?? []
+  const fullData = history[historyIndex] ?? []
 
   const keyOf = useCallback(
     (row: T): RowKey | null => rowKey(row) ?? null,
     [rowKey],
   )
+
+  // The rows actually rendered: the full set minus anything the caller's
+  // filter rejects, but always keeping unsaved new rows visible. Cell
+  // indices coming back from the grid are positions in this array.
+  const currentData = useMemo(() => {
+    if (!filterFn) return fullData
+    return fullData.filter((row) => keyOf(row) == null || filterFn(row))
+  }, [fullData, filterFn, keyOf])
+
+  // Clear any active cell when the filter changes — its index would
+  // otherwise point at a different (or vanished) row.
+  useEffect(() => {
+    setEditingCell(null)
+    setSelectedCell(null)
+  }, [filterFn])
 
   const initialByKey = useMemo(() => {
     const map = new Map<RowKey, T>()
@@ -65,12 +85,13 @@ export function useEditTable<T extends Record<string, unknown>>({
     return map
   }, [initialRows, keyOf])
 
+  // Dirty tracking always runs against the full set, never the filtered view.
   const changes = useMemo<EditTableChanges<T>>(() => {
     const created: T[] = []
     const updated: T[] = []
     const currentKeys = new Set<RowKey>()
 
-    for (const row of currentData) {
+    for (const row of fullData) {
       const key = keyOf(row)
       if (key == null) {
         created.push(row)
@@ -87,7 +108,7 @@ export function useEditTable<T extends Record<string, unknown>>({
     )
 
     return { created, updated, deleted }
-  }, [currentData, initialByKey, keyOf])
+  }, [fullData, initialByKey, keyOf])
 
   const isDirty =
     changes.created.length + changes.updated.length + changes.deleted.length >
@@ -150,26 +171,31 @@ export function useEditTable<T extends Record<string, unknown>>({
     setHistoryIndex((i) => i + 1)
   }
 
+  // `row` is an index into the filtered view; map it back to the full set
+  // by object identity before writing history.
   const commitEdit = (row: number, key: string, value: unknown) => {
     setEditingCell(null)
 
-    if (currentData[row]?.[key] === value) return
+    const target = currentData[row]
+    if (!target || target[key] === value) return
 
     pushRows(
-      currentData.map((r, i) => (i === row ? { ...r, [key]: value } : r)) as T[],
+      fullData.map((r) => (r === target ? { ...r, [key]: value } : r)) as T[],
     )
   }
 
   const addRow = (seed: T) => {
     setEditingCell(null)
     setSelectedCell(null)
-    pushRows([...currentData, seed])
+    pushRows([...fullData, seed])
   }
 
   const deleteRow = (row: number) => {
     setEditingCell(null)
     setSelectedCell(null)
-    pushRows(currentData.filter((_, i) => i !== row))
+    const target = currentData[row]
+    if (!target) return
+    pushRows(fullData.filter((r) => r !== target))
   }
 
   const handleSave = async () => {
@@ -200,6 +226,7 @@ export function useEditTable<T extends Record<string, unknown>>({
   return {
     containerRef,
     currentData,
+    totalRowCount: fullData.length,
     editingCell,
     selectedCell,
     inputValue,
