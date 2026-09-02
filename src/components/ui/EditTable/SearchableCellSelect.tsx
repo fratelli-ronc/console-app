@@ -72,7 +72,7 @@ export const SearchableCellSelect: React.FC<SearchableCellSelectProps> = ({
           inputRef.current?.focus()
         }}
         onCloseAutoFocus={(e) => e.preventDefault()}
-        className="w-[calc(var(--radix-popover-trigger-width)+32px)] min-w-50 rounded-lg p-0"
+        className="w-[calc(100%-8px)] min-w-50 rounded-lg p-0"
       >
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <SearchIcon size={14} className="shrink-0 text-muted-foreground" />
