@@ -41,10 +41,9 @@ export const MoveMenu: React.FC<MoveMenuProps> = ({
 )
 
 // Separate component so the search query resets every time the menu opens
-const MoveMenuContent: React.FC<Pick<MoveMenuProps, 'targets' | 'onSelect'>> = ({
-  targets,
-  onSelect,
-}) => {
+const MoveMenuContent: React.FC<
+  Pick<MoveMenuProps, 'targets' | 'onSelect'>
+> = ({ targets, onSelect }) => {
   const [query, setQuery] = useState('')
 
   const q = query.trim().toLowerCase()
@@ -63,6 +62,9 @@ const MoveMenuContent: React.FC<Pick<MoveMenuProps, 'targets' | 'onSelect'>> = (
           type="text"
           placeholder="Cerca server…"
           autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="h-7.5 w-full rounded-md border border-border px-2.5 text-[13px] outline-none focus:border-primary transition-colors"

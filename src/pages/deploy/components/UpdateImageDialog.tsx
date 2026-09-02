@@ -282,6 +282,9 @@ export const UpdateImageDialog: React.FC = () => {
             onChange={(e) => setCustomTag(e.target.value)}
             placeholder="Es. latest, 1.2.3…"
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             disabled={isBusy || updateCompleted}
             className="w-full h-9 px-3 text-sm bg-background border border-border rounded-lg outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring placeholder:text-placeholder transition disabled:opacity-50"
           />
