@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUnsavedChangesPrompt } from '../ConfirmDialog'
 import { FilledButton } from '../FilledButton'
 import { OutlinedButton } from '../OutlinedButton'
 import { TextButton } from '../TextButton'
@@ -60,6 +61,8 @@ export function EditTablePanel<
 }: EditTablePanelProps<T>) {
   const tableRef = useRef<EditTableHandle<T>>(null)
   const [isDirty, setIsDirty] = useState(false)
+
+  const { unsavedChangesDialog } = useUnsavedChangesPrompt(isDirty)
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -123,6 +126,8 @@ export function EditTablePanel<
           onDirtyChange?.(dirty)
         }}
       />
+
+      {unsavedChangesDialog}
     </div>
   )
 }

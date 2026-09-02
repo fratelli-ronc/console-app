@@ -165,6 +165,7 @@ function EditTableInner<
   ref: React.ForwardedRef<EditTableHandle<T>>,
 ) {
   const {
+    confirmDialog,
     containerRef,
     currentData,
     totalRowCount,
@@ -563,6 +564,8 @@ function EditTableInner<
               : `${currentData.length} righe`}
         </span>
       </div>
+
+      {confirmDialog}
     </div>
   )
 }

@@ -1,5 +1,11 @@
 import { lazy, Suspense } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Outlet,
+  Route,
+  RouterProvider,
+} from 'react-router-dom'
 import { AppLayout, AppPrivateRoute, SplashScreen } from '@/layout'
 import './App.css'
 
@@ -103,47 +109,56 @@ const SettingsPage = lazy(() =>
   })),
 )
 
-function App() {
-  return (
-    <Suspense fallback={<SplashScreen />}>
-      <Routes>
-        <Route path="/auth" element={<AuthPage />} />
+// Single Suspense boundary for the lazily-loaded page chunks, matching the
+// previous <Routes>-wrapped-in-<Suspense> behaviour.
+const SuspenseBoundary: React.FC = () => (
+  <Suspense fallback={<SplashScreen />}>
+    <Outlet />
+  </Suspense>
+)
 
-        <Route element={<AppPrivateRoute />}>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/stations" element={<StationsPage />} />
-            <Route path="/stations/new" element={<NewStationPage />} />
-            <Route path="/stations/:id" element={<EditStationPage />} />
-            <Route
-              path="/stations/station-tags"
-              element={<StationTagsPage />}
-            />
-            <Route path="/groups" element={<GroupsPage />} />
-            <Route path="/groups/new" element={<NewGroupPage />} />
-            <Route path="/groups/:id" element={<EditGroupPage />} />
-            <Route path="/groups/group-tags" element={<GroupTagsPage />} />
-            <Route path="/variables" element={<VariablesPage />} />
+// Data router (createBrowserRouter) rather than <BrowserRouter> so pages can
+// use useBlocker to guard unsaved changes on navigation.
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<SuspenseBoundary />}>
+      <Route path="/auth" element={<AuthPage />} />
 
-            <Route path="/servers" element={<ServersPage />} />
-            <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />
+      <Route element={<AppPrivateRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/stations" element={<StationsPage />} />
+          <Route path="/stations/new" element={<NewStationPage />} />
+          <Route path="/stations/:id" element={<EditStationPage />} />
+          <Route path="/stations/station-tags" element={<StationTagsPage />} />
+          <Route path="/groups" element={<GroupsPage />} />
+          <Route path="/groups/new" element={<NewGroupPage />} />
+          <Route path="/groups/:id" element={<EditGroupPage />} />
+          <Route path="/groups/group-tags" element={<GroupTagsPage />} />
+          <Route path="/variables" element={<VariablesPage />} />
 
-            <Route path="/deploy" element={<DeployPage />} />
+          <Route path="/servers" element={<ServersPage />} />
+          <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />
 
-            <Route path="/server-tree" element={<ServerTreePage />} />
+          <Route path="/deploy" element={<DeployPage />} />
 
-            <Route path="/users" element={<UsersPage />} />
-            <Route path="/users/new" element={<NewUserPage />} />
-            <Route path="/users/:userId" element={<EditUserPage />} />
+          <Route path="/server-tree" element={<ServerTreePage />} />
 
-            <Route path="/profilation" element={<ProfilationPage />} />
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/users/new" element={<NewUserPage />} />
+          <Route path="/users/:userId" element={<EditUserPage />} />
 
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
+          <Route path="/profilation" element={<ProfilationPage />} />
+
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
-      </Routes>
-    </Suspense>
-  )
+      </Route>
+    </Route>,
+  ),
+)
+
+function App() {
+  return <RouterProvider router={router} />
 }
 
 export default App

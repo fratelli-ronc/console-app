@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useConfirm } from '../ConfirmDialog'
 
 export type RowKey = string | number
 
@@ -26,7 +27,8 @@ export interface UseEditTableOptions<T> {
   filterFn?: (row: T) => boolean
 }
 
-const DISCARD_PROMPT = 'Ci sono modifiche non salvate. Continuare e scartarle?'
+const DISCARD_PROMPT =
+  'Le modifiche non salvate andranno perse. Vuoi continuare?'
 
 export function useEditTable<T extends Record<string, unknown>>({
   fetchFn,
@@ -47,6 +49,8 @@ export function useEditTable<T extends Record<string, unknown>>({
     key: string
   } | null>(null)
   const [inputValue, setInputValue] = useState('')
+
+  const { confirm, confirmDialog } = useConfirm()
 
   const containerRef = useRef<HTMLDivElement>(null)
   const historyIndexRef = useRef(historyIndex)
@@ -129,13 +133,21 @@ export function useEditTable<T extends Record<string, unknown>>({
   // Guards unsaved changes: declining the prompt keeps the current data
   // (the caller's filter state may then be ahead of the grid until the
   // user saves or discards).
-  const load = useCallback(() => {
-    if (isDirtyRef.current && !window.confirm(DISCARD_PROMPT)) return
+  const load = useCallback(async () => {
+    if (
+      isDirtyRef.current &&
+      !(await confirm({
+        title: 'Modifiche non salvate',
+        description: DISCARD_PROMPT,
+        confirmLabel: 'Continua',
+      }))
+    )
+      return
     doLoad()
-  }, [doLoad])
+  }, [doLoad, confirm])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   useEffect(() => {
@@ -224,6 +236,7 @@ export function useEditTable<T extends Record<string, unknown>>({
   }
 
   return {
+    confirmDialog,
     containerRef,
     currentData,
     totalRowCount: fullData.length,

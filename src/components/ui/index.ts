@@ -1,3 +1,4 @@
+export * from './ConfirmDialog'
 export * from './DataTable'
 export * from './Dialog'
 export * from './EditTable/EditTable'
