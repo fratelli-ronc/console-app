@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw, UserCog } from 'lucide-react'
+import { UserCog } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FilterPills, PageHeader, Search } from '@/components'
+import { FilterPills, PageHeader, ReloadButton, Search } from '@/components'
 import { DataTable, type DataTableColumn } from '@/components'
 import { listProfilations, UserProfilation } from '@/client'
 
@@ -101,13 +101,7 @@ export const ProfilationPage: React.FC = () => {
           onChange={setAccessFilter}
         />
 
-        <button
-          onClick={handleReload}
-          className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-        >
-          <RefreshCw size={14} className={cn(reloading && 'animate-spin')} />
-          Aggiorna
-        </button>
+        <ReloadButton isReloading={reloading} onReload={handleReload} />
       </div>
 
       {/* Table */}

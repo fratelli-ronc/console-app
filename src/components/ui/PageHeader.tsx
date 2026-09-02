@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react'
+import { FilledButton } from './FilledButton'
 
 interface PageHeaderProps {
   title: string
@@ -27,13 +28,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {trailing}
 
         {newLabel && (
-          <button
+          <FilledButton
+            type="button"
             onClick={onNewClick}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 active:bg-primary/80 transition-colors shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-2"
           >
             <Plus size={16} />
             {newLabel}
-          </button>
+          </FilledButton>
         )}
       </div>
     </div>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Users, Pencil, Trash2 } from 'lucide-react'
+import { Users, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   FilterPills,
   PageHeader,
+  ReloadButton,
   Search,
   SyncStatusIndicator,
 } from '@/components'
@@ -232,13 +233,7 @@ export const UsersPage: React.FC = () => {
           onChange={setStatusFilter}
         />
 
-        <button
-          onClick={handleReload}
-          className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-        >
-          <RefreshCw size={14} className={cn(reloading && 'animate-spin')} />
-          Aggiorna
-        </button>
+        <ReloadButton isReloading={reloading} onReload={handleReload} />
       </div>
 
       {/* Table */}

@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Container, Copy, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Container, Copy } from 'lucide-react'
 import { listServicesByImage } from '@/client/coolify/requests'
 import { ServicesByImageMap } from '@/client/coolify'
-import { PageHeader, Search, FilledButton } from '@/components'
+import { PageHeader, ReloadButton, Search, FilledButton } from '@/components'
 import { ImageCard, ImageCardSkeleton } from './components/ImageCard'
 import { ImageDetailDialog } from './components/ImageDetailDialog'
 import { UpdateImageDialog } from './components/UpdateImageDialog'
@@ -68,13 +67,7 @@ export const DeployPage: React.FC = () => {
             Clona su nuovo server
           </FilledButton>
 
-          <button
-            onClick={handleReload}
-            className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-          >
-            <RefreshCw size={14} className={cn(reloading && 'animate-spin')} />
-            Aggiorna
-          </button>
+          <ReloadButton isReloading={reloading} onReload={handleReload} />
         </div>
 
         {loading ? (

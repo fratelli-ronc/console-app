@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw, Tag, Pencil, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { PageHeader, Search } from '@/components'
+import { Tag, Pencil, Trash2 } from 'lucide-react'
+import { PageHeader, ReloadButton, Search } from '@/components'
 import {
   DataTable,
   type DataTableColumn,
@@ -152,13 +151,7 @@ export const StationTagsPage: React.FC = () => {
       <div className="flex items-center gap-3">
         <Search value={search} onChange={setSearch} />
 
-        <button
-          onClick={handleReload}
-          className="ml-auto h-9 px-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-        >
-          <RefreshCw size={14} className={cn(reloading && 'animate-spin')} />
-          Aggiorna
-        </button>
+        <ReloadButton isReloading={reloading} onReload={handleReload} />
       </div>
 
       {/* Table */}
