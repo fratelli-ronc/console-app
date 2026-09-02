@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUnsavedChangesPrompt } from '../ConfirmDialog'
 import { FilledButton } from '../FilledButton'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '../HoverCard'
 import { OutlinedButton } from '../OutlinedButton'
 import { TextButton } from '../TextButton'
 import {
@@ -36,6 +37,9 @@ interface EditTablePanelProps<
   newRow?: () => T
   addLabel?: string
   addDisabled?: boolean
+  // When the add button is disabled, hovering it reveals this text in a
+  // popover explaining why.
+  disabledReason?: string
   // Renders a per-row trash button.
   deletable?: boolean
   emptyMessage?: React.ReactNode
@@ -55,6 +59,7 @@ export function EditTablePanel<
   newRow,
   addLabel = 'Aggiungi',
   addDisabled = false,
+  disabledReason,
   deletable = false,
   emptyMessage,
   onDirtyChange,
@@ -81,17 +86,37 @@ export function EditTablePanel<
         {filters}
 
         <div className="ml-auto flex shrink-0 items-center gap-3">
-          {newRow && (
-            <OutlinedButton
-              type="button"
-              disabled={addDisabled}
-              onClick={() => tableRef.current?.addRow(newRow())}
-              className="inline-flex items-center gap-1.5"
-            >
-              <Plus size={14} />
-              {addLabel}
-            </OutlinedButton>
-          )}
+          {newRow &&
+            (() => {
+              const button = (
+                <OutlinedButton
+                  type="button"
+                  disabled={addDisabled}
+                  onClick={() => tableRef.current?.addRow(newRow())}
+                  className="inline-flex items-center gap-1.5"
+                >
+                  <Plus size={14} />
+                  {addLabel}
+                </OutlinedButton>
+              )
+
+              if (!addDisabled || !disabledReason) return button
+
+              return (
+                <HoverCard openDelay={100}>
+                  <HoverCardTrigger asChild>
+                    <span className="inline-flex cursor-not-allowed">
+                      {button}
+                    </span>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-auto max-w-xs p-3">
+                    <p className="text-xs text-muted-foreground">
+                      {disabledReason}
+                    </p>
+                  </HoverCardContent>
+                </HoverCard>
+              )
+            })()}
 
           <TextButton
             type="button"

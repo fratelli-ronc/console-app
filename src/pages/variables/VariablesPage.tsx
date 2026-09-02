@@ -300,6 +300,7 @@ export const VariablesPage: React.FC = () => {
         }
         addLabel="Aggiungi variabile"
         addDisabled={!groupId}
+        disabledReason="Seleziona un gruppo per aggiungere una variabile."
         newRow={() => ({
           id: null,
           variableId: null,
