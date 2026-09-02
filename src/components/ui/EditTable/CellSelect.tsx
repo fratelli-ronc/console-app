@@ -80,7 +80,7 @@ export const CellSelect: React.FC<CellSelectProps> = ({
         ref={listRef}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="absolute -left-4 top-[calc(100%+12px)] mt-1 z-50 w-[calc(100%+32px)] min-w-50 bg-popover border border-border rounded-lg shadow-md py-1 outline-none"
+        className="absolute -left-4 top-[calc(100%+12px)] mt-1 z-50 w-[calc(100%+32px)] min-w-50 bg-popover text-popover-foreground border rounded-md shadow-md p-1 outline-none"
       >
         {options.map((option, i) => (
           <li
@@ -90,7 +90,7 @@ export const CellSelect: React.FC<CellSelectProps> = ({
               onCommit(option.value)
             }}
             className={cn(
-              'flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer transition-colors',
+              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm cursor-pointer transition-colors',
               i === activeIndex
                 ? 'bg-accent text-accent-foreground'
                 : 'text-popover-foreground hover:bg-accent hover:text-accent-foreground',
