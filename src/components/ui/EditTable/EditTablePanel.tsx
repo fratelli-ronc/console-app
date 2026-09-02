@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -8,7 +9,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useUnsavedChangesPrompt } from '../ConfirmDialog'
 import { FilledButton } from '../FilledButton'
-import { TextButton } from '../TextButton'
+import { OutlinedButton } from '../OutlinedButton'
 import {
   EditTable,
   type EditTableColumn,
@@ -66,6 +67,8 @@ function EditTablePanelInner<
 ) {
   const tableRef = useRef<EditTableHandle<T>>(null)
   const [isDirty, setIsDirty] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [saving, setSaving] = useState(false)
 
   const { unsavedChangesDialog } = useUnsavedChangesPrompt(isDirty)
 
@@ -73,40 +76,29 @@ function EditTablePanelInner<
     addRow: (seed: T) => tableRef.current?.addRow(seed),
   }))
 
+  const runSave = useCallback(async () => {
+    setSaving(true)
+    try {
+      await tableRef.current?.save()
+    } finally {
+      setSaving(false)
+    }
+  }, [])
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
-        tableRef.current?.save()
+        void runSave()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [runSave])
 
   return (
     <div className={cn('h-full flex flex-col gap-6', className)}>
-      <div className="flex items-start gap-3">
-        {filters}
-
-        <div className="ml-auto flex shrink-0 items-center gap-3">
-          <TextButton
-            type="button"
-            disabled={!isDirty}
-            onClick={() => tableRef.current?.discard()}
-          >
-            Annulla
-          </TextButton>
-
-          <FilledButton
-            type="button"
-            disabled={!isDirty}
-            onClick={() => tableRef.current?.save()}
-          >
-            Salva
-          </FilledButton>
-        </div>
-      </div>
+      {filters && <div className="flex items-start gap-3">{filters}</div>}
 
       <EditTable
         ref={tableRef}
@@ -118,11 +110,44 @@ function EditTablePanelInner<
         filterFn={filterFn}
         deletable={deletable}
         emptyMessage={emptyMessage}
-        onDirtyChange={(dirty) => {
+        onDirtyChange={(dirty, count) => {
           setIsDirty(dirty)
+          setPendingCount(count)
           onDirtyChange?.(dirty)
         }}
       />
+
+      {isDirty && (
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-lg animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-secondary" />
+
+          <div className="leading-tight">
+            <p className="text-sm font-semibold text-foreground">
+              {pendingCount === 1
+                ? '1 modifica in sospeso'
+                : `${pendingCount} modifiche in sospeso`}
+            </p>
+
+            <p className="text-xs text-muted-foreground">
+              Le modifiche alla tabella non sono ancora applicate.
+            </p>
+          </div>
+
+          <span className="ml-auto" />
+
+          <OutlinedButton
+            type="button"
+            disabled={saving}
+            onClick={() => tableRef.current?.discard()}
+          >
+            Annulla
+          </OutlinedButton>
+
+          <FilledButton type="button" disabled={saving} onClick={runSave}>
+            {saving ? 'Salvataggio...' : 'Salva modifiche'}
+          </FilledButton>
+        </div>
+      )}
 
       {unsavedChangesDialog}
     </div>

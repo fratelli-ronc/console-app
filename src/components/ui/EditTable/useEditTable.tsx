@@ -18,7 +18,7 @@ export type EditTableSaveFn<T> = (
 export interface UseEditTableOptions<T> {
   fetchFn: () => Promise<T[]>
   onSave?: EditTableSaveFn<T>
-  onDirtyChange?: (isDirty: boolean) => void
+  onDirtyChange?: (isDirty: boolean, pendingCount: number) => void
   // Stable identity of a row; rows without a key count as newly created.
   rowKey?: (row: T) => RowKey | null | undefined
   // Client-side view filter. Rows that fail the predicate are hidden from
@@ -114,9 +114,9 @@ export function useEditTable<T extends Record<string, unknown>>({
     return { created, updated, deleted }
   }, [fullData, initialByKey, keyOf])
 
-  const isDirty =
-    changes.created.length + changes.updated.length + changes.deleted.length >
-    0
+  const pendingCount =
+    changes.created.length + changes.updated.length + changes.deleted.length
+  const isDirty = pendingCount > 0
   const isDirtyRef = useRef(isDirty)
   isDirtyRef.current = isDirty
 
@@ -151,8 +151,8 @@ export function useEditTable<T extends Record<string, unknown>>({
   }, [load])
 
   useEffect(() => {
-    onDirtyChange?.(isDirty)
-  }, [isDirty])
+    onDirtyChange?.(isDirty, pendingCount)
+  }, [isDirty, pendingCount])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

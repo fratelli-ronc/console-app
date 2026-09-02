@@ -3,11 +3,7 @@ import { Check, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CellSelect } from './CellSelect'
 import { SearchableCellSelect } from './SearchableCellSelect'
-import {
-  useEditTable,
-  type EditTableSaveFn,
-  type RowKey,
-} from './useEditTable'
+import { useEditTable, type EditTableSaveFn, type RowKey } from './useEditTable'
 
 export type EditTableCellType = 'text' | 'number' | 'boolean' | 'select'
 
@@ -51,7 +47,7 @@ interface EditTableProps<
   className?: string
   fetchFn: () => Promise<T[]>
   onSave?: EditTableSaveFn<T>
-  onDirtyChange?: (isDirty: boolean) => void
+  onDirtyChange?: (isDirty: boolean, pendingCount: number) => void
   rowKey?: (row: T) => RowKey | null | undefined
   // Client-side view filter: non-matching rows are hidden but kept in state.
   filterFn?: (row: T) => boolean
@@ -214,7 +210,11 @@ function EditTableInner<
 
   // Commits a raw editor value onto a cell; unchanged raw text closes the
   // editor without touching history.
-  const commitCell = (rowIndex: number, col: EditTableColumn<T>, raw: string) => {
+  const commitCell = (
+    rowIndex: number,
+    col: EditTableColumn<T>,
+    raw: string,
+  ) => {
     const original = currentData[rowIndex]?.[col.key]
     const value =
       String(original ?? '') === raw
@@ -227,7 +227,11 @@ function EditTableInner<
     commitEdit(rowIndex, col.key, !currentData[rowIndex]?.[col.key])
   }
 
-  const startEdit = (rowIndex: number, col: EditTableColumn<T>, seed?: string) => {
+  const startEdit = (
+    rowIndex: number,
+    col: EditTableColumn<T>,
+    seed?: string,
+  ) => {
     setSelectedCell(null)
     setEditingCell({ row: rowIndex, key: col.key })
     setInputValue(seed ?? String(currentData[rowIndex]?.[col.key] ?? ''))
@@ -284,9 +288,7 @@ function EditTableInner<
                   {label}
                 </th>
               ))}
-              {deletable && (
-                <th className="px-2 py-3 border-b border-border" />
-              )}
+              {deletable && <th className="px-2 py-3 border-b border-border" />}
             </tr>
           </thead>
 
@@ -502,8 +504,7 @@ function EditTableInner<
                               !e.altKey
                             ) {
                               e.preventDefault()
-                              const isFreeInput =
-                                col.type !== 'select'
+                              const isFreeInput = col.type !== 'select'
                               editTriggeredByTypingRef.current = isFreeInput
                               startEdit(
                                 rowIndex,
