@@ -198,6 +198,21 @@ export interface VariablePresentation {
   color: string | null
 }
 
+// Nested partial merges onto a Variable's 1:1 sub-records. Omitted/null
+// fields are left unchanged server-side; omit the whole object to leave the
+// sub-record untouched. Used by CreateVariableRequest / UpdateVariableRequest.
+export type VariableHistoryInput = Partial<Omit<VariableHistory, 'variableId'>>
+export type VariableMemoryMapInput = Partial<
+  Omit<VariableMemoryMap, 'variableId'>
+>
+export interface VariableImageInput {
+  snapshotPath?: string | null
+  goToPresetPath?: string | null
+  snapshotDelay?: number | null
+  // Replaced wholesale when present; type (when set) must be V2_DIGEST_AUTH.
+  auth?: VariableImageAuth | null
+}
+
 export interface Variable {
   id: number
   variableId: number
@@ -267,6 +282,9 @@ export interface CreateVariableRequest {
   presentations?: VariablePresentation[]
   note?: string | null
   writeAuthorizationLevel?: number | null
+  history?: VariableHistoryInput | null
+  memoryMap?: VariableMemoryMapInput | null
+  image?: VariableImageInput | null
 }
 
 // All fields optional: omitted/null fields are left unchanged server-side.

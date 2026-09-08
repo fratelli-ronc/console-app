@@ -25,14 +25,20 @@ import {
   VARIABLE_CLASS_TYPE_OPTIONS,
   VARIABLE_DRIVER_OPTIONS,
   VARIABLE_FORMAT_OPTIONS,
+  VARIABLE_HISTORY_AGGREGATION_POLICY_OPTIONS,
+  VARIABLE_HISTORY_TRIGGER_TYPE_OPTIONS,
+  VARIABLE_IMAGE_AUTH_TYPE_OPTIONS,
+  VARIABLE_MEMORY_MAP_FUNC_TYPE_OPTIONS,
+  VARIABLE_MEMORY_MAP_FUNC_TYPE_WRITE_OPTIONS,
   listGroups,
   listStations,
   listVariables,
   saveVariablesBatch,
 } from '@/client'
 
-// Flattened, grid-editable projection of a Variable. The remaining fields
-// (graphGroup, k, exponent, note, history, memory map, image, presentations…)
+// Flattened, grid-editable projection of a Variable — including the 1:1
+// history / memory-map / image sub-records (hist*/mm*/img* fields). The
+// remaining variable fields (graphGroup, k, exponent, note, presentations…)
 // are reserved for a future per-variable detail view.
 type VariableRow = {
   id: number | null
@@ -51,6 +57,31 @@ type VariableRow = {
   hidden: boolean
   preview: boolean
   tags: string
+  // history
+  histEnabled: boolean
+  histTriggerType: string | null
+  histAggregationPolicy: string | null
+  histIntervalNumber: number | null
+  histIntervalText: string | null
+  histNLogsMax: number | null
+  // memory map
+  mmFuncType: string | null
+  mmFuncTypeWrite: string | null
+  mmMemAddress: number | null
+  mmMemQuantity: number | null
+  mmBitId: number | null
+  mmPage: number | null
+  mmTariff: number | null
+  mmVarType: string | null
+  mmChannelMx3: string | null
+  mmChunkGrouping: number | null
+  // image
+  imgSnapshotPath: string | null
+  imgGoToPresetPath: string | null
+  imgSnapshotDelay: number | null
+  imgAuthType: string | null
+  imgAuthUser: string | null
+  imgAuthPassword: string | null
 }
 
 const toRow = (variable: Variable): VariableRow => ({
@@ -70,6 +101,28 @@ const toRow = (variable: Variable): VariableRow => ({
   hidden: variable.hidden ?? false,
   preview: variable.preview ?? false,
   tags: variable.tags?.join(', ') ?? '',
+  histEnabled: variable.history?.enabled ?? false,
+  histTriggerType: variable.history?.triggerType ?? null,
+  histAggregationPolicy: variable.history?.aggregationPolicy ?? null,
+  histIntervalNumber: variable.history?.intervalNumber ?? null,
+  histIntervalText: variable.history?.intervalText ?? null,
+  histNLogsMax: variable.history?.nLogsMax ?? null,
+  mmFuncType: variable.memoryMap?.funcType ?? null,
+  mmFuncTypeWrite: variable.memoryMap?.funcTypeWrite ?? null,
+  mmMemAddress: variable.memoryMap?.memAddress ?? null,
+  mmMemQuantity: variable.memoryMap?.memQuantity ?? null,
+  mmBitId: variable.memoryMap?.bitId ?? null,
+  mmPage: variable.memoryMap?.page ?? null,
+  mmTariff: variable.memoryMap?.tariff ?? null,
+  mmVarType: variable.memoryMap?.varType ?? null,
+  mmChannelMx3: variable.memoryMap?.channelMx3 ?? null,
+  mmChunkGrouping: variable.memoryMap?.chunkGrouping ?? null,
+  imgSnapshotPath: variable.image?.snapshotPath ?? null,
+  imgGoToPresetPath: variable.image?.goToPresetPath ?? null,
+  imgSnapshotDelay: variable.image?.snapshotDelay ?? null,
+  imgAuthType: variable.image?.auth?.type ?? null,
+  imgAuthUser: variable.image?.auth?.user ?? null,
+  imgAuthPassword: variable.image?.auth?.password ?? null,
 })
 
 const parseTags = (raw: string): string[] =>
@@ -93,6 +146,36 @@ const toFields = (row: VariableRow): UpdateVariableRequest => ({
   hidden: row.hidden,
   preview: row.preview,
   tags: parseTags(row.tags),
+  history: {
+    enabled: row.histEnabled,
+    triggerType: row.histTriggerType,
+    aggregationPolicy: row.histAggregationPolicy,
+    intervalNumber: row.histIntervalNumber,
+    intervalText: row.histIntervalText,
+    nLogsMax: row.histNLogsMax,
+  },
+  memoryMap: {
+    funcType: row.mmFuncType,
+    funcTypeWrite: row.mmFuncTypeWrite,
+    memAddress: row.mmMemAddress,
+    memQuantity: row.mmMemQuantity,
+    bitId: row.mmBitId,
+    page: row.mmPage,
+    tariff: row.mmTariff,
+    varType: row.mmVarType,
+    channelMx3: row.mmChannelMx3,
+    chunkGrouping: row.mmChunkGrouping,
+  },
+  image: {
+    snapshotPath: row.imgSnapshotPath,
+    goToPresetPath: row.imgGoToPresetPath,
+    snapshotDelay: row.imgSnapshotDelay,
+    auth: {
+      type: row.imgAuthType,
+      user: row.imgAuthUser,
+      password: row.imgAuthPassword,
+    },
+  },
 })
 
 // Sentinel for the "no class filter" option — Radix Select can't use an
@@ -155,7 +238,106 @@ const buildColumns = (
   { key: 'hidden', label: 'Nascosta', width: '6rem', type: 'boolean' },
   { key: 'preview', label: 'Anteprima', width: '6.5rem', type: 'boolean' },
   { key: 'tags', label: 'Tag', width: '12rem' },
+
+  // ── History sub-record ────────────────────────────────────────────────
+  { key: 'histEnabled', label: 'History', width: '5rem', type: 'boolean' },
+  {
+    key: 'histTriggerType',
+    label: 'History Trigger',
+    width: '10rem',
+    type: 'select',
+    options: VARIABLE_HISTORY_TRIGGER_TYPE_OPTIONS,
+  },
+  {
+    key: 'histAggregationPolicy',
+    label: 'Aggregazione',
+    width: '13rem',
+    type: 'select',
+    options: VARIABLE_HISTORY_AGGREGATION_POLICY_OPTIONS,
+  },
+  {
+    key: 'histIntervalNumber',
+    label: 'Intervallo (num)',
+    width: '7rem',
+    type: 'number',
+  },
+  { key: 'histIntervalText', label: 'Intervallo (text)', width: '8rem' },
+  { key: 'histNLogsMax', label: 'Max log', width: '6rem', type: 'number' },
+
+  // ── Memory-map sub-record ─────────────────────────────────────────────
+  {
+    key: 'mmFuncType',
+    label: 'Func. lettura',
+    width: '13rem',
+    type: 'select',
+    options: VARIABLE_MEMORY_MAP_FUNC_TYPE_OPTIONS,
+  },
+  {
+    key: 'mmFuncTypeWrite',
+    label: 'Func. scrittura',
+    width: '13rem',
+    type: 'select',
+    options: VARIABLE_MEMORY_MAP_FUNC_TYPE_WRITE_OPTIONS,
+  },
+  { key: 'mmMemAddress', label: 'Indirizzo', width: '7rem', type: 'number' },
+  { key: 'mmMemQuantity', label: 'Quantità', width: '7rem', type: 'number' },
+  { key: 'mmBitId', label: 'Bit', width: '5rem', type: 'number' },
+  { key: 'mmPage', label: 'Pagina', width: '6rem', type: 'number' },
+  { key: 'mmTariff', label: 'Tariffa', width: '6rem', type: 'number' },
+  { key: 'mmVarType', label: 'Tipo var.', width: '7rem' },
+  { key: 'mmChannelMx3', label: 'Canale MX3', width: '8rem' },
+  {
+    key: 'mmChunkGrouping',
+    label: 'Raggr. chunk',
+    width: '7rem',
+    type: 'number',
+  },
+
+  // ── Image sub-record ──────────────────────────────────────────────────
+  { key: 'imgSnapshotPath', label: 'Path snapshot', width: '12rem' },
+  { key: 'imgGoToPresetPath', label: 'Path preset', width: '12rem' },
+  {
+    key: 'imgSnapshotDelay',
+    label: 'Ritardo snap.',
+    width: '7rem',
+    type: 'number',
+  },
+  {
+    key: 'imgAuthType',
+    label: 'Auth img.',
+    width: '9rem',
+    type: 'select',
+    options: VARIABLE_IMAGE_AUTH_TYPE_OPTIONS,
+  },
+  { key: 'imgAuthUser', label: 'Auth utente', width: '9rem' },
+  { key: 'imgAuthPassword', label: 'Auth password', width: '9rem' },
 ]
+
+// Blank history / memory-map / image fields for a freshly-added row.
+const EMPTY_SUBRECORD_FIELDS = {
+  histEnabled: false,
+  histTriggerType: null,
+  histAggregationPolicy: null,
+  histIntervalNumber: null,
+  histIntervalText: null,
+  histNLogsMax: null,
+  mmFuncType: null,
+  mmFuncTypeWrite: null,
+  mmMemAddress: null,
+  mmMemQuantity: null,
+  mmBitId: null,
+  mmPage: null,
+  mmTariff: null,
+  mmVarType: null,
+  mmChannelMx3: null,
+  mmChunkGrouping: null,
+  imgSnapshotPath: null,
+  imgGoToPresetPath: null,
+  imgSnapshotDelay: null,
+  imgAuthType: null,
+  imgAuthUser: null,
+  imgAuthPassword: null,
+} satisfies Partial<VariableRow>
 
 export const VariablesPage: React.FC = () => {
   const panelRef = useRef<EditTablePanelHandle<VariableRow>>(null)
@@ -342,6 +524,7 @@ export const VariablesPage: React.FC = () => {
       hidden: false,
       preview: false,
       tags: '',
+      ...EMPTY_SUBRECORD_FIELDS,
     })
   }, [groupId])
 
