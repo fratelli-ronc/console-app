@@ -4,7 +4,9 @@ import toast from 'react-hot-toast'
 function extractMessage(error: unknown): string {
   if (isAxiosError(error)) {
     if (!error.response) return 'Errore di connessione. Controlla la rete.'
-    const msg = error.response.data?.message
+    // Both console-api and goauth-gate reply with { "error": "..." }, not
+    // { "message": "..." } — this is the key every handler actually sets.
+    const msg = error.response.data?.error
     if (typeof msg === 'string' && msg.length > 0) return msg
     return `Errore del server (${error.response.status}).`
   }
