@@ -131,13 +131,17 @@ const parseTags = (raw: string): string[] =>
     .map((tag) => tag.trim())
     .filter(Boolean)
 
+// A blank grid cell means "no value" — send it as null so the API clears
+// the column (an omitted field is left unchanged, an explicit null clears).
+const blankToNull = (value: string | null): string | null => value || null
+
 const toFields = (row: VariableRow): UpdateVariableRequest => ({
   groupId: row.groupId ? Number(row.groupId) : null,
-  name: row.name,
-  classType: row.classType,
-  format: row.format,
-  driver: row.driver,
-  measureUnit: row.measureUnit,
+  name: blankToNull(row.name),
+  classType: blankToNull(row.classType),
+  format: blankToNull(row.format),
+  driver: blankToNull(row.driver),
+  measureUnit: blankToNull(row.measureUnit),
   ordPrint: row.ordPrint,
   minValue: row.minValue,
   maxValue: row.maxValue,
@@ -148,32 +152,32 @@ const toFields = (row: VariableRow): UpdateVariableRequest => ({
   tags: parseTags(row.tags),
   history: {
     enabled: row.histEnabled,
-    triggerType: row.histTriggerType,
-    aggregationPolicy: row.histAggregationPolicy,
+    triggerType: blankToNull(row.histTriggerType),
+    aggregationPolicy: blankToNull(row.histAggregationPolicy),
     intervalNumber: row.histIntervalNumber,
-    intervalText: row.histIntervalText,
+    intervalText: blankToNull(row.histIntervalText),
     nLogsMax: row.histNLogsMax,
   },
   memoryMap: {
-    funcType: row.mmFuncType,
-    funcTypeWrite: row.mmFuncTypeWrite,
+    funcType: blankToNull(row.mmFuncType),
+    funcTypeWrite: blankToNull(row.mmFuncTypeWrite),
     memAddress: row.mmMemAddress,
     memQuantity: row.mmMemQuantity,
     bitId: row.mmBitId,
     page: row.mmPage,
     tariff: row.mmTariff,
-    varType: row.mmVarType,
-    channelMx3: row.mmChannelMx3,
+    varType: blankToNull(row.mmVarType),
+    channelMx3: blankToNull(row.mmChannelMx3),
     chunkGrouping: row.mmChunkGrouping,
   },
   image: {
-    snapshotPath: row.imgSnapshotPath,
-    goToPresetPath: row.imgGoToPresetPath,
+    snapshotPath: blankToNull(row.imgSnapshotPath),
+    goToPresetPath: blankToNull(row.imgGoToPresetPath),
     snapshotDelay: row.imgSnapshotDelay,
     auth: {
-      type: row.imgAuthType,
-      user: row.imgAuthUser,
-      password: row.imgAuthPassword,
+      type: blankToNull(row.imgAuthType),
+      user: blankToNull(row.imgAuthUser),
+      password: blankToNull(row.imgAuthPassword),
     },
   },
 })

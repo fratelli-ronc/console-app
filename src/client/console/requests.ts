@@ -1,5 +1,6 @@
 import consoleClient from './client'
 import {
+  CloneStationRequest,
   CreateGroupRequest,
   CreateStationRequest,
   CreateVariableRequest,
@@ -7,6 +8,7 @@ import {
   GroupTag,
   GroupTagDetailed,
   ListVariablesParams,
+  NextStationId,
   PaginatedVariables,
   ServerTreeRelation,
   ServerTreeRelationRequest,
@@ -71,6 +73,24 @@ export const updateStation = (
       `/stations/${id}`,
       payload,
     )
+    return data
+  })
+
+export const cloneStation = (
+  id: number | string,
+  payload: CloneStationRequest,
+): Promise<Station | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.post<Station>(
+      `/stations/${id}/clone`,
+      payload,
+    )
+    return data
+  })
+
+export const getNextStationId = (): Promise<NextStationId | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<NextStationId>('/station-next-id')
     return data
   })
 
@@ -182,9 +202,7 @@ export const listGroupTags = (): Promise<GroupTag[] | null> =>
     return data
   })
 
-export const listGroupTagsDetailed = (): Promise<
-  GroupTagDetailed[] | null
-> =>
+export const listGroupTagsDetailed = (): Promise<GroupTagDetailed[] | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.get<GroupTagDetailed[]>(
       '/group-tags/detailed',

@@ -80,6 +80,18 @@ export interface UpdateStationRequest {
   tagIds?: number[]
 }
 
+// Both fields are optional: an omitted stationId auto-assigns the next
+// available business ID, an omitted name keeps the source station's name.
+// Groups, variables and their sub-records are always copied verbatim.
+export interface CloneStationRequest {
+  stationId?: number
+  name?: string
+}
+
+export interface NextStationId {
+  stationId: number
+}
+
 export interface UpdateStationPhotoRequest {
   contentType: string
   data: string

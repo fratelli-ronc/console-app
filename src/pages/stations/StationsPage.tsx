@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Radio, Pencil, Trash2, Tag } from 'lucide-react'
+import { Radio, Pencil, Copy, Trash2, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilterPills, PageHeader, ReloadButton, Search } from '@/components'
 import {
   DataTable,
   type DataTableColumn,
+  TextInput,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -16,7 +17,13 @@ import {
   OutlinedButton,
   TextButton,
 } from '@/components'
-import { listStations, deleteStation, Station } from '@/client'
+import {
+  listStations,
+  deleteStation,
+  cloneStation,
+  getNextStationId,
+  Station,
+} from '@/client'
 
 const STATUS_FILTERS: {
   label: string
@@ -50,6 +57,10 @@ export const StationsPage: React.FC = () => {
   >('all')
   const [stationToDelete, setStationToDelete] = useState<Station | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [stationToClone, setStationToClone] = useState<Station | null>(null)
+  const [cloneStationId, setCloneStationId] = useState('')
+  const [cloneName, setCloneName] = useState('')
+  const [cloning, setCloning] = useState(false)
 
   const fetchStations = async () => {
     const res = await listStations()
@@ -73,11 +84,45 @@ export const StationsPage: React.FC = () => {
     }
   }
 
+  // The proposed ID comes from the server: it counts soft-deleted stations,
+  // which the list here cannot see.
+  const openCloneDialog = async (station: Station) => {
+    setStationToClone(station)
+    setCloneStationId('')
+    setCloneName(station.name ?? '')
+
+    const res = await getNextStationId()
+    if (res) setCloneStationId(String(res.stationId))
+  }
+
+  const handleClone = async () => {
+    if (!stationToClone) return
+    setCloning(true)
+    const res = await cloneStation(stationToClone.id, {
+      stationId: Number(cloneStationId),
+      name: cloneName,
+    })
+    setCloning(false)
+    if (res !== null) {
+      setStationToClone(null)
+      await fetchStations()
+    }
+  }
+
   useEffect(() => {
     fetchStations()
   }, [])
 
   const loading = stations === null
+
+  const cloneIdTaken = (stations ?? []).some(
+    (s) => String(s.stationId) === cloneStationId.trim(),
+  )
+  const cloneDisabled =
+    cloning ||
+    cloneStationId.trim() === '' ||
+    cloneName.trim() === '' ||
+    cloneIdTaken
 
   const filtered = (stations ?? []).filter((s) => {
     const q = search.toLowerCase()
@@ -195,6 +240,13 @@ export const StationsPage: React.FC = () => {
             Modifica
           </button>
           <button
+            onClick={() => openCloneDialog(station)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
+          >
+            <Copy size={12} />
+            Clona
+          </button>
+          <button
             onClick={() => setStationToDelete(station)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border transition-colors cursor-pointer"
           >
@@ -251,6 +303,68 @@ export const StationsPage: React.FC = () => {
             'Prova a modificare la ricerca o aggiungi una nuova stazione.',
         }}
       />
+
+      <Dialog
+        open={stationToClone !== null}
+        onOpenChange={(open) => !open && !cloning && setStationToClone(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Clona stazione</DialogTitle>
+            <DialogDescription>
+              Verrà creata una copia di{' '}
+              <span className="font-medium text-foreground">
+                {stationToClone?.name || `ID ${stationToClone?.stationId}`}
+              </span>
+              , con tutti i suoi gruppi e le loro variabili. I dati sono
+              identici all&apos;originale, solo gli ID vengono riassegnati.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <TextInput
+              required
+              label="ID stazione"
+              value={cloneStationId}
+              type="number"
+              placeholder="1"
+              disabled={cloning}
+              onChange={setCloneStationId}
+            />
+            {cloneIdTaken && (
+              <p className="-mt-2 text-xs text-destructive">
+                Questo ID è già assegnato a un&apos;altra stazione.
+              </p>
+            )}
+
+            <TextInput
+              required
+              label="Nome"
+              value={cloneName}
+              placeholder="Stazione Centrale"
+              disabled={cloning}
+              onChange={setCloneName}
+            />
+          </div>
+
+          <DialogFooter>
+            <TextButton
+              type="button"
+              disabled={cloning}
+              onClick={() => setStationToClone(null)}
+            >
+              Annulla
+            </TextButton>
+            <FilledButton
+              type="button"
+              disabled={cloneDisabled}
+              onClick={handleClone}
+            >
+              {cloning ? 'Clonazione…' : 'Clona'}
+            </FilledButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={stationToDelete !== null}
