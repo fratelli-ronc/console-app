@@ -277,7 +277,8 @@ export const GroupsPage: React.FC = () => {
               <span className="font-medium text-foreground">
                 {groupToDelete?.name || `ID ${groupToDelete?.groupId}`}
               </span>
-              . Questa azione non può essere annullata.
+              , con tutte le sue variabili. Questa azione non può essere
+              annullata.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

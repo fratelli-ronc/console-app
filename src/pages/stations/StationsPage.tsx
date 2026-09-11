@@ -378,7 +378,8 @@ export const StationsPage: React.FC = () => {
               <span className="font-medium text-foreground">
                 {stationToDelete?.name || `ID ${stationToDelete?.stationId}`}
               </span>
-              . Questa azione non può essere annullata.
+              , con tutti i suoi gruppi e le loro variabili. Questa azione non
+              può essere annullata.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
