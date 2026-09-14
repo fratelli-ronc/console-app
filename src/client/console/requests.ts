@@ -196,6 +196,11 @@ export const deleteGroup = (id: number | string): Promise<void | null> =>
     await consoleClient.delete(`/groups/${id}`)
   })
 
+export const deleteGroups = (ids: number[]): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await consoleClient.delete('/groups', { data: { ids } })
+  })
+
 export const listGroupTags = (): Promise<GroupTag[] | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.get<GroupTag[]>('/group-tags')

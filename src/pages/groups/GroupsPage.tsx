@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Boxes, Pencil, Trash2, Tag } from 'lucide-react'
+import toast from 'react-hot-toast'
+import {
+  Boxes,
+  ChevronDown,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Tag,
+  Archive,
+  Download,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilterPills, PageHeader, ReloadButton, Search } from '@/components'
 import {
@@ -12,11 +22,22 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   FilledButton,
   OutlinedButton,
   TextButton,
 } from '@/components'
-import { listGroups, deleteGroup, listStations, Group, Station } from '@/client'
+import {
+  listGroups,
+  deleteGroup,
+  deleteGroups,
+  listStations,
+  Group,
+  Station,
+} from '@/client'
 import { PROTOCOL_OPTIONS, NETWORK_TYPE_OPTIONS } from './components/GroupFormPage'
 
 const STATUS_FILTERS: {
@@ -60,6 +81,9 @@ export const GroupsPage: React.FC = () => {
   >('all')
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [selectedKeys, setSelectedKeys] = useState<Set<React.Key>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const fetchGroups = async () => {
     const [groupsRes, stationsRes] = await Promise.all([
@@ -69,6 +93,11 @@ export const GroupsPage: React.FC = () => {
     if (groupsRes) setGroups(groupsRes.sort((a, b) => a.groupId - b.groupId))
     if (stationsRes)
       setStationsById(new Map(stationsRes.map((s) => [s.id, s])))
+    setSelectedKeys(new Set())
+  }
+
+  const handlePlaceholderAction = (label: string) => {
+    toast(`${label}: azione non ancora disponibile`)
   }
 
   const handleReload = async () => {
@@ -84,6 +113,17 @@ export const GroupsPage: React.FC = () => {
     setDeleting(false)
     if (res !== null) {
       setGroupToDelete(null)
+      await fetchGroups()
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return
+    setBulkDeleting(true)
+    const res = await deleteGroups(Array.from(selectedKeys) as number[])
+    setBulkDeleting(false)
+    if (res !== null) {
+      setBulkDeleteOpen(false)
       await fetchGroups()
     }
   }
@@ -195,26 +235,35 @@ export const GroupsPage: React.FC = () => {
       header: '',
       cellClassName: 'text-right',
       render: (group) => (
-        <div className="inline-flex items-center gap-2">
-          <button
-            onClick={() =>
-              navigate(`/groups/${group.id}`, {
-                state: { name: group.name },
-              })
-            }
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
-          >
-            <Pencil size={12} />
-            Modifica
-          </button>
-          <button
-            onClick={() => setGroupToDelete(group)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border transition-colors cursor-pointer"
-          >
-            <Trash2 size={12} />
-            Elimina
-          </button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+            >
+              <MoreVertical size={16} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() =>
+                navigate(`/groups/${group.id}`, {
+                  state: { name: group.name },
+                })
+              }
+            >
+              <Pencil size={14} />
+              Modifica
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setGroupToDelete(group)}
+            >
+              <Trash2 size={14} />
+              Elimina
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ]
@@ -248,7 +297,50 @@ export const GroupsPage: React.FC = () => {
           onChange={setStatusFilter}
         />
 
-        <ReloadButton isReloading={reloading} onReload={handleReload} />
+        <div className="flex items-center gap-3 ml-auto">
+          {selectedKeys.size > 0 && (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {selectedKeys.size}{' '}
+                {selectedKeys.size === 1 ? 'selezionato' : 'selezionati'}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <OutlinedButton
+                    type="button"
+                    className="inline-flex items-center gap-2"
+                  >
+                    Azioni
+                    <ChevronDown size={14} />
+                  </OutlinedButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    <Trash2 size={14} />
+                    Elimina
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handlePlaceholderAction('Archivia')}
+                  >
+                    <Archive size={14} />
+                    Archivia
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handlePlaceholderAction('Esporta')}
+                  >
+                    <Download size={14} />
+                    Esporta
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+
+          <ReloadButton isReloading={reloading} onReload={handleReload} />
+        </div>
       </div>
 
       {/* Table */}
@@ -257,6 +349,10 @@ export const GroupsPage: React.FC = () => {
         data={filtered}
         loading={loading}
         getRowKey={(group) => group.id}
+        selection={{
+          selectedKeys,
+          onSelectionChange: setSelectedKeys,
+        }}
         emptyState={{
           icon: <Boxes size={22} className="text-primary" />,
           title: 'Nessun gruppo trovato',
@@ -296,6 +392,43 @@ export const GroupsPage: React.FC = () => {
               className="bg-destructive hover:bg-destructive/90 text-white"
             >
               {deleting ? 'Eliminazione…' : 'Elimina'}
+            </FilledButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => !open && !bulkDeleting && setBulkDeleteOpen(false)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Elimina gruppi</DialogTitle>
+            <DialogDescription>
+              Stai per eliminare{' '}
+              <span className="font-medium text-foreground">
+                {selectedKeys.size}{' '}
+                {selectedKeys.size === 1 ? 'gruppo' : 'gruppi'}
+              </span>
+              , con tutte le loro variabili. Questa azione non può essere
+              annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <TextButton
+              type="button"
+              disabled={bulkDeleting}
+              onClick={() => setBulkDeleteOpen(false)}
+            >
+              Annulla
+            </TextButton>
+            <FilledButton
+              type="button"
+              disabled={bulkDeleting}
+              onClick={handleBulkDelete}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              {bulkDeleting ? 'Eliminazione…' : 'Elimina'}
             </FilledButton>
           </DialogFooter>
         </DialogContent>

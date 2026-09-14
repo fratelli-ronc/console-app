@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Radio, Pencil, Copy, Trash2, Tag } from 'lucide-react'
+import { Radio, MoreVertical, Pencil, Copy, Trash2, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilterPills, PageHeader, ReloadButton, Search } from '@/components'
 import {
@@ -13,6 +13,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   FilledButton,
   OutlinedButton,
   TextButton,
@@ -227,33 +231,39 @@ export const StationsPage: React.FC = () => {
       header: '',
       cellClassName: 'text-right',
       render: (station) => (
-        <div className="inline-flex items-center gap-2">
-          <button
-            onClick={() =>
-              navigate(`/stations/${station.id}`, {
-                state: { name: station.name },
-              })
-            }
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
-          >
-            <Pencil size={12} />
-            Modifica
-          </button>
-          <button
-            onClick={() => openCloneDialog(station)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
-          >
-            <Copy size={12} />
-            Clona
-          </button>
-          <button
-            onClick={() => setStationToDelete(station)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border transition-colors cursor-pointer"
-          >
-            <Trash2 size={12} />
-            Elimina
-          </button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+            >
+              <MoreVertical size={16} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() =>
+                navigate(`/stations/${station.id}`, {
+                  state: { name: station.name },
+                })
+              }
+            >
+              <Pencil size={14} />
+              Modifica
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openCloneDialog(station)}>
+              <Copy size={14} />
+              Clona
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setStationToDelete(station)}
+            >
+              <Trash2 size={14} />
+              Elimina
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ]

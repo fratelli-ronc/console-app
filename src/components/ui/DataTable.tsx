@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { Checkbox } from './Checkbox'
 
 export interface DataTableColumn<T> {
   key: string
@@ -41,6 +42,11 @@ const DataTableSkeleton: React.FC<DataTableSkeletonProps> = ({
   </>
 )
 
+export interface DataTableSelection {
+  selectedKeys: Set<React.Key>
+  onSelectionChange: (selectedKeys: Set<React.Key>) => void
+}
+
 interface DataTableProps<T> {
   columns: DataTableColumn<T>[]
   data: T[]
@@ -50,6 +56,7 @@ interface DataTableProps<T> {
   skeletonRows?: number
   rowClassName?: string | ((item: T) => string)
   className?: string
+  selection?: DataTableSelection
 }
 
 export function DataTable<T>({
@@ -61,6 +68,7 @@ export function DataTable<T>({
   skeletonRows = 5,
   rowClassName,
   className,
+  selection,
 }: DataTableProps<T>) {
   if (!loading && data.length === 0 && emptyState) {
     return (
@@ -92,6 +100,30 @@ export function DataTable<T>({
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-muted/50 border-b border-border">
+            {selection && (
+              <th className="w-10 px-4 py-3">
+                <Checkbox
+                  checked={
+                    data.length > 0 &&
+                    selection.selectedKeys.size === data.length
+                      ? true
+                      : selection.selectedKeys.size > 0
+                        ? 'indeterminate'
+                        : false
+                  }
+                  onCheckedChange={(checked) =>
+                    selection.onSelectionChange(
+                      checked
+                        ? new Set(
+                            data.map((item, index) => getRowKey(item, index)),
+                          )
+                        : new Set(),
+                    )
+                  }
+                  aria-label="Seleziona tutto"
+                />
+              </th>
+            )}
             {columns.map((col) => (
               <th
                 key={col.key}
@@ -107,31 +139,53 @@ export function DataTable<T>({
         </thead>
         <tbody className="bg-card divide-y divide-border">
           {loading ? (
-            <DataTableSkeleton columns={columns.length} rows={skeletonRows} />
+            <DataTableSkeleton
+              columns={columns.length + (selection ? 1 : 0)}
+              rows={skeletonRows}
+            />
           ) : (
-            data.map((item, index) => (
-              <tr
-                key={getRowKey(item, index)}
-                className={cn(
-                  'hover:bg-muted/30 transition-colors',
-                  typeof rowClassName === 'function'
-                    ? rowClassName(item)
-                    : rowClassName,
-                )}
-              >
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className={cn(
-                      'px-4 py-3.5 whitespace-nowrap',
-                      col.cellClassName,
-                    )}
-                  >
-                    {col.render(item)}
-                  </td>
-                ))}
-              </tr>
-            ))
+            data.map((item, index) => {
+              const rowKey = getRowKey(item, index)
+              const selected = selection?.selectedKeys.has(rowKey) ?? false
+              return (
+                <tr
+                  key={rowKey}
+                  className={cn(
+                    'hover:bg-muted/30 transition-colors',
+                    selected && 'bg-primary/5',
+                    typeof rowClassName === 'function'
+                      ? rowClassName(item)
+                      : rowClassName,
+                  )}
+                >
+                  {selection && (
+                    <td className="px-4 py-3.5">
+                      <Checkbox
+                        checked={selected}
+                        onCheckedChange={(checked) => {
+                          const next = new Set(selection.selectedKeys)
+                          if (checked) next.add(rowKey)
+                          else next.delete(rowKey)
+                          selection.onSelectionChange(next)
+                        }}
+                        aria-label="Seleziona riga"
+                      />
+                    </td>
+                  )}
+                  {columns.map((col) => (
+                    <td
+                      key={col.key}
+                      className={cn(
+                        'px-4 py-3.5 whitespace-nowrap',
+                        col.cellClassName,
+                      )}
+                    >
+                      {col.render(item)}
+                    </td>
+                  ))}
+                </tr>
+              )
+            })
           )}
         </tbody>
       </table>

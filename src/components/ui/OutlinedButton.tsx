@@ -1,26 +1,19 @@
+import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-interface OutlinedButtonProps {
-  type: 'submit' | 'reset' | 'button'
-  disabled?: boolean
-  className?: string
-  onClick?: () => void
-}
-
-export const OutlinedButton: React.FC<
-  React.PropsWithChildren<OutlinedButtonProps>
-> = ({ type, disabled, className, children, onClick }) => {
+export const OutlinedButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<'button'>
+>(({ className, ...props }, ref) => {
   return (
     <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
+      ref={ref}
       className={cn(
         'h-10 px-4 text-sm font-medium bg-transparent text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
         className,
       )}
-    >
-      {children}
-    </button>
+      {...props}
+    />
   )
-}
+})
+OutlinedButton.displayName = 'OutlinedButton'

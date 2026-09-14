@@ -1,30 +1,19 @@
+import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-interface TextButtonProps {
-  type: 'submit' | 'reset' | 'button'
-  disabled?: boolean
-  className?: string
-  onClick?: () => void
-}
-
-export const TextButton: React.FC<React.PropsWithChildren<TextButtonProps>> = ({
-  type,
-  disabled,
-  className,
-  children,
-  onClick,
-}) => {
+export const TextButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<'button'>
+>(({ className, ...props }, ref) => {
   return (
     <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
+      ref={ref}
       className={cn(
         'h-10 px-3 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
         className,
       )}
-    >
-      {children}
-    </button>
+      {...props}
+    />
   )
-}
+})
+TextButton.displayName = 'TextButton'
