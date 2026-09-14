@@ -201,6 +201,14 @@ export const deleteGroups = (ids: number[]): Promise<void | null> =>
     await consoleClient.delete('/groups', { data: { ids } })
   })
 
+export const transferGroups = (
+  ids: number[],
+  stationId: number,
+): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await consoleClient.patch('/groups/transfer', { ids, stationId })
+  })
+
 export const listGroupTags = (): Promise<GroupTag[] | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.get<GroupTag[]>('/group-tags')

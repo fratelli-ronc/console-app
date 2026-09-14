@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
 import {
+  ArrowRightLeft,
   Boxes,
   ChevronDown,
   MoreVertical,
   Pencil,
   Trash2,
   Tag,
-  Archive,
-  Download,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilterPills, PageHeader, ReloadButton, Search } from '@/components'
@@ -28,17 +26,22 @@ import {
   DropdownMenuTrigger,
   FilledButton,
   OutlinedButton,
+  SearchableSelect,
   TextButton,
 } from '@/components'
 import {
   listGroups,
   deleteGroup,
   deleteGroups,
+  transferGroups,
   listStations,
   Group,
   Station,
 } from '@/client'
-import { PROTOCOL_OPTIONS, NETWORK_TYPE_OPTIONS } from './components/GroupFormPage'
+import {
+  PROTOCOL_OPTIONS,
+  NETWORK_TYPE_OPTIONS,
+} from './components/GroupFormPage'
 
 const STATUS_FILTERS: {
   label: string
@@ -84,6 +87,9 @@ export const GroupsPage: React.FC = () => {
   const [selectedKeys, setSelectedKeys] = useState<Set<React.Key>>(new Set())
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferring, setTransferring] = useState(false)
+  const [transferStationId, setTransferStationId] = useState('')
 
   const fetchGroups = async () => {
     const [groupsRes, stationsRes] = await Promise.all([
@@ -91,13 +97,8 @@ export const GroupsPage: React.FC = () => {
       listStations(),
     ])
     if (groupsRes) setGroups(groupsRes.sort((a, b) => a.groupId - b.groupId))
-    if (stationsRes)
-      setStationsById(new Map(stationsRes.map((s) => [s.id, s])))
+    if (stationsRes) setStationsById(new Map(stationsRes.map((s) => [s.id, s])))
     setSelectedKeys(new Set())
-  }
-
-  const handlePlaceholderAction = (label: string) => {
-    toast(`${label}: azione non ancora disponibile`)
   }
 
   const handleReload = async () => {
@@ -128,11 +129,30 @@ export const GroupsPage: React.FC = () => {
     }
   }
 
+  const handleBulkTransfer = async () => {
+    if (selectedKeys.size === 0 || transferStationId === '') return
+    setTransferring(true)
+    const res = await transferGroups(
+      Array.from(selectedKeys) as number[],
+      Number(transferStationId),
+    )
+    setTransferring(false)
+    if (res !== null) {
+      setTransferOpen(false)
+      setTransferStationId('')
+      await fetchGroups()
+    }
+  }
+
   useEffect(() => {
     fetchGroups()
   }, [])
 
   const loading = groups === null
+
+  const stations = Array.from(stationsById.values()).sort(
+    (a, b) => a.stationId - b.stationId,
+  )
 
   const filtered = (groups ?? []).filter((g) => {
     const q = search.toLowerCase()
@@ -156,9 +176,7 @@ export const GroupsPage: React.FC = () => {
       header: 'Nome',
       render: (group) => (
         <>
-          <div className="font-medium text-foreground">
-            {group.name || '—'}
-          </div>
+          <div className="font-medium text-foreground">{group.name || '—'}</div>
           <div className="text-xs text-muted-foreground">
             ID {group.groupId}
           </div>
@@ -316,23 +334,20 @@ export const GroupsPage: React.FC = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
+                    onClick={() => {
+                      setTransferStationId('')
+                      setTransferOpen(true)
+                    }}
+                  >
+                    <ArrowRightLeft size={14} />
+                    Trasferisci
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     variant="destructive"
                     onClick={() => setBulkDeleteOpen(true)}
                   >
                     <Trash2 size={14} />
                     Elimina
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handlePlaceholderAction('Archivia')}
-                  >
-                    <Archive size={14} />
-                    Archivia
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handlePlaceholderAction('Esporta')}
-                  >
-                    <Download size={14} />
-                    Esporta
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -399,7 +414,9 @@ export const GroupsPage: React.FC = () => {
 
       <Dialog
         open={bulkDeleteOpen}
-        onOpenChange={(open) => !open && !bulkDeleting && setBulkDeleteOpen(false)}
+        onOpenChange={(open) =>
+          !open && !bulkDeleting && setBulkDeleteOpen(false)
+        }
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -429,6 +446,56 @@ export const GroupsPage: React.FC = () => {
               className="bg-destructive hover:bg-destructive/90 text-white"
             >
               {bulkDeleting ? 'Eliminazione…' : 'Elimina'}
+            </FilledButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={transferOpen}
+        onOpenChange={(open) =>
+          !open && !transferring && setTransferOpen(false)
+        }
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Trasferisci gruppi</DialogTitle>
+            <DialogDescription>
+              Sposta{' '}
+              <span className="font-medium text-foreground">
+                {selectedKeys.size}{' '}
+                {selectedKeys.size === 1 ? 'gruppo' : 'gruppi'}
+              </span>{' '}
+              nella stazione selezionata.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <SearchableSelect
+              value={transferStationId}
+              onValueChange={setTransferStationId}
+              placeholder="Seleziona stazione…"
+              searchPlaceholder="Cerca stazione…"
+              emptyMessage="Nessuna stazione trovata."
+              options={stations.map((station) => ({
+                value: String(station.id),
+                label: station.name || `ID ${station.stationId}`,
+              }))}
+            />
+          </div>
+          <DialogFooter>
+            <TextButton
+              type="button"
+              disabled={transferring}
+              onClick={() => setTransferOpen(false)}
+            >
+              Annulla
+            </TextButton>
+            <FilledButton
+              type="button"
+              disabled={transferring || transferStationId === ''}
+              onClick={handleBulkTransfer}
+            >
+              {transferring ? 'Trasferimento…' : 'Trasferisci'}
             </FilledButton>
           </DialogFooter>
         </DialogContent>
