@@ -14,10 +14,17 @@ import {
   EditTable,
   type EditTableColumn,
   type EditTableHandle,
+  type EditTableSelection,
 } from './EditTable'
 import type { EditTableChanges, EditTableSaveFn, RowKey } from './useEditTable'
 
-export type { EditTableChanges, EditTableColumn, EditTableSaveFn, RowKey }
+export type {
+  EditTableChanges,
+  EditTableColumn,
+  EditTableSaveFn,
+  EditTableSelection,
+  RowKey,
+}
 
 export interface EditTablePanelHandle<
   T extends Record<string, unknown> = Record<string, unknown>,
@@ -26,6 +33,10 @@ export interface EditTablePanelHandle<
   // "add" affordance from wherever it makes sense for the page (e.g. the
   // PageHeader) and call this on click.
   addRow: (seed: T) => void
+  // Refetches from fetchFn, discarding any unsaved edits. Use after a bulk
+  // action that changed rows out from under the grid (e.g. a selection
+  // targeting an immediate API call rather than the save buffer).
+  reload: () => void
 }
 
 interface EditTablePanelProps<
@@ -44,6 +55,8 @@ interface EditTablePanelProps<
   filters?: React.ReactNode
   // Renders a per-row trash button.
   deletable?: boolean
+  // Renders a leading checkbox column for bulk row selection.
+  selection?: EditTableSelection
   emptyMessage?: React.ReactNode
   // Fires when the grid gains or loses unsaved edits. Watch it to guard any
   // control that changes the table's scope (station/group pickers, etc.):
@@ -64,6 +77,7 @@ function EditTablePanelInner<
     className,
     filters,
     deletable = false,
+    selection,
     emptyMessage,
     onDirtyChange,
   }: EditTablePanelProps<T>,
@@ -78,6 +92,7 @@ function EditTablePanelInner<
 
   useImperativeHandle(ref, () => ({
     addRow: (seed: T) => tableRef.current?.addRow(seed),
+    reload: () => tableRef.current?.reload(),
   }))
 
   const runSave = useCallback(async () => {
@@ -113,6 +128,7 @@ function EditTablePanelInner<
         rowKey={rowKey}
         filterFn={filterFn}
         deletable={deletable}
+        selection={selection}
         emptyMessage={emptyMessage}
         onDirtyChange={(dirty, count) => {
           setIsDirty(dirty)

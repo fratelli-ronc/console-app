@@ -288,6 +288,19 @@ export const deleteVariable = (id: number | string): Promise<void | null> =>
     await consoleClient.delete(`/variables/${id}`)
   })
 
+export const deleteVariables = (ids: number[]): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await consoleClient.delete('/variables', { data: { ids } })
+  })
+
+export const transferVariables = (
+  ids: number[],
+  groupId: number,
+): Promise<void | null> =>
+  withErrorHandling(async () => {
+    await consoleClient.patch('/variables/transfer', { ids, groupId })
+  })
+
 export const saveVariablesBatch = (
   payload: VariableBatchRequest,
 ): Promise<VariableBatchResult | null> =>

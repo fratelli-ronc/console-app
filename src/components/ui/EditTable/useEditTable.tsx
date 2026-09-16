@@ -227,6 +227,7 @@ export function useEditTable<T extends Record<string, unknown>>({
     inputValue,
     isDirty,
     changes,
+    keyOf,
     setInputValue,
     isCellModified,
     commitEdit,
@@ -236,5 +237,6 @@ export function useEditTable<T extends Record<string, unknown>>({
     setSelectedCell,
     handleDiscard,
     handleSave,
+    reload: doLoad,
   }
 }

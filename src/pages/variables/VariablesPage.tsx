@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { ArrowRightLeft, ChevronDown, Trash2 } from 'lucide-react'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   EditTablePanel,
+  FilledButton,
+  OutlinedButton,
   PageHeader,
   Search,
   SearchableSelect,
@@ -10,11 +23,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  TextButton,
   useConfirm,
   type EditTableChanges,
   type EditTableColumn,
   type EditTablePanelHandle,
   type EditTableSelectOption,
+  type RowKey,
 } from '@/components'
 import {
   Group,
@@ -30,10 +45,12 @@ import {
   VARIABLE_IMAGE_AUTH_TYPE_OPTIONS,
   VARIABLE_MEMORY_MAP_FUNC_TYPE_OPTIONS,
   VARIABLE_MEMORY_MAP_FUNC_TYPE_WRITE_OPTIONS,
+  deleteVariables,
   listGroups,
   listStations,
   listVariables,
   saveVariablesBatch,
+  transferVariables,
 } from '@/client'
 
 // Flattened, grid-editable projection of a Variable — including the 1:1
@@ -360,6 +377,13 @@ export const VariablesPage: React.FC = () => {
   const [isDirty, setIsDirty] = useState(false)
   const { confirm, confirmDialog } = useConfirm()
 
+  const [selectedKeys, setSelectedKeys] = useState<Set<RowKey>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferring, setTransferring] = useState(false)
+  const [transferGroupId, setTransferGroupId] = useState('')
+
   // Every tag present in the currently-loaded (station/group-scoped) rows,
   // sorted — the option list for the tag filter.
   const [availableTags, setAvailableTags] = useState<string[]>([])
@@ -377,6 +401,12 @@ export const VariablesPage: React.FC = () => {
   useEffect(() => {
     if (tag && !availableTags.includes(tag)) setTag('')
   }, [availableTags, tag])
+
+  // A scope change refetches the grid, so any prior selection no longer maps
+  // to the rows shown.
+  useEffect(() => {
+    setSelectedKeys(new Set())
+  }, [stationId, groupId])
 
   const stationOptions = useMemo(
     () =>
@@ -407,6 +437,23 @@ export const VariablesPage: React.FC = () => {
     () => [{ value: '', label: 'Tutti i gruppi' }, ...scopedGroupOptions],
     [scopedGroupOptions],
   )
+
+  // Every group across every station, labeled with its station — the target
+  // list for bulk-transferring variables, unrestricted by the current scope.
+  const allGroupOptions = useMemo(() => {
+    const stationsById = new Map((stations ?? []).map((s) => [s.id, s]))
+    return (groups ?? []).map((group) => {
+      const station =
+        group.stationId != null ? stationsById.get(group.stationId) : null
+      const groupLabel = group.name || `ID ${group.groupId}`
+      return {
+        value: String(group.id),
+        label: station
+          ? `${groupLabel} — ${station.name || `ID ${station.stationId}`}`
+          : groupLabel,
+      }
+    })
+  }, [groups, stations])
 
   const columns = useMemo(
     () => buildColumns(scopedGroupOptions),
@@ -449,6 +496,49 @@ export const VariablesPage: React.FC = () => {
     if (value) {
       const group = (groups ?? []).find((g) => String(g.id) === value)
       if (group?.stationId != null) setStationId(String(group.stationId))
+    }
+  }
+
+  // Bulk actions hit the API immediately (unlike the grid's own edits, which
+  // only apply on "Salva modifiche"), so opening either dialog first confirms
+  // discarding any pending edits — the reload afterwards would drop them
+  // silently otherwise.
+  const openBulkDelete = async () => {
+    if (!(await guardDiscard())) return
+    setBulkDeleteOpen(true)
+  }
+
+  const openTransfer = async () => {
+    if (!(await guardDiscard())) return
+    setTransferGroupId('')
+    setTransferOpen(true)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return
+    setBulkDeleting(true)
+    const res = await deleteVariables(Array.from(selectedKeys) as number[])
+    setBulkDeleting(false)
+    if (res !== null) {
+      setBulkDeleteOpen(false)
+      setSelectedKeys(new Set())
+      panelRef.current?.reload()
+    }
+  }
+
+  const handleBulkTransfer = async () => {
+    if (selectedKeys.size === 0 || transferGroupId === '') return
+    setTransferring(true)
+    const res = await transferVariables(
+      Array.from(selectedKeys) as number[],
+      Number(transferGroupId),
+    )
+    setTransferring(false)
+    if (res !== null) {
+      setTransferOpen(false)
+      setTransferGroupId('')
+      setSelectedKeys(new Set())
+      panelRef.current?.reload()
     }
   }
 
@@ -505,6 +595,7 @@ export const VariablesPage: React.FC = () => {
       const res = await saveVariablesBatch(payload)
       if (!res) return false // keep the grid dirty so nothing is lost
 
+      setSelectedKeys(new Set())
       toast.success('Variabili salvate')
     },
     [],
@@ -552,6 +643,7 @@ export const VariablesPage: React.FC = () => {
         onSave={handleSave}
         onDirtyChange={setIsDirty}
         deletable
+        selection={{ selectedKeys, onSelectionChange: setSelectedKeys }}
         emptyMessage={
           hasScope
             ? 'Nessuna variabile trovata.'
@@ -612,10 +704,128 @@ export const VariablesPage: React.FC = () => {
                 emptyMessage="Nessun tag."
                 options={tagOptions}
               />
+
+              {selectedKeys.size > 0 && (
+                <div className="flex items-center gap-3 ml-auto">
+                  <span className="text-sm text-muted-foreground">
+                    {selectedKeys.size}{' '}
+                    {selectedKeys.size === 1 ? 'selezionata' : 'selezionate'}
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <OutlinedButton
+                        type="button"
+                        className="inline-flex items-center gap-2"
+                      >
+                        Azioni
+                        <ChevronDown size={14} />
+                      </OutlinedButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={openTransfer}>
+                        <ArrowRightLeft size={14} />
+                        Sposta in gruppo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={openBulkDelete}
+                      >
+                        <Trash2 size={14} />
+                        Elimina
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
             </div>
           </div>
         }
       />
+
+      <Dialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) =>
+          !open && !bulkDeleting && setBulkDeleteOpen(false)
+        }
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Elimina variabili</DialogTitle>
+            <DialogDescription>
+              Stai per eliminare{' '}
+              <span className="font-medium text-foreground">
+                {selectedKeys.size}{' '}
+                {selectedKeys.size === 1 ? 'variabile' : 'variabili'}
+              </span>
+              . Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <TextButton
+              type="button"
+              disabled={bulkDeleting}
+              onClick={() => setBulkDeleteOpen(false)}
+            >
+              Annulla
+            </TextButton>
+            <FilledButton
+              type="button"
+              disabled={bulkDeleting}
+              onClick={handleBulkDelete}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              {bulkDeleting ? 'Eliminazione…' : 'Elimina'}
+            </FilledButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={transferOpen}
+        onOpenChange={(open) =>
+          !open && !transferring && setTransferOpen(false)
+        }
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sposta variabili</DialogTitle>
+            <DialogDescription>
+              Sposta{' '}
+              <span className="font-medium text-foreground">
+                {selectedKeys.size}{' '}
+                {selectedKeys.size === 1 ? 'variabile' : 'variabili'}
+              </span>{' '}
+              nel gruppo selezionato.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <SearchableSelect
+              value={transferGroupId}
+              onValueChange={setTransferGroupId}
+              placeholder="Seleziona gruppo…"
+              searchPlaceholder="Cerca gruppo…"
+              emptyMessage="Nessun gruppo trovato."
+              options={allGroupOptions}
+            />
+          </div>
+          <DialogFooter>
+            <TextButton
+              type="button"
+              disabled={transferring}
+              onClick={() => setTransferOpen(false)}
+            >
+              Annulla
+            </TextButton>
+            <FilledButton
+              type="button"
+              disabled={transferring || transferGroupId === ''}
+              onClick={handleBulkTransfer}
+            >
+              {transferring ? 'Spostamento…' : 'Sposta'}
+            </FilledButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {confirmDialog}
     </div>

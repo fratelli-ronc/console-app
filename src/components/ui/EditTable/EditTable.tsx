@@ -1,6 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { Check, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Checkbox } from '../Checkbox'
 import { CellSelect } from './CellSelect'
 import { SearchableCellSelect } from './SearchableCellSelect'
 import { useEditTable, type EditTableSaveFn, type RowKey } from './useEditTable'
@@ -38,6 +39,15 @@ export interface EditTableHandle<
   save: () => Promise<void>
   discard: () => void
   addRow: (seed: T) => void
+  // Refetches from fetchFn, discarding any unsaved edits. Use after a bulk
+  // action that changed rows out from under the grid (e.g. a selection
+  // targeting an immediate API call rather than the save buffer).
+  reload: () => void
+}
+
+export interface EditTableSelection {
+  selectedKeys: Set<RowKey>
+  onSelectionChange: (selectedKeys: Set<RowKey>) => void
 }
 
 interface EditTableProps<
@@ -53,6 +63,10 @@ interface EditTableProps<
   filterFn?: (row: T) => boolean
   // Renders a trailing trash-button column that removes the row.
   deletable?: boolean
+  // Renders a leading checkbox column for bulk row selection. Rows without a
+  // key (unsaved new rows) can't be selected since bulk actions target
+  // persisted rows.
+  selection?: EditTableSelection
   // Shown centered in the body when there are no rows.
   emptyMessage?: React.ReactNode
 }
@@ -160,6 +174,7 @@ function EditTableInner<
     rowKey,
     filterFn,
     deletable,
+    selection,
     emptyMessage = 'Nessun elemento.',
   }: EditTableProps<T>,
   ref: React.ForwardedRef<EditTableHandle<T>>,
@@ -173,6 +188,7 @@ function EditTableInner<
     inputValue,
     setInputValue,
     isCellModified,
+    keyOf,
     commitEdit,
     addRow,
     deleteRow,
@@ -180,6 +196,7 @@ function EditTableInner<
     setSelectedCell,
     handleDiscard,
     handleSave,
+    reload,
   } = useEditTable<T>({ fetchFn, onSave, onDirtyChange, rowKey, filterFn })
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -193,6 +210,7 @@ function EditTableInner<
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
       })
     },
+    reload,
   }))
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -250,6 +268,12 @@ function EditTableInner<
 
   const hasWidths = columns.some((c) => c.width)
 
+  const selectableKeys = selection
+    ? currentData
+        .map((row) => keyOf(row))
+        .filter((key): key is RowKey => key != null)
+    : []
+
   return (
     <div
       ref={containerRef}
@@ -267,6 +291,7 @@ function EditTableInner<
         >
           {hasWidths && (
             <colgroup>
+              {selection && <col style={{ width: '2.75rem' }} />}
               {columns.map((col) => (
                 <col
                   key={col.key}
@@ -279,6 +304,31 @@ function EditTableInner<
 
           <thead>
             <tr className="sticky top-0 bg-muted z-10">
+              {selection && (
+                <th className="w-10 px-4 py-3 border-b border-r border-border">
+                  <Checkbox
+                    checked={
+                      selectableKeys.length > 0 &&
+                      selectableKeys.every((key) =>
+                        selection.selectedKeys.has(key),
+                      )
+                        ? true
+                        : selectableKeys.some((key) =>
+                              selection.selectedKeys.has(key),
+                            )
+                          ? 'indeterminate'
+                          : false
+                    }
+                    disabled={selectableKeys.length === 0}
+                    onCheckedChange={(checked) =>
+                      selection.onSelectionChange(
+                        checked ? new Set(selectableKeys) : new Set(),
+                      )
+                    }
+                    aria-label="Seleziona tutto"
+                  />
+                </th>
+              )}
               {columns.map(({ key, label }) => (
                 <th
                   key={key}
@@ -292,8 +342,36 @@ function EditTableInner<
           </thead>
 
           <tbody className="bg-card">
-            {currentData.map((item, rowIndex) => (
+            {currentData.map((item, rowIndex) => {
+              const rowSelectKey = selection ? keyOf(item) : null
+              const rowSelected =
+                rowSelectKey != null &&
+                (selection?.selectedKeys.has(rowSelectKey) ?? false)
+
+              return (
               <tr key={rowIndex}>
+                {selection && (
+                  <td
+                    className={cn(
+                      'px-4 py-3.5 text-center align-middle border-r border-border',
+                      rowIndex < currentData.length - 1 &&
+                        'border-b border-border',
+                    )}
+                  >
+                    {rowSelectKey != null && (
+                      <Checkbox
+                        checked={rowSelected}
+                        onCheckedChange={(checked) => {
+                          const next = new Set(selection.selectedKeys)
+                          if (checked) next.add(rowSelectKey)
+                          else next.delete(rowSelectKey)
+                          selection.onSelectionChange(next)
+                        }}
+                        aria-label="Seleziona riga"
+                      />
+                    )}
+                  </td>
+                )}
                 {columns.map((col) => {
                   const { key } = col
 
@@ -551,7 +629,8 @@ function EditTableInner<
                   </td>
                 )}
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
 
