@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   Boxes,
   ChevronDown,
+  Copy,
   MoreVertical,
   Pencil,
   Trash2,
@@ -34,6 +35,7 @@ import {
   deleteGroup,
   deleteGroups,
   transferGroups,
+  cloneGroups,
   listStations,
   Group,
   Station,
@@ -90,6 +92,9 @@ export const GroupsPage: React.FC = () => {
   const [transferOpen, setTransferOpen] = useState(false)
   const [transferring, setTransferring] = useState(false)
   const [transferStationId, setTransferStationId] = useState('')
+  const [cloneOpen, setCloneOpen] = useState(false)
+  const [cloning, setCloning] = useState(false)
+  const [cloneStationId, setCloneStationId] = useState('')
 
   const fetchGroups = async () => {
     const [groupsRes, stationsRes] = await Promise.all([
@@ -140,6 +145,21 @@ export const GroupsPage: React.FC = () => {
     if (res !== null) {
       setTransferOpen(false)
       setTransferStationId('')
+      await fetchGroups()
+    }
+  }
+
+  const handleBulkClone = async () => {
+    if (selectedKeys.size === 0 || cloneStationId === '') return
+    setCloning(true)
+    const res = await cloneGroups(
+      Array.from(selectedKeys) as number[],
+      Number(cloneStationId),
+    )
+    setCloning(false)
+    if (res !== null) {
+      setCloneOpen(false)
+      setCloneStationId('')
       await fetchGroups()
     }
   }
@@ -343,6 +363,15 @@ export const GroupsPage: React.FC = () => {
                     Trasferisci
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    onClick={() => {
+                      setCloneStationId('')
+                      setCloneOpen(true)
+                    }}
+                  >
+                    <Copy size={14} />
+                    Clona
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     variant="destructive"
                     onClick={() => setBulkDeleteOpen(true)}
                   >
@@ -496,6 +525,55 @@ export const GroupsPage: React.FC = () => {
               onClick={handleBulkTransfer}
             >
               {transferring ? 'Trasferimento…' : 'Trasferisci'}
+            </FilledButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cloneOpen}
+        onOpenChange={(open) => !open && !cloning && setCloneOpen(false)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Clona gruppi</DialogTitle>
+            <DialogDescription>
+              Crea una copia di{' '}
+              <span className="font-medium text-foreground">
+                {selectedKeys.size}{' '}
+                {selectedKeys.size === 1 ? 'gruppo' : 'gruppi'}
+              </span>{' '}
+              con tutte le loro variabili nella stazione selezionata. I dati
+              sono identici agli originali, solo gli ID vengono riassegnati.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <SearchableSelect
+              value={cloneStationId}
+              onValueChange={setCloneStationId}
+              placeholder="Seleziona stazione…"
+              searchPlaceholder="Cerca stazione…"
+              emptyMessage="Nessuna stazione trovata."
+              options={stations.map((station) => ({
+                value: String(station.id),
+                label: station.name || `ID ${station.stationId}`,
+              }))}
+            />
+          </div>
+          <DialogFooter>
+            <TextButton
+              type="button"
+              disabled={cloning}
+              onClick={() => setCloneOpen(false)}
+            >
+              Annulla
+            </TextButton>
+            <FilledButton
+              type="button"
+              disabled={cloning || cloneStationId === ''}
+              onClick={handleBulkClone}
+            >
+              {cloning ? 'Clonazione…' : 'Clona'}
             </FilledButton>
           </DialogFooter>
         </DialogContent>

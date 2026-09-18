@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ArrowRightLeft, ChevronDown, Trash2 } from 'lucide-react'
+import { ArrowRightLeft, ChevronDown, Copy, Trash2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,7 @@ import {
   VARIABLE_IMAGE_AUTH_TYPE_OPTIONS,
   VARIABLE_MEMORY_MAP_FUNC_TYPE_OPTIONS,
   VARIABLE_MEMORY_MAP_FUNC_TYPE_WRITE_OPTIONS,
+  cloneVariables,
   deleteVariables,
   listGroups,
   listStations,
@@ -383,6 +384,9 @@ export const VariablesPage: React.FC = () => {
   const [transferOpen, setTransferOpen] = useState(false)
   const [transferring, setTransferring] = useState(false)
   const [transferGroupId, setTransferGroupId] = useState('')
+  const [cloneOpen, setCloneOpen] = useState(false)
+  const [cloning, setCloning] = useState(false)
+  const [cloneGroupId, setCloneGroupId] = useState('')
 
   // Every tag present in the currently-loaded (station/group-scoped) rows,
   // sorted — the option list for the tag filter.
@@ -514,6 +518,12 @@ export const VariablesPage: React.FC = () => {
     setTransferOpen(true)
   }
 
+  const openClone = async () => {
+    if (!(await guardDiscard())) return
+    setCloneGroupId('')
+    setCloneOpen(true)
+  }
+
   const handleBulkDelete = async () => {
     if (selectedKeys.size === 0) return
     setBulkDeleting(true)
@@ -537,6 +547,22 @@ export const VariablesPage: React.FC = () => {
     if (res !== null) {
       setTransferOpen(false)
       setTransferGroupId('')
+      setSelectedKeys(new Set())
+      panelRef.current?.reload()
+    }
+  }
+
+  const handleBulkClone = async () => {
+    if (selectedKeys.size === 0 || cloneGroupId === '') return
+    setCloning(true)
+    const res = await cloneVariables(
+      Array.from(selectedKeys) as number[],
+      Number(cloneGroupId),
+    )
+    setCloning(false)
+    if (res !== null) {
+      setCloneOpen(false)
+      setCloneGroupId('')
       setSelectedKeys(new Set())
       panelRef.current?.reload()
     }
@@ -726,6 +752,10 @@ export const VariablesPage: React.FC = () => {
                         <ArrowRightLeft size={14} />
                         Sposta in gruppo
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={openClone}>
+                        <Copy size={14} />
+                        Clona
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
                         onClick={openBulkDelete}
@@ -822,6 +852,52 @@ export const VariablesPage: React.FC = () => {
               onClick={handleBulkTransfer}
             >
               {transferring ? 'Spostamento…' : 'Sposta'}
+            </FilledButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cloneOpen}
+        onOpenChange={(open) => !open && !cloning && setCloneOpen(false)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Clona variabili</DialogTitle>
+            <DialogDescription>
+              Crea una copia di{' '}
+              <span className="font-medium text-foreground">
+                {selectedKeys.size}{' '}
+                {selectedKeys.size === 1 ? 'variabile' : 'variabili'}
+              </span>{' '}
+              nel gruppo selezionato. I dati sono identici agli originali,
+              solo l'ID variabile viene riassegnato.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <SearchableSelect
+              value={cloneGroupId}
+              onValueChange={setCloneGroupId}
+              placeholder="Seleziona gruppo…"
+              searchPlaceholder="Cerca gruppo…"
+              emptyMessage="Nessun gruppo trovato."
+              options={allGroupOptions}
+            />
+          </div>
+          <DialogFooter>
+            <TextButton
+              type="button"
+              disabled={cloning}
+              onClick={() => setCloneOpen(false)}
+            >
+              Annulla
+            </TextButton>
+            <FilledButton
+              type="button"
+              disabled={cloning || cloneGroupId === ''}
+              onClick={handleBulkClone}
+            >
+              {cloning ? 'Clonazione…' : 'Clona'}
             </FilledButton>
           </DialogFooter>
         </DialogContent>

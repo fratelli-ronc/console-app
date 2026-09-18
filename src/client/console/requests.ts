@@ -209,6 +209,18 @@ export const transferGroups = (
     await consoleClient.patch('/groups/transfer', { ids, stationId })
   })
 
+export const cloneGroups = (
+  ids: number[],
+  stationId: number,
+): Promise<Group[] | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.post<Group[]>('/groups/clone', {
+      ids,
+      stationId,
+    })
+    return data
+  })
+
 export const listGroupTags = (): Promise<GroupTag[] | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.get<GroupTag[]>('/group-tags')
@@ -299,6 +311,18 @@ export const transferVariables = (
 ): Promise<void | null> =>
   withErrorHandling(async () => {
     await consoleClient.patch('/variables/transfer', { ids, groupId })
+  })
+
+export const cloneVariables = (
+  ids: number[],
+  groupId: number,
+): Promise<Variable[] | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.post<Variable[]>('/variables/clone', {
+      ids,
+      groupId,
+    })
+    return data
   })
 
 export const saveVariablesBatch = (
