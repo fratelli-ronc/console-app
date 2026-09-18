@@ -127,6 +127,7 @@ export interface Group {
   driveDocUrl: string | null
   drivePhotoUrl: string | null
   tel: string | null
+  serverIp: string | null
   ipAddress: string | null
   portNumber: number | null
   connectionTimeout: number | null
@@ -152,6 +153,7 @@ export interface CreateGroupRequest {
   driveDocUrl?: string
   drivePhotoUrl?: string
   tel?: string
+  serverIp?: string
   ipAddress?: string
   portNumber?: number
   connectionTimeout?: number
@@ -326,6 +328,7 @@ export interface UpdateGroupRequest {
   driveDocUrl?: string
   drivePhotoUrl?: string
   tel?: string
+  serverIp?: string
   ipAddress?: string
   portNumber?: number
   connectionTimeout?: number

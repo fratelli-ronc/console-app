@@ -40,6 +40,7 @@ import {
   Group,
   Station,
 } from '@/client'
+import { listServers, type Server } from '@/client/coolify'
 import {
   PROTOCOL_OPTIONS,
   NETWORK_TYPE_OPTIONS,
@@ -79,6 +80,9 @@ export const GroupsPage: React.FC = () => {
   const [stationsById, setStationsById] = useState<Map<number, Station>>(
     new Map(),
   )
+  const [serversByIp, setServersByIp] = useState<Map<string, Server>>(
+    new Map(),
+  )
   const [reloading, setReloading] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<
@@ -97,12 +101,14 @@ export const GroupsPage: React.FC = () => {
   const [cloneStationId, setCloneStationId] = useState('')
 
   const fetchGroups = async () => {
-    const [groupsRes, stationsRes] = await Promise.all([
+    const [groupsRes, stationsRes, serversRes] = await Promise.all([
       listGroups(),
       listStations(),
+      listServers(),
     ])
     if (groupsRes) setGroups(groupsRes.sort((a, b) => a.groupId - b.groupId))
     if (stationsRes) setStationsById(new Map(stationsRes.map((s) => [s.id, s])))
+    if (serversRes) setServersByIp(new Map(serversRes.map((s) => [s.ip, s])))
     setSelectedKeys(new Set())
   }
 
@@ -182,6 +188,7 @@ export const GroupsPage: React.FC = () => {
       String(g.groupId).includes(q) ||
       (g.name ?? '').toLowerCase().includes(q) ||
       (g.ipAddress ?? '').includes(q) ||
+      (g.serverIp ?? '').includes(q) ||
       (station?.name ?? '').toLowerCase().includes(q)
     const matchesStatus =
       statusFilter === 'all' ||
@@ -231,6 +238,23 @@ export const GroupsPage: React.FC = () => {
           </p>
         </>
       ),
+    },
+    {
+      key: 'server',
+      header: 'Server',
+      cellClassName: 'text-muted-foreground',
+      render: (group) => {
+        if (!group.serverIp) return <span>—</span>
+        const server = serversByIp.get(group.serverIp)
+        return (
+          <>
+            <p className="text-foreground">
+              {server ? server.name : group.serverIp}
+            </p>
+            <p className="text-xs">{group.serverIp}</p>
+          </>
+        )
+      },
     },
     {
       key: 'network',

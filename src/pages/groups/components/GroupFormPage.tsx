@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   TextInput,
@@ -20,6 +20,7 @@ import {
   updateGroup,
   listStations,
 } from '@/client'
+import { listServers, type Server } from '@/client/coolify'
 import { GroupTagPicker } from './GroupTagPicker'
 
 interface GroupFormPageProps {
@@ -48,6 +49,7 @@ export const GroupFormPage: React.FC<GroupFormPageProps> = ({
   const navigate = useNavigate()
 
   const [stations, setStations] = useState<Station[] | null>(null)
+  const [servers, setServers] = useState<Server[] | null>(null)
 
   const [groupId, setGroupId] = useState(
     initialValues ? String(initialValues.groupId) : '',
@@ -62,6 +64,7 @@ export const GroupFormPage: React.FC<GroupFormPageProps> = ({
   const [networkType, setNetworkType] = useState(
     initialValues?.networkType ?? NETWORK_TYPE_OPTIONS[0].value,
   )
+  const [serverIp, setServerIp] = useState(initialValues?.serverIp ?? '')
   const [ipAddress, setIpAddress] = useState(initialValues?.ipAddress ?? '')
   const [portNumber, setPortNumber] = useState(
     initialValues?.portNumber != null ? String(initialValues.portNumber) : '',
@@ -111,7 +114,24 @@ export const GroupFormPage: React.FC<GroupFormPageProps> = ({
     listStations().then((res) => {
       if (res) setStations(res.sort((a, b) => a.stationId - b.stationId))
     })
+    listServers().then((res) => {
+      if (res) setServers(res)
+    })
   }, [])
+
+  const serverOptions = useMemo(() => {
+    const opts = [
+      { value: '', label: 'Nessuno' },
+      ...(servers ?? []).map((server) => ({
+        value: server.ip,
+        label: `${server.ip} — ${server.name}`,
+      })),
+    ]
+    if (serverIp && !opts.some((opt) => opt.value === serverIp)) {
+      opts.push({ value: serverIp, label: serverIp })
+    }
+    return opts
+  }, [servers, serverIp])
 
   const isCreate = mode === 'create'
 
@@ -131,6 +151,7 @@ export const GroupFormPage: React.FC<GroupFormPageProps> = ({
       driveDocUrl,
       drivePhotoUrl,
       tel,
+      serverIp,
       ipAddress,
       portNumber: portNumber === '' ? undefined : Number(portNumber),
       connectionTimeout:
@@ -211,6 +232,18 @@ export const GroupFormPage: React.FC<GroupFormPageProps> = ({
           type="number"
           placeholder="1"
           onChange={setOrdPrint}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-foreground">Server</label>
+        <SearchableSelect
+          value={serverIp}
+          onValueChange={setServerIp}
+          placeholder="Nessuno"
+          searchPlaceholder="Cerca server…"
+          emptyMessage="Nessun server trovato."
+          options={serverOptions}
         />
       </div>
 
