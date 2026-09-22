@@ -9,7 +9,7 @@ import { UpdateImageDialog } from './components/UpdateImageDialog'
 import { CloneDialog } from './components/CloneDialog'
 import { useUpdateImageStore } from './store/updateImageStore'
 
-export const DeployPage: React.FC = () => {
+export const ServicesPage: React.FC = () => {
   const [data, setData] = useState<ServicesByImageMap | null>(null)
   const [search, setSearch] = useState('')
   const [cloneOpen, setCloneOpen] = useState(false)
@@ -51,7 +51,7 @@ export const DeployPage: React.FC = () => {
 
       <div className="space-y-6">
         <PageHeader
-          title="Deploy"
+          title="Servizi"
           subtitle="Panoramica delle immagini in esecuzione e delle loro versioni."
         />
 

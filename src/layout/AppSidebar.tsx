@@ -9,7 +9,8 @@ import {
   ChevronRight,
   LogOut,
   Server,
-  HardDriveDownload,
+  Container,
+  Rocket,
   UserCog,
   Network,
   Radio,
@@ -46,6 +47,7 @@ const navSections: NavSection[] = [
       { label: 'Stazioni', href: '/stations', icon: <Radio size={20} /> },
       { label: 'Gruppi', href: '/groups', icon: <Boxes size={20} /> },
       { label: 'Variabili', href: '/variables', icon: <Variable size={20} /> },
+      { label: 'Deploy', href: '/deploy', icon: <Rocket size={20} /> },
     ],
   },
   {
@@ -57,9 +59,9 @@ const navSections: NavSection[] = [
         icon: <Server size={20} />,
       },
       {
-        label: 'Deploy',
-        href: '/deploy',
-        icon: <HardDriveDownload size={20} />,
+        label: 'Servizi',
+        href: '/services',
+        icon: <Container size={20} />,
       },
       {
         label: 'Alberatura',

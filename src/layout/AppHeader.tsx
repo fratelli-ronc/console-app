@@ -11,6 +11,7 @@ const ROUTE_LABELS: Record<string, string> = {
   resources: 'Risorse',
   servers: 'Server',
   'server-tree': 'Alberatura',
+  services: 'Servizi',
   settings: 'Impostazioni',
   groups: 'Gruppi',
   'group-tags': 'Tag Gruppi',
