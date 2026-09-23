@@ -12,26 +12,29 @@ import {
   SearchableSelect,
   StatusBadge,
 } from '@/components'
-import { listGroups, listStations, Group, Station } from '@/client'
+import {
+  deployStations,
+  getDeploymentStatuses,
+  listGroups,
+  listStations,
+  DeploymentStatusValue,
+  Group,
+  GroupDeploymentStatus,
+  Station,
+  StationDeploymentStatus,
+} from '@/client'
 import { listServers, type Server } from '@/client/coolify'
 import { cn } from '@/lib/utils'
+import { useUserStore } from '@/store'
 
-type DeployStatus =
-  | { state: 'idle' }
-  | { state: 'deploying' }
-  | { state: 'deployed'; at: string }
-
-const IDLE_STATUS: DeployStatus = { state: 'idle' }
-
-// There is no backend endpoint yet to push variable configs to a station —
-// this simulates the round trip locally so the UI/UX can be reviewed ahead
-// of that work.
-const SIMULATED_DEPLOY_MS = 900
-const simulateDeploy = () =>
-  new Promise<void>((resolve) => setTimeout(resolve, SIMULATED_DEPLOY_MS))
-
-const formatTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 
 const stationLabel = (station: Station) =>
   station.name || `ID ${station.stationId}`
@@ -54,6 +57,7 @@ const ServerLabel: React.FC<ServerLabelProps> = ({ ip, server }) => (
 )
 
 export const DeployPage: React.FC = () => {
+  const currentUser = useUserStore((state) => state.user)
   const [stations, setStations] = useState<Station[] | null>(null)
   const [groups, setGroups] = useState<Group[]>([])
   const [serversByIp, setServersByIp] = useState<Map<string, Server>>(
@@ -62,23 +66,44 @@ export const DeployPage: React.FC = () => {
   const [reloading, setReloading] = useState(false)
   const [search, setSearch] = useState('')
   const [serverIp, setServerIp] = useState('')
+  const [statusFilter, setStatusFilter] = useState<DeploymentStatusValue | ''>(
+    '',
+  )
   const [selectedKeys, setSelectedKeys] = useState<Set<React.Key>>(new Set())
   const [expandedKeys, setExpandedKeys] = useState<Set<React.Key>>(new Set())
   const [bulkDeploying, setBulkDeploying] = useState(false)
-  const [deployStatus, setDeployStatus] = useState<
-    Record<number, DeployStatus>
+  const [deployingIds, setDeployingIds] = useState<Set<number>>(new Set())
+  const [stationStatuses, setStationStatuses] = useState<
+    Record<number, StationDeploymentStatus>
+  >({})
+  const [groupStatuses, setGroupStatuses] = useState<
+    Record<number, GroupDeploymentStatus>
   >({})
 
   const fetchData = async () => {
-    const [stationsRes, groupsRes, serversRes] = await Promise.all([
-      listStations(),
-      listGroups(),
-      listServers(),
-    ])
-    if (stationsRes)
-      setStations(stationsRes.sort((a, b) => a.stationId - b.stationId))
+    const [stationsRes, groupsRes, serversRes, statusesRes] =
+      await Promise.all([
+        listStations(),
+        listGroups(),
+        listServers(),
+        getDeploymentStatuses(),
+      ])
     if (groupsRes) setGroups(groupsRes)
     if (serversRes) setServersByIp(new Map(serversRes.map((s) => [s.ip, s])))
+
+    if (stationsRes) {
+      const sorted = [...stationsRes].sort((a, b) => a.stationId - b.stationId)
+      setStations(sorted)
+    }
+
+    if (statusesRes) {
+      setStationStatuses(
+        Object.fromEntries(statusesRes.stations.map((s) => [s.stationId, s])),
+      )
+      setGroupStatuses(
+        Object.fromEntries(statusesRes.groups.map((g) => [g.groupId, g])),
+      )
+    }
     setSelectedKeys(new Set())
   }
 
@@ -108,6 +133,9 @@ export const DeployPage: React.FC = () => {
   const stationGroups = (station: Station) =>
     groupsByStation.get(station.id) ?? []
 
+  const stationStatusValue = (station: Station): DeploymentStatusValue =>
+    stationStatuses[station.id]?.status ?? 'not_deployed'
+
   // Disabled groups are skipped on deploy, so a station needs at least one
   // enabled group to have anything to distribute.
   const canDeploy = (station: Station) =>
@@ -124,10 +152,20 @@ export const DeployPage: React.FC = () => {
     [groups, serversByIp],
   )
 
+  const statusOptions = [
+    { value: '', label: 'Tutti gli stati' },
+    { value: 'deployed', label: 'Distribuito' },
+    { value: 'pending', label: 'Modifiche in sospeso' },
+    { value: 'not_deployed', label: 'Non distribuito' },
+  ]
+
   const filtered = (stations ?? []).filter((station) => {
     const ownGroups = stationGroups(station)
 
     if (serverIp && !ownGroups.some((g) => g.serverIp === serverIp))
+      return false
+
+    if (statusFilter && stationStatusValue(station) !== statusFilter)
       return false
 
     const q = search.trim().toLowerCase()
@@ -139,21 +177,43 @@ export const DeployPage: React.FC = () => {
     )
   })
 
-  const deployStation = async (station: Station) => {
-    setDeployStatus((prev) => ({
-      ...prev,
-      [station.id]: { state: 'deploying' },
-    }))
-    await simulateDeploy()
-    setDeployStatus((prev) => ({
-      ...prev,
-      [station.id]: { state: 'deployed', at: new Date().toISOString() },
-    }))
+  // Applies the response of a successful deploy: updates the deployed
+  // stations' statuses (already carrying the resolved "deployed by" user),
+  // and optimistically clears the pending flag on their groups too, since a
+  // station deploy always clears both server-side.
+  const applyDeployResult = (results: StationDeploymentStatus[]) => {
+    setStationStatuses((prev) => {
+      const next = { ...prev }
+      for (const result of results) next[result.stationId] = result
+      return next
+    })
+
+    const deployedStationIds = new Set(results.map((r) => r.stationId))
+    setGroupStatuses((prev) => {
+      const next = { ...prev }
+      for (const group of groups) {
+        if (group.stationId != null && deployedStationIds.has(group.stationId))
+          next[group.id] = { groupId: group.id, pending: false }
+      }
+      return next
+    })
+  }
+
+  const runDeploy = async (ids: number[]) => {
+    setDeployingIds((prev) => new Set([...prev, ...ids]))
+    const results = await deployStations(ids)
+    setDeployingIds((prev) => {
+      const next = new Set(prev)
+      for (const id of ids) next.delete(id)
+      return next
+    })
+    if (results) applyDeployResult(results)
+    return results
   }
 
   const handleDeploy = async (station: Station) => {
-    await deployStation(station)
-    toast.success(`Configurazione inviata a ${stationLabel(station)}`)
+    const results = await runDeploy([station.id])
+    if (results) toast.success(`Configurazione inviata a ${stationLabel(station)}`)
   }
 
   const handleBulkDeploy = async () => {
@@ -162,12 +222,13 @@ export const DeployPage: React.FC = () => {
     )
     if (targets.length === 0) return
     setBulkDeploying(true)
-    await Promise.all(targets.map(deployStation))
+    const results = await runDeploy(targets.map((s) => s.id))
     setBulkDeploying(false)
     setSelectedKeys(new Set())
-    toast.success(
-      `Configurazione inviata a ${targets.length} ${targets.length === 1 ? 'stazione' : 'stazioni'}`,
-    )
+    if (results)
+      toast.success(
+        `Configurazione inviata a ${targets.length} ${targets.length === 1 ? 'stazione' : 'stazioni'}`,
+      )
   }
 
   const columns: DataTableColumn<Station>[] = [
@@ -235,8 +296,7 @@ export const DeployPage: React.FC = () => {
             />
           )
         }
-        const status = deployStatus[station.id] ?? IDLE_STATUS
-        if (status.state === 'deploying') {
+        if (deployingIds.has(station.id)) {
           return (
             <StatusBadge
               pending
@@ -246,12 +306,33 @@ export const DeployPage: React.FC = () => {
             />
           )
         }
-        if (status.state === 'deployed') {
+        const status = stationStatuses[station.id]
+        if (status?.status === 'deployed') {
+          const deployedBy = status.lastDeployedBy
+          return (
+            <div>
+              <StatusBadge
+                dot="bg-primary"
+                badge="border-primary/30 text-primary bg-primary/10"
+                label={`Distribuito il ${formatDateTime(status.lastDeployedAt!)}`}
+              />
+              {deployedBy && (
+                <div className="mt-1 text-xs text-muted-foreground">
+                  da{' '}
+                  {deployedBy.username === currentUser?.username
+                    ? 'Te'
+                    : deployedBy.name || deployedBy.username}
+                </div>
+              )}
+            </div>
+          )
+        }
+        if (status?.status === 'pending') {
           return (
             <StatusBadge
-              dot="bg-primary"
-              badge="border-primary/30 text-primary bg-primary/10"
-              label={`Distribuito alle ${formatTime(status.at)}`}
+              dot="bg-secondary"
+              badge="border-secondary/30 text-secondary-foreground bg-secondary/10"
+              label="Modifiche in sospeso"
             />
           )
         }
@@ -268,20 +349,17 @@ export const DeployPage: React.FC = () => {
       key: 'actions',
       header: '',
       cellClassName: 'text-right',
-      render: (station) => {
-        const status = deployStatus[station.id] ?? IDLE_STATUS
-        return (
-          <OutlinedButton
-            type="button"
-            className="inline-flex items-center gap-2"
-            disabled={!canDeploy(station) || status.state === 'deploying'}
-            onClick={() => handleDeploy(station)}
-          >
-            <UploadCloud size={14} />
-            Distribuisci
-          </OutlinedButton>
-        )
-      },
+      render: (station) => (
+        <OutlinedButton
+          type="button"
+          className="inline-flex items-center gap-2"
+          disabled={!canDeploy(station) || deployingIds.has(station.id)}
+          onClick={() => handleDeploy(station)}
+        >
+          <UploadCloud size={14} />
+          Distribuisci
+        </OutlinedButton>
+      ),
     },
   ]
 
@@ -310,12 +388,20 @@ export const DeployPage: React.FC = () => {
             <span className="text-muted-foreground">—</span>
           )}
           <div>
-            {!group.enabled && (
+            {!group.enabled ? (
               <StatusBadge
                 dot="bg-muted-foreground"
                 badge="border-border text-muted-foreground bg-muted/50"
                 label="Disabilitato"
               />
+            ) : (
+              groupStatuses[group.id]?.pending && (
+                <StatusBadge
+                  dot="bg-secondary"
+                  badge="border-secondary/30 text-secondary-foreground bg-secondary/10"
+                  label="Modifiche in sospeso"
+                />
+              )
             )}
           </div>
         </li>
@@ -341,6 +427,18 @@ export const DeployPage: React.FC = () => {
           searchPlaceholder="Cerca server…"
           emptyMessage="Nessun server trovato."
           options={serverOptions}
+        />
+
+        <SearchableSelect
+          className="w-56"
+          value={statusFilter}
+          onValueChange={(value) =>
+            setStatusFilter(value as DeploymentStatusValue | '')
+          }
+          placeholder="Tutti gli stati"
+          searchPlaceholder="Cerca stato…"
+          emptyMessage="Nessuno stato trovato."
+          options={statusOptions}
         />
 
         <div className="flex items-center gap-3 ml-auto">

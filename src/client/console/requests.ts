@@ -4,7 +4,9 @@ import {
   CreateGroupRequest,
   CreateStationRequest,
   CreateVariableRequest,
+  DeploymentStatuses,
   Group,
+  GroupDeploymentStatus,
   GroupTag,
   GroupTagDetailed,
   ListVariablesParams,
@@ -13,6 +15,7 @@ import {
   ServerTreeRelation,
   ServerTreeRelationRequest,
   Station,
+  StationDeploymentStatus,
   StationPhoto,
   StationTag,
   StationTagDetailed,
@@ -162,6 +165,39 @@ export const updateStationPhoto = (
     return data
   })
 
+// Bulk-fetches every station's and group's deployment status in one call.
+export const getDeploymentStatuses = (): Promise<DeploymentStatuses | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<DeploymentStatuses>(
+      '/deployment-status',
+    )
+    return data
+  })
+
+export const getStationDeploymentStatus = (
+  id: number | string,
+): Promise<StationDeploymentStatus | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<StationDeploymentStatus>(
+      `/stations/${id}/deployment-status`,
+    )
+    return data
+  })
+
+// Deploying clears the pending flag for each station and all of its groups,
+// and records the authenticated user and time as the last deploy. Actually
+// delivering the config to the stations is not implemented server-side yet.
+export const deployStations = (
+  ids: number[],
+): Promise<StationDeploymentStatus[] | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.post<StationDeploymentStatus[]>(
+      '/stations/deploy',
+      { ids },
+    )
+    return data
+  })
+
 export const listGroups = (): Promise<Group[] | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.get<Group[]>('/groups')
@@ -218,6 +254,16 @@ export const cloneGroups = (
       ids,
       stationId,
     })
+    return data
+  })
+
+export const getGroupDeploymentStatus = (
+  id: number | string,
+): Promise<GroupDeploymentStatus | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<GroupDeploymentStatus>(
+      `/groups/${id}/deployment-status`,
+    )
     return data
   })
 

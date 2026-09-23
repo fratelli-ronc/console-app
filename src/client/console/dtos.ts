@@ -316,6 +316,44 @@ export interface VariableBatchResult {
   deleted: number[]
 }
 
+// "not_deployed" - never deployed ("Non distribuito"); "pending" - deployed
+// at least once but changed since; "deployed" - deployed and unchanged.
+export type DeploymentStatusValue = 'not_deployed' | 'pending' | 'deployed'
+
+// lastDeployedByUserId resolved to a display name/avatar by console-api
+// (which looks it up against goauth-gate). Absent (null) whenever
+// lastDeployedByUserId is null, and also, best-effort, if that lookup
+// failed - it's a display nicety, not guaranteed to be present.
+export interface DeployedByUser {
+  id: number
+  username: string
+  name: string
+  avatar: string
+}
+
+export interface StationDeploymentStatus {
+  // The station's internal id (matches Station.id, not Station.stationId).
+  stationId: number
+  status: DeploymentStatusValue
+  pending: boolean
+  lastDeployedAt: string | null
+  lastDeployedByUserId: number | null
+  lastDeployedBy: DeployedByUser | null
+}
+
+export interface GroupDeploymentStatus {
+  // The group's internal id (matches Group.id, not Group.groupId).
+  groupId: number
+  pending: boolean
+}
+
+// Every station and group is included, even ones with no deployment status
+// row yet (reported as "not_deployed" / pending: false).
+export interface DeploymentStatuses {
+  stations: StationDeploymentStatus[]
+  groups: GroupDeploymentStatus[]
+}
+
 export interface UpdateGroupRequest {
   stationId?: number | null
   name?: string
