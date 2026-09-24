@@ -1,9 +1,12 @@
+import { isAxiosError } from 'axios'
 import consoleClient from './client'
 import {
   CloneStationRequest,
   CreateGroupRequest,
   CreateStationRequest,
   CreateVariableRequest,
+  DeployConfigIssue,
+  DeployStationsResponse,
   DeploymentStatuses,
   Group,
   GroupDeploymentStatus,
@@ -27,7 +30,7 @@ import {
   VariableBatchRequest,
   VariableBatchResult,
 } from './dtos'
-import { withErrorHandling } from '../withErrorHandling'
+import { extractErrorMessage, withErrorHandling } from '../withErrorHandling'
 
 export const getServerTree = (): Promise<ServerTreeRelation[] | null> =>
   withErrorHandling(async () => {
@@ -184,19 +187,41 @@ export const getStationDeploymentStatus = (
     return data
   })
 
-// Deploying clears the pending flag for each station and all of its groups,
-// and records the authenticated user and time as the last deploy. Actually
-// delivering the config to the stations is not implemented server-side yet.
-export const deployStations = (
+// What a deploy attempt ended in. A failure carries `groups` when the API
+// rejected the deploy over groups it couldn't place on a server; it's empty
+// for any other error.
+export type DeployOutcome =
+  | ({ ok: true } & DeployStationsResponse)
+  | { ok: false; message: string; groups: DeployConfigIssue[] }
+
+// Deploying renders each station's config files and, when they all render,
+// clears the pending flag for the station and its groups and records the
+// authenticated user and time as the last deploy. The rendered files come
+// back with the response — actually delivering them to the station servers
+// is not implemented server-side yet.
+//
+// Skips withErrorHandling: the deploy dialog renders the failure itself,
+// per-group detail included, instead of dropping it into a toast. null
+// still means the auth interceptor took over (401).
+export const deployStations = async (
   ids: number[],
-): Promise<StationDeploymentStatus[] | null> =>
-  withErrorHandling(async () => {
-    const { data } = await consoleClient.post<StationDeploymentStatus[]>(
+): Promise<DeployOutcome | null> => {
+  try {
+    const { data } = await consoleClient.post<DeployStationsResponse>(
       '/stations/deploy',
       { ids },
     )
-    return data
-  })
+    return { ok: true, statuses: data.statuses, files: data.files ?? [] }
+  } catch (error) {
+    if (isAxiosError(error) && error.response?.status === 401) return null
+    const groups = isAxiosError(error) ? error.response?.data?.groups : null
+    return {
+      ok: false,
+      message: extractErrorMessage(error),
+      groups: Array.isArray(groups) ? (groups as DeployConfigIssue[]) : [],
+    }
+  }
+}
 
 export const listGroups = (): Promise<Group[] | null> =>
   withErrorHandling(async () => {

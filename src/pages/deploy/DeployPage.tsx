@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import toast from 'react-hot-toast'
 import { Rocket, UploadCloud } from 'lucide-react'
 import {
   DataTable,
@@ -26,6 +25,10 @@ import {
 import { listServers, type Server } from '@/client/coolify'
 import { cn } from '@/lib/utils'
 import { useUserStore } from '@/store'
+import {
+  DeployResultDialog,
+  type DeployDialogState,
+} from './components/DeployResultDialog'
 
 const formatDateTime = (iso: string) =>
   new Date(iso).toLocaleString('it-IT', {
@@ -35,9 +38,6 @@ const formatDateTime = (iso: string) =>
     hour: '2-digit',
     minute: '2-digit',
   })
-
-const stationLabel = (station: Station) =>
-  station.name || `ID ${station.stationId}`
 
 const distinctServerIps = (groups: Group[]) =>
   Array.from(
@@ -79,6 +79,9 @@ export const DeployPage: React.FC = () => {
   const [groupStatuses, setGroupStatuses] = useState<
     Record<number, GroupDeploymentStatus>
   >({})
+  const [deployDialog, setDeployDialog] = useState<DeployDialogState | null>(
+    null,
+  )
 
   const fetchData = async () => {
     const [stationsRes, groupsRes, serversRes, statusesRes] =
@@ -199,21 +202,42 @@ export const DeployPage: React.FC = () => {
     })
   }
 
+  // Reports the whole attempt through the dialog — the rendered config
+  // files on success, the offending groups when the API refuses the deploy.
+  // Returns whether it went through, for the callers that clean up after it.
   const runDeploy = async (ids: number[]) => {
     setDeployingIds((prev) => new Set([...prev, ...ids]))
-    const results = await deployStations(ids)
+    setDeployDialog({ phase: 'loading', stationCount: ids.length })
+    const outcome = await deployStations(ids)
     setDeployingIds((prev) => {
       const next = new Set(prev)
       for (const id of ids) next.delete(id)
       return next
     })
-    if (results) applyDeployResult(results)
-    return results
-  }
 
-  const handleDeploy = async (station: Station) => {
-    const results = await runDeploy([station.id])
-    if (results) toast.success(`Configurazione inviata a ${stationLabel(station)}`)
+    // null means the auth interceptor took over — logging out, so there is
+    // nothing worth keeping a dialog open for.
+    if (!outcome) {
+      setDeployDialog(null)
+      return false
+    }
+
+    if (!outcome.ok) {
+      setDeployDialog({
+        phase: 'error',
+        message: outcome.message,
+        groups: outcome.groups,
+      })
+      return false
+    }
+
+    applyDeployResult(outcome.statuses)
+    setDeployDialog({
+      phase: 'success',
+      stationCount: ids.length,
+      files: outcome.files,
+    })
+    return true
   }
 
   const handleBulkDeploy = async () => {
@@ -222,13 +246,9 @@ export const DeployPage: React.FC = () => {
     )
     if (targets.length === 0) return
     setBulkDeploying(true)
-    const results = await runDeploy(targets.map((s) => s.id))
+    const deployed = await runDeploy(targets.map((s) => s.id))
     setBulkDeploying(false)
-    setSelectedKeys(new Set())
-    if (results)
-      toast.success(
-        `Configurazione inviata a ${targets.length} ${targets.length === 1 ? 'stazione' : 'stazioni'}`,
-      )
+    if (deployed) setSelectedKeys(new Set())
   }
 
   const columns: DataTableColumn<Station>[] = [
@@ -354,7 +374,7 @@ export const DeployPage: React.FC = () => {
           type="button"
           className="inline-flex items-center gap-2"
           disabled={!canDeploy(station) || deployingIds.has(station.id)}
-          onClick={() => handleDeploy(station)}
+          onClick={() => runDeploy([station.id])}
         >
           <UploadCloud size={14} />
           Distribuisci
@@ -486,6 +506,12 @@ export const DeployPage: React.FC = () => {
           title: 'Nessuna stazione trovata',
           description: 'Prova a modificare la ricerca o i filtri.',
         }}
+      />
+
+      <DeployResultDialog
+        state={deployDialog}
+        onClose={() => setDeployDialog(null)}
+        serverName={(ip) => serversByIp.get(ip)?.name}
       />
     </div>
   )

@@ -199,11 +199,24 @@ export const ServerTreePage: React.FC = () => {
     // The center's own children are implied (any server absent from the
     // saved relations falls back to being its direct child) so that relation
     // is omitted here.
+    //
+    // Saved by IP rather than by uuid: a deploy places a group on the tree by
+    // the serverIp the group carries, so that is the name both ends have to
+    // agree on. A server without one cannot be placed and is left out.
     const relations: ServerTreeRelationRequest[] = Array.from(
       childrenMap.entries(),
     )
       .filter(([serverId]) => serverId !== root?.id)
-      .map(([serverId, childrenServerIds]) => ({ serverId, childrenServerIds }))
+      .flatMap(([serverId, childrenServerIds]) => {
+        const serverIp = byId.get(serverId)?.ip
+        if (!serverIp) return []
+        const childrenServerIps = childrenServerIds.flatMap((childId) => {
+          const childIp = byId.get(childId)?.ip
+          return childIp ? [childIp] : []
+        })
+        if (childrenServerIps.length === 0) return []
+        return [{ serverIp, childrenServerIps }]
+      })
 
     setSaving(true)
     const result = await saveServerTree(relations)

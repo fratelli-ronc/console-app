@@ -1,12 +1,15 @@
+// Servers are named by IP here, not by their Coolify uuid: a group carries
+// the IP of the server it runs on, and a deploy has to join the two to know
+// which servers relay it.
 export interface ServerTreeRelation {
   id: number
-  serverId: string
-  childrenServerIds: string[]
+  serverIp: string
+  childrenServerIps: string[]
 }
 
 export interface ServerTreeRelationRequest {
-  serverId: string
-  childrenServerIds: string[]
+  serverIp: string
+  childrenServerIps: string[]
 }
 
 export interface StationTag {
@@ -352,6 +355,33 @@ export interface GroupDeploymentStatus {
 export interface DeploymentStatuses {
   stations: StationDeploymentStatus[]
   groups: GroupDeploymentStatus[]
+}
+
+// One config file rendered by a deploy: `content` is the exact body to
+// write as `fileName` in `serverIp`'s config folder. stationId is the
+// station's business id — the one the file name carries — unlike the
+// internal ids the deployment-status DTOs use.
+export interface DeployConfigFile {
+  fileName: string
+  serverIp: string
+  stationId: number
+  content: string
+}
+
+// A group the deploy could not place on a server. One issue fails the whole
+// deploy: no file is rendered and no status changes. `id` and `stationId`
+// are internal ids, `groupId` is the business one.
+export interface DeployConfigIssue {
+  id: number
+  groupId: number
+  stationId: number
+  serverIp: string | null
+  reason: string
+}
+
+export interface DeployStationsResponse {
+  statuses: StationDeploymentStatus[]
+  files: DeployConfigFile[]
 }
 
 export interface UpdateGroupRequest {
