@@ -45,6 +45,10 @@ import {
   PROTOCOL_OPTIONS,
   NETWORK_TYPE_OPTIONS,
 } from './components/GroupFormPage'
+import {
+  changedGroupNames,
+  GroupNamesField,
+} from './components/GroupNamesField'
 
 const STATUS_FILTERS: {
   label: string
@@ -66,6 +70,15 @@ const StatusBadge: React.FC<{ enabled: boolean }> = ({ enabled }) => (
     {enabled ? 'Attivo' : 'Disattivo'}
   </span>
 )
+
+const describeTargets = (targets: Group[] | null) => {
+  if (!targets) return ''
+  if (targets.length === 1) return targets[0].name || `ID ${targets[0].groupId}`
+  return `${targets.length} gruppi`
+}
+
+const currentNames = (targets: Group[]) =>
+  Object.fromEntries(targets.map((g) => [g.id, g.name ?? '']))
 
 const protocolLabel = (value: string) =>
   PROTOCOL_OPTIONS.find((opt) => opt.value === value)?.label ?? value
@@ -93,12 +106,16 @@ export const GroupsPage: React.FC = () => {
   const [selectedKeys, setSelectedKeys] = useState<Set<React.Key>>(new Set())
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
-  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferTargets, setTransferTargets] = useState<Group[] | null>(null)
   const [transferring, setTransferring] = useState(false)
   const [transferStationId, setTransferStationId] = useState('')
-  const [cloneOpen, setCloneOpen] = useState(false)
+  const [transferNames, setTransferNames] = useState<Record<number, string>>(
+    {},
+  )
+  const [cloneTargets, setCloneTargets] = useState<Group[] | null>(null)
   const [cloning, setCloning] = useState(false)
   const [cloneStationId, setCloneStationId] = useState('')
+  const [cloneNames, setCloneNames] = useState<Record<number, string>>({})
 
   const fetchGroups = async () => {
     const [groupsRes, stationsRes, serversRes] = await Promise.all([
@@ -140,31 +157,50 @@ export const GroupsPage: React.FC = () => {
     }
   }
 
-  const handleBulkTransfer = async () => {
-    if (selectedKeys.size === 0 || transferStationId === '') return
+  const selectedGroups = () =>
+    (groups ?? []).filter((g) => selectedKeys.has(g.id))
+
+  const openTransfer = (targets: Group[]) => {
+    setTransferStationId('')
+    setTransferNames(currentNames(targets))
+    setTransferTargets(targets)
+  }
+
+  const openClone = (targets: Group[]) => {
+    setCloneStationId('')
+    setCloneNames(currentNames(targets))
+    setCloneTargets(targets)
+  }
+
+  const handleTransfer = async () => {
+    if (!transferTargets?.length || transferStationId === '') return
     setTransferring(true)
+    const names = changedGroupNames(transferTargets, transferNames)
     const res = await transferGroups(
-      Array.from(selectedKeys) as number[],
+      transferTargets.map((g) => g.id),
       Number(transferStationId),
+      Object.keys(names).length > 0 ? names : undefined,
     )
     setTransferring(false)
     if (res !== null) {
-      setTransferOpen(false)
+      setTransferTargets(null)
       setTransferStationId('')
       await fetchGroups()
     }
   }
 
-  const handleBulkClone = async () => {
-    if (selectedKeys.size === 0 || cloneStationId === '') return
+  const handleClone = async () => {
+    if (!cloneTargets?.length || cloneStationId === '') return
     setCloning(true)
+    const names = changedGroupNames(cloneTargets, cloneNames)
     const res = await cloneGroups(
-      Array.from(selectedKeys) as number[],
+      cloneTargets.map((g) => g.id),
       Number(cloneStationId),
+      Object.keys(names).length > 0 ? names : undefined,
     )
     setCloning(false)
     if (res !== null) {
-      setCloneOpen(false)
+      setCloneTargets(null)
       setCloneStationId('')
       await fetchGroups()
     }
@@ -317,6 +353,14 @@ export const GroupsPage: React.FC = () => {
               <Pencil size={14} />
               Modifica
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openTransfer([group])}>
+              <ArrowRightLeft size={14} />
+              Trasferisci
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openClone([group])}>
+              <Copy size={14} />
+              Clona
+            </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
               onClick={() => setGroupToDelete(group)}
@@ -378,20 +422,12 @@ export const GroupsPage: React.FC = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => {
-                      setTransferStationId('')
-                      setTransferOpen(true)
-                    }}
+                    onClick={() => openTransfer(selectedGroups())}
                   >
                     <ArrowRightLeft size={14} />
                     Trasferisci
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setCloneStationId('')
-                      setCloneOpen(true)
-                    }}
-                  >
+                  <DropdownMenuItem onClick={() => openClone(selectedGroups())}>
                     <Copy size={14} />
                     Clona
                   </DropdownMenuItem>
@@ -505,24 +541,27 @@ export const GroupsPage: React.FC = () => {
       </Dialog>
 
       <Dialog
-        open={transferOpen}
+        open={transferTargets !== null}
         onOpenChange={(open) =>
-          !open && !transferring && setTransferOpen(false)
+          !open && !transferring && setTransferTargets(null)
         }
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Trasferisci gruppi</DialogTitle>
+            <DialogTitle>
+              {transferTargets?.length === 1
+                ? 'Trasferisci gruppo'
+                : 'Trasferisci gruppi'}
+            </DialogTitle>
             <DialogDescription>
               Sposta{' '}
               <span className="font-medium text-foreground">
-                {selectedKeys.size}{' '}
-                {selectedKeys.size === 1 ? 'gruppo' : 'gruppi'}
+                {describeTargets(transferTargets)}
               </span>{' '}
               nella stazione selezionata.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
+          <div className="space-y-4 py-2">
             <SearchableSelect
               value={transferStationId}
               onValueChange={setTransferStationId}
@@ -534,19 +573,27 @@ export const GroupsPage: React.FC = () => {
                 label: station.name || `ID ${station.stationId}`,
               }))}
             />
+            {transferTargets && (
+              <GroupNamesField
+                groups={transferTargets}
+                names={transferNames}
+                disabled={transferring}
+                onChange={setTransferNames}
+              />
+            )}
           </div>
           <DialogFooter>
             <TextButton
               type="button"
               disabled={transferring}
-              onClick={() => setTransferOpen(false)}
+              onClick={() => setTransferTargets(null)}
             >
               Annulla
             </TextButton>
             <FilledButton
               type="button"
               disabled={transferring || transferStationId === ''}
-              onClick={handleBulkTransfer}
+              onClick={handleTransfer}
             >
               {transferring ? 'Trasferimento…' : 'Trasferisci'}
             </FilledButton>
@@ -555,23 +602,25 @@ export const GroupsPage: React.FC = () => {
       </Dialog>
 
       <Dialog
-        open={cloneOpen}
-        onOpenChange={(open) => !open && !cloning && setCloneOpen(false)}
+        open={cloneTargets !== null}
+        onOpenChange={(open) => !open && !cloning && setCloneTargets(null)}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Clona gruppi</DialogTitle>
+            <DialogTitle>
+              {cloneTargets?.length === 1 ? 'Clona gruppo' : 'Clona gruppi'}
+            </DialogTitle>
             <DialogDescription>
               Crea una copia di{' '}
               <span className="font-medium text-foreground">
-                {selectedKeys.size}{' '}
-                {selectedKeys.size === 1 ? 'gruppo' : 'gruppi'}
+                {describeTargets(cloneTargets)}
               </span>{' '}
-              con tutte le loro variabili nella stazione selezionata. I dati
-              sono identici agli originali, solo gli ID vengono riassegnati.
+              {cloneTargets?.length === 1
+                ? 'con tutte le sue variabili nella stazione selezionata. I dati sono identici all’originale, solo gli ID vengono riassegnati.'
+                : 'con tutte le loro variabili nella stazione selezionata. I dati sono identici agli originali, solo gli ID vengono riassegnati.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
+          <div className="space-y-4 py-2">
             <SearchableSelect
               value={cloneStationId}
               onValueChange={setCloneStationId}
@@ -583,19 +632,27 @@ export const GroupsPage: React.FC = () => {
                 label: station.name || `ID ${station.stationId}`,
               }))}
             />
+            {cloneTargets && (
+              <GroupNamesField
+                groups={cloneTargets}
+                names={cloneNames}
+                disabled={cloning}
+                onChange={setCloneNames}
+              />
+            )}
           </div>
           <DialogFooter>
             <TextButton
               type="button"
               disabled={cloning}
-              onClick={() => setCloneOpen(false)}
+              onClick={() => setCloneTargets(null)}
             >
               Annulla
             </TextButton>
             <FilledButton
               type="button"
               disabled={cloning || cloneStationId === ''}
-              onClick={handleBulkClone}
+              onClick={handleClone}
             >
               {cloning ? 'Clonazione…' : 'Clona'}
             </FilledButton>

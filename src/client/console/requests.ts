@@ -335,22 +335,27 @@ export const deleteGroups = (ids: number[]): Promise<void | null> =>
     await consoleClient.delete('/groups', { data: { ids } })
   })
 
+// names renames some of the transferred groups, keyed by group id.
 export const transferGroups = (
   ids: number[],
   stationId: number,
+  names?: Record<number, string>,
 ): Promise<void | null> =>
   withErrorHandling(async () => {
-    await consoleClient.patch('/groups/transfer', { ids, stationId })
+    await consoleClient.patch('/groups/transfer', { ids, stationId, names })
   })
 
+// names renames some of the copies, keyed by source group id.
 export const cloneGroups = (
   ids: number[],
   stationId: number,
+  names?: Record<number, string>,
 ): Promise<Group[] | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.post<Group[]>('/groups/clone', {
       ids,
       stationId,
+      names,
     })
     return data
   })
