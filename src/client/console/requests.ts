@@ -1,11 +1,11 @@
-import { isAxiosError } from 'axios'
-import consoleClient from './client'
+import consoleClient, { refreshConsoleTokens } from './client'
 import {
   CloneStationRequest,
   CreateGroupRequest,
   CreateStationRequest,
   CreateVariableRequest,
   DeployConfigIssue,
+  DeployServer,
   DeployStationsResponse,
   DeploymentStatuses,
   Group,
@@ -30,7 +30,10 @@ import {
   VariableBatchRequest,
   VariableBatchResult,
 } from './dtos'
-import { extractErrorMessage, withErrorHandling } from '../withErrorHandling'
+import { withErrorHandling } from '../withErrorHandling'
+import { endSession } from '../withAuthInterceptors'
+import { getToken } from '../tokenStore'
+import { readSSE } from '@/lib/sse'
 
 export const getServerTree = (): Promise<ServerTreeRelation[] | null> =>
   withErrorHandling(async () => {
@@ -187,39 +190,109 @@ export const getStationDeploymentStatus = (
     return data
   })
 
-// What a deploy attempt ended in. A failure carries `groups` when the API
-// rejected the deploy over groups it couldn't place on a server; it's empty
-// for any other error.
+// What a deploy attempt ended in.
+// - "ran": the files were shipped. `result.error` is set when it didn't
+//   fully succeed, and `result.statuses` then holds the stations deployed
+//   anyway. `result.servers` says what happened on each server.
+// - "rejected": refused before any server was called — nothing changed.
+//   `groups` lists the offending groups when that was the reason.
 export type DeployOutcome =
-  | ({ ok: true } & DeployStationsResponse)
-  | { ok: false; message: string; groups: DeployConfigIssue[] }
+  | { kind: 'ran'; result: DeployStationsResponse }
+  | { kind: 'rejected'; message: string; groups: DeployConfigIssue[] }
 
-// Deploying renders each station's config files and, when they all render,
-// clears the pending flag for the station and its groups and records the
-// authenticated user and time as the last deploy. The rendered files come
-// back with the response — actually delivering them to the station servers
-// is not implemented server-side yet.
+// The progress a deploy streams before its result: the plan, every server
+// still "waiting", then each server as its state changes.
+export interface DeployProgress {
+  onServers: (servers: DeployServer[]) => void
+  onServer: (server: DeployServer) => void
+}
+
+const DEPLOY_STREAM_INTERRUPTED =
+  "Connessione interrotta durante la distribuzione: l'esito non è noto. Ricarica la pagina per vedere lo stato aggiornato."
+
+// Deploys the stations: console-api renders their configs, pings every
+// server involved, ships the files through each one's config-helper, and
+// records the deploy for every station whose servers all took them.
 //
-// Skips withErrorHandling: the deploy dialog renders the failure itself,
-// per-group detail included, instead of dropping it into a toast. null
-// still means the auth interceptor took over (401).
+// Asks for the event stream so the dialog can follow each server live —
+// hence fetch rather than consoleClient, and the 401 handling done here.
+// Failures found before any server is called still come back as plain
+// JSON. Never toasts: the deploy dialog renders every outcome itself. null
+// means the session ended (refresh failed) and the app is logging out.
 export const deployStations = async (
   ids: number[],
+  progress: DeployProgress,
 ): Promise<DeployOutcome | null> => {
+  const post = async (token: string | null) =>
+    fetch(`${import.meta.env.VITE_CONSOLE_API_URL}/stations/deploy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ ids }),
+    })
+
+  let resp: Response
   try {
-    const { data } = await consoleClient.post<DeployStationsResponse>(
-      '/stations/deploy',
-      { ids },
-    )
-    return { ok: true, statuses: data.statuses, files: data.files ?? [] }
-  } catch (error) {
-    if (isAxiosError(error) && error.response?.status === 401) return null
-    const groups = isAxiosError(error) ? error.response?.data?.groups : null
-    return {
-      ok: false,
-      message: extractErrorMessage(error),
-      groups: Array.isArray(groups) ? (groups as DeployConfigIssue[]) : [],
+    resp = await post(await getToken())
+    if (resp.status === 401) {
+      let token: string
+      try {
+        token = (await refreshConsoleTokens()).token
+      } catch {
+        await endSession()
+        return null
+      }
+      resp = await post(token)
     }
+  } catch {
+    return {
+      kind: 'rejected',
+      message: 'Errore di connessione. Controlla la rete.',
+      groups: [],
+    }
+  }
+
+  if (!resp.headers.get('Content-Type')?.includes('text/event-stream')) {
+    const body = await resp.json().catch(() => null)
+    const message =
+      typeof body?.error === 'string' && body.error.length > 0
+        ? body.error
+        : `Errore del server (${resp.status}).`
+    return {
+      kind: 'rejected',
+      message,
+      groups: Array.isArray(body?.groups)
+        ? (body.groups as DeployConfigIssue[])
+        : [],
+    }
+  }
+
+  let result: DeployStationsResponse | null = null
+  try {
+    await readSSE(resp.body!, (name, data) => {
+      if (name === 'servers') progress.onServers(data as DeployServer[])
+      else if (name === 'server') progress.onServer(data as DeployServer)
+      else if (name === 'result') result = data as DeployStationsResponse
+    })
+  } catch {
+    // Falls through to the missing result below.
+  }
+
+  if (!result) {
+    return { kind: 'rejected', message: DEPLOY_STREAM_INTERRUPTED, groups: [] }
+  }
+  const { error, statuses, files, servers } = result as DeployStationsResponse
+  return {
+    kind: 'ran',
+    result: {
+      error,
+      statuses: statuses ?? [],
+      files: files ?? [],
+      servers: servers ?? [],
+    },
   }
 }
 

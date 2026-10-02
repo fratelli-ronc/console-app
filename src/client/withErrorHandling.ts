@@ -1,9 +1,7 @@
 import { isAxiosError } from 'axios'
 import toast from 'react-hot-toast'
 
-// Exported for the rare call that renders its own failure instead of
-// letting withErrorHandling toast it (see deployStations).
-export function extractErrorMessage(error: unknown): string {
+function extractErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {
     if (!error.response) return 'Errore di connessione. Controlla la rete.'
     // Both console-api and goauth-gate reply with { "error": "..." }, not

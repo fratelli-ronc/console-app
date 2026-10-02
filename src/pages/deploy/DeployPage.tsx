@@ -202,13 +202,29 @@ export const DeployPage: React.FC = () => {
     })
   }
 
-  // Reports the whole attempt through the dialog — the rendered config
-  // files on success, the offending groups when the API refuses the deploy.
-  // Returns whether it went through, for the callers that clean up after it.
+  // Reports the whole attempt through the dialog — each server live as it
+  // is pinged and synced, then the outcome; the offending groups when the
+  // API refuses the deploy. Returns whether every station went through,
+  // for the callers that clean up after it.
   const runDeploy = async (ids: number[]) => {
+    const stationCount = ids.length
     setDeployingIds((prev) => new Set([...prev, ...ids]))
-    setDeployDialog({ phase: 'loading', stationCount: ids.length })
-    const outcome = await deployStations(ids)
+    setDeployDialog({ phase: 'preparing', stationCount })
+    const outcome = await deployStations(ids, {
+      onServers: (servers) =>
+        setDeployDialog({ phase: 'running', stationCount, servers }),
+      onServer: (server) =>
+        setDeployDialog((prev) =>
+          prev?.phase === 'running'
+            ? {
+                ...prev,
+                servers: prev.servers.map((s) =>
+                  s.serverIp === server.serverIp ? server : s,
+                ),
+              }
+            : prev,
+        ),
+    })
     setDeployingIds((prev) => {
       const next = new Set(prev)
       for (const id of ids) next.delete(id)
@@ -222,22 +238,19 @@ export const DeployPage: React.FC = () => {
       return false
     }
 
-    if (!outcome.ok) {
+    if (outcome.kind === 'rejected') {
       setDeployDialog({
-        phase: 'error',
+        phase: 'rejected',
         message: outcome.message,
         groups: outcome.groups,
       })
       return false
     }
 
-    applyDeployResult(outcome.statuses)
-    setDeployDialog({
-      phase: 'success',
-      stationCount: ids.length,
-      files: outcome.files,
-    })
-    return true
+    // A partial deploy still reports the stations that went through.
+    applyDeployResult(outcome.result.statuses)
+    setDeployDialog({ phase: 'done', stationCount, result: outcome.result })
+    return !outcome.result.error
   }
 
   const handleBulkDeploy = async () => {

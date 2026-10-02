@@ -379,9 +379,37 @@ export interface DeployConfigIssue {
   reason: string
 }
 
+// Where a server is in a deploy. Every server is pinged before any is
+// written to: "unreachable" means nothing was written anywhere,
+// "sync_failed" that the stations on that server stay pending.
+export type DeployServerState =
+  | 'waiting'
+  | 'pinging'
+  | 'reachable'
+  | 'unreachable'
+  | 'syncing'
+  | 'synced'
+  | 'sync_failed'
+
+// One server a deploy calls. stationIds are the business ids whose files it
+// replaces there and fileNames the files it writes — empty when the deploy
+// only clears a station that has since moved off the server. `error` is set
+// on the two failed states.
+export interface DeployServer {
+  serverIp: string
+  stationIds: number[]
+  fileNames: string[]
+  state: DeployServerState
+  error: string | null
+}
+
+// `error` is set whenever the deploy did not fully succeed; `statuses` then
+// lists only the stations that were deployed anyway.
 export interface DeployStationsResponse {
+  error?: string
   statuses: StationDeploymentStatus[]
   files: DeployConfigFile[]
+  servers: DeployServer[]
 }
 
 export interface UpdateGroupRequest {

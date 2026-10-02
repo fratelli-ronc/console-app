@@ -388,9 +388,21 @@ export const VariablesPage: React.FC = () => {
   const [cloning, setCloning] = useState(false)
   const [cloneGroupId, setCloneGroupId] = useState('')
 
-  // Every tag present in the currently-loaded (station/group-scoped) rows,
-  // sorted — the option list for the tag filter.
-  const [availableTags, setAvailableTags] = useState<string[]>([])
+  // Class + tags of every currently-loaded (station/group-scoped) row — the
+  // source for the tag filter's options, narrowed by the class filter.
+  const [loadedTagInfo, setLoadedTagInfo] = useState<
+    { classType: string | null; tags: string[] }[]
+  >([])
+
+  // Every tag present in the loaded rows of the selected class, sorted.
+  const availableTags = useMemo(() => {
+    const tags = new Set<string>()
+    loadedTagInfo.forEach((v) => {
+      if (classType && v.classType !== classType) return
+      v.tags.forEach((t) => tags.add(t))
+    })
+    return [...tags].sort((a, b) => a.localeCompare(b))
+  }, [loadedTagInfo, classType])
 
   useEffect(() => {
     listStations().then((res) => {
@@ -576,7 +588,7 @@ export const VariablesPage: React.FC = () => {
   // (see filterFn) so tweaking a filter never refetches or drops edits.
   const fetchFn = useCallback(async (): Promise<VariableRow[]> => {
     if (!hasScope) {
-      setAvailableTags([])
+      setLoadedTagInfo([])
       return []
     }
     const res = await listVariables({
@@ -585,9 +597,9 @@ export const VariablesPage: React.FC = () => {
     })
     if (!res) return []
 
-    const tags = new Set<string>()
-    res.data.forEach((v) => v.tags?.forEach((t) => tags.add(t)))
-    setAvailableTags([...tags].sort((a, b) => a.localeCompare(b)))
+    setLoadedTagInfo(
+      res.data.map((v) => ({ classType: v.classType, tags: v.tags ?? [] })),
+    )
 
     return res.data.map(toRow)
   }, [hasScope, groupId, stationId])
@@ -704,9 +716,10 @@ export const VariablesPage: React.FC = () => {
 
               <Select
                 value={classType ?? ALL_CLASSES}
-                onValueChange={(v) =>
+                onValueChange={(v) => {
                   setClassType(v === ALL_CLASSES ? null : v)
-                }
+                  setTag('')
+                }}
               >
                 <SelectTrigger className="w-48">
                   <SelectValue />

@@ -18,7 +18,7 @@ type RefreshResult = { token: string; refreshToken: string }
 // had just set.
 let refreshPromise: Promise<RefreshResult> | null = null
 
-function refreshTokens(
+export function refreshTokens(
   doRefresh: (refreshToken: string) => Promise<RefreshResult>,
 ): Promise<RefreshResult> {
   if (!refreshPromise) {
@@ -39,6 +39,15 @@ function refreshTokens(
   }
 
   return refreshPromise
+}
+
+// Drops the stored tokens and tells the app to log out. For the callers
+// that refresh outside the interceptor (a fetch stream) and fail to.
+export async function endSession(): Promise<void> {
+  await clearToken()
+  await clearRefreshToken()
+
+  window.dispatchEvent(new CustomEvent('auth:unauthorized'))
 }
 
 export function withAuthInterceptors(
@@ -67,10 +76,7 @@ export function withAuthInterceptors(
 
           return await instance(original)
         } catch {
-          await clearToken()
-          await clearRefreshToken()
-
-          window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+          await endSession()
         }
       }
 
