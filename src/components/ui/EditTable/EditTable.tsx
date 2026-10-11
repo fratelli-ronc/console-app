@@ -1,9 +1,27 @@
-import { forwardRef, useImperativeHandle, useRef } from 'react'
-import { Check, Trash2 } from 'lucide-react'
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type Modifier,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { Check, GripVertical, RotateCcw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Checkbox } from '../Checkbox'
 import { CellSelect } from './CellSelect'
 import { SearchableCellSelect } from './SearchableCellSelect'
+import { useColumnOrder } from './useColumnOrder'
 import { useEditTable, type EditTableSaveFn, type RowKey } from './useEditTable'
 
 export type EditTableCellType = 'text' | 'number' | 'boolean' | 'select'
@@ -69,6 +87,9 @@ interface EditTableProps<
   selection?: EditTableSelection
   // Shown centered in the body when there are no rows.
   emptyMessage?: React.ReactNode
+  // Enables drag-to-reorder headers; the order is persisted per user under
+  // this key. Omit to keep the columns in their declared order.
+  columnOrderKey?: string
 }
 
 function isColEditable(col: EditTableColumn<any>): boolean {
@@ -106,6 +127,155 @@ const BooleanCell: React.FC<{ checked: boolean }> = ({ checked }) => (
     {checked && <Check size={11} strokeWidth={3} />}
   </span>
 )
+
+const headerCellClass =
+  'text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap'
+
+// The header drag ghost only slides sideways — columns reorder on one axis.
+const restrictToHorizontalAxis: Modifier = ({ transform }) => ({
+  ...transform,
+  y: 0,
+})
+
+// An in-flight header drag: the column being moved and the one under the
+// pointer (null when it's outside every header).
+type ColumnDrag = { activeKey: string; overKey: string | null }
+
+// Drag feedback for any cell (header or body) of column `key`: the dragged
+// column fades out, and the drop-target column is tinted with a line on the
+// side the dragged column will land. Applied to every row, so the line runs
+// the full table height.
+function columnDragClass(
+  drag: ColumnDrag | null,
+  columns: { key: string }[],
+  key: string,
+): string | false {
+  if (!drag) return false
+  if (key === drag.activeKey) return 'opacity-40'
+  if (key !== drag.overKey) return false
+  const indexOf = (k: string) => columns.findIndex((c) => c.key === k)
+  const side =
+    indexOf(drag.overKey) > indexOf(drag.activeKey) ? 'right' : 'left'
+  return cn(
+    'relative bg-primary/10 before:pointer-events-none before:absolute before:inset-y-0 before:w-[3px] before:bg-primary',
+    side === 'left' ? 'before:-left-px' : 'before:-right-px',
+  )
+}
+
+// A draggable header cell. It deliberately ignores the sortable transform:
+// shifting headers mid-drag would misalign them from their body cells, so
+// the column only moves on drop and columnDragClass marks the slot meanwhile.
+const SortableHeaderCell: React.FC<{
+  id: string
+  label: string
+  className?: string | false
+}> = ({ id, label, className }) => {
+  const { attributes, listeners, setNodeRef } = useSortable({
+    id,
+    // Keep table semantics; useSortable would otherwise stamp role="button".
+    attributes: { role: 'columnheader' },
+  })
+
+  return (
+    <th
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        headerCellClass,
+        'group relative border-b border-r border-border last:border-r-0 cursor-grab select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60',
+        className,
+      )}
+    >
+      <GripVertical
+        size={12}
+        className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-60"
+      />
+      {label}
+    </th>
+  )
+}
+
+// The reorderable header cells of a table row. Owns the whole drag
+// interaction; the ghost and the screen-reader live region are portaled to
+// <body> since a <tr> can't host their <div>s.
+function SortableHeaderCells({
+  columns,
+  onReorder,
+  drag,
+  onDragChange,
+}: {
+  columns: { key: string; label: string }[]
+  onReorder: (activeKey: string, overKey: string) => void
+  // Lifted to the table so body cells can render the drop feedback too.
+  drag: ColumnDrag | null
+  onDragChange: (drag: ColumnDrag | null) => void
+}) {
+  const draggingColumn = columns.find((c) => c.key === drag?.activeKey)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[restrictToHorizontalAxis]}
+      // Horizontal auto-scroll only: the header sits in the top edge zone,
+      // so vertical auto-scroll would yank the body back to the top.
+      autoScroll={{ threshold: { x: 0.2, y: 0 } }}
+      accessibility={{ container: document.body }}
+      onDragStart={({ active }) =>
+        onDragChange({ activeKey: String(active.id), overKey: null })
+      }
+      onDragOver={({ active, over }) =>
+        onDragChange({
+          activeKey: String(active.id),
+          overKey: over ? String(over.id) : null,
+        })
+      }
+      onDragEnd={({ active, over }) => {
+        onDragChange(null)
+        if (over) onReorder(String(active.id), String(over.id))
+      }}
+      onDragCancel={() => onDragChange(null)}
+    >
+      <SortableContext
+        items={columns.map((c) => c.key)}
+        strategy={horizontalListSortingStrategy}
+      >
+        {columns.map(({ key, label }) => (
+          <SortableHeaderCell
+            key={key}
+            id={key}
+            label={label}
+            className={columnDragClass(drag, columns, key)}
+          />
+        ))}
+      </SortableContext>
+
+      {createPortal(
+        <DragOverlay dropAnimation={null}>
+          {draggingColumn && (
+            <div
+              className={cn(
+                headerCellClass,
+                'rounded-md border border-primary/60 bg-muted text-foreground shadow-lg cursor-grabbing',
+              )}
+            >
+              {draggingColumn.label}
+            </div>
+          )}
+        </DragOverlay>,
+        document.body,
+      )}
+    </DndContext>
+  )
+}
 
 type NavDirection = 'tab' | 'shift-tab' | 'up' | 'down' | 'left' | 'right'
 
@@ -166,7 +336,7 @@ function EditTableInner<
   T extends Record<string, unknown> = Record<string, unknown>,
 >(
   {
-    columns,
+    columns: declaredColumns,
     className,
     fetchFn,
     onSave,
@@ -176,6 +346,7 @@ function EditTableInner<
     deletable,
     selection,
     emptyMessage = 'Nessun elemento.',
+    columnOrderKey,
   }: EditTableProps<T>,
   ref: React.ForwardedRef<EditTableHandle<T>>,
 ) {
@@ -198,6 +369,16 @@ function EditTableInner<
     handleSave,
     reload,
   } = useEditTable<T>({ fetchFn, onSave, onDirtyChange, rowKey, filterFn })
+
+  // Everything below (rendering, keyboard navigation) works off this ordered
+  // list; cells and edits are addressed by column key, never by position.
+  const {
+    orderedColumns: columns,
+    reorder,
+    reset: resetColumnOrder,
+    isCustomized: isColumnOrderCustomized,
+  } = useColumnOrder(declaredColumns, columnOrderKey)
+  const [columnDrag, setColumnDrag] = useState<ColumnDrag | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -329,14 +510,26 @@ function EditTableInner<
                   />
                 </th>
               )}
-              {columns.map(({ key, label }) => (
-                <th
-                  key={key}
-                  className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b border-r border-border last:border-r-0 whitespace-nowrap"
-                >
-                  {label}
-                </th>
-              ))}
+              {columnOrderKey ? (
+                <SortableHeaderCells
+                  columns={columns}
+                  onReorder={reorder}
+                  drag={columnDrag}
+                  onDragChange={setColumnDrag}
+                />
+              ) : (
+                columns.map(({ key, label }) => (
+                  <th
+                    key={key}
+                    className={cn(
+                      headerCellClass,
+                      'border-b border-r border-border last:border-r-0',
+                    )}
+                  >
+                    {label}
+                  </th>
+                ))
+              )}
               {deletable && <th className="px-2 py-3 border-b border-border" />}
             </tr>
           </thead>
@@ -602,6 +795,7 @@ function EditTableInner<
                           : 'ring-muted',
                         rowIndex < currentData.length - 1 &&
                           'border-b border-border',
+                        columnDragClass(columnDrag, columns, key),
                       )}
                     >
                       {displayValue(col, item)}
@@ -642,6 +836,16 @@ function EditTableInner<
       </div>
 
       <div className="flex items-center justify-end px-4 py-2.5 bg-muted/20 border-t border-border">
+        {isColumnOrderCustomized && (
+          <button
+            type="button"
+            onClick={resetColumnOrder}
+            className="mr-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <RotateCcw size={12} />
+            Ripristina colonne
+          </button>
+        )}
         <span className="text-xs text-muted-foreground tabular-nums">
           {totalRowCount !== currentData.length
             ? `${currentData.length} di ${totalRowCount} righe`

@@ -63,6 +63,9 @@ interface EditTablePanelProps<
   // prompt before letting the change through, since a scope change refetches
   // and drops pending edits.
   onDirtyChange?: (isDirty: boolean) => void
+  // Enables drag-to-reorder column headers, persisted per user under this
+  // key (e.g. 'variables').
+  columnOrderKey?: string
 }
 
 function EditTablePanelInner<
@@ -80,6 +83,7 @@ function EditTablePanelInner<
     selection,
     emptyMessage,
     onDirtyChange,
+    columnOrderKey,
   }: EditTablePanelProps<T>,
   ref: React.ForwardedRef<EditTablePanelHandle<T>>,
 ) {
@@ -130,6 +134,7 @@ function EditTablePanelInner<
         deletable={deletable}
         selection={selection}
         emptyMessage={emptyMessage}
+        columnOrderKey={columnOrderKey}
         onDirtyChange={(dirty, count) => {
           setIsDirty(dirty)
           setPendingCount(count)
