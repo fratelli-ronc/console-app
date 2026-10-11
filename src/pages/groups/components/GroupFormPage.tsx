@@ -17,6 +17,7 @@ import {
   Group,
   Station,
   createGroup,
+  getNextGroupId,
   updateGroup,
   listStations,
 } from '@/client'
@@ -134,6 +135,15 @@ export const GroupFormPage: React.FC<GroupFormPageProps> = ({
   }, [servers, serverIp])
 
   const isCreate = mode === 'create'
+
+  // Propose the next free ID from the server (it counts soft-deleted
+  // groups); skip it if the user already typed one.
+  useEffect(() => {
+    if (!isCreate) return
+    getNextGroupId().then((res) => {
+      if (res) setGroupId((prev) => prev || String(res.groupId))
+    })
+  }, [isCreate])
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()

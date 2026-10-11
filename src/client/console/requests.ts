@@ -13,6 +13,7 @@ import {
   GroupTag,
   GroupTagDetailed,
   ListVariablesParams,
+  NextGroupId,
   NextStationId,
   PaginatedVariables,
   ServerTreeRelation,
@@ -322,6 +323,12 @@ export const updateGroup = (
 ): Promise<Group | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.put<Group>(`/groups/${id}`, payload)
+    return data
+  })
+
+export const getNextGroupId = (): Promise<NextGroupId | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<NextGroupId>('/group-next-id')
     return data
   })
 

@@ -95,6 +95,10 @@ export interface NextStationId {
   stationId: number
 }
 
+export interface NextGroupId {
+  groupId: number
+}
+
 export interface UpdateStationPhotoRequest {
   contentType: string
   data: string

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TextInput, FormPage, ToggleSwitch } from '@/components'
 import {
@@ -12,6 +12,7 @@ import {
   Station,
   StationPhotoRef,
   createStation,
+  getNextStationId,
   updateStation,
 } from '@/client'
 import { TagPicker } from './TagPicker'
@@ -52,6 +53,15 @@ export const StationFormPage: React.FC<StationFormPageProps> = ({
   const [loading, setLoading] = useState(false)
 
   const isCreate = mode === 'create'
+
+  // Propose the next free ID from the server (it counts soft-deleted
+  // stations); skip it if the user already typed one.
+  useEffect(() => {
+    if (!isCreate) return
+    getNextStationId().then((res) => {
+      if (res) setStationId((prev) => prev || String(res.stationId))
+    })
+  }, [isCreate])
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
