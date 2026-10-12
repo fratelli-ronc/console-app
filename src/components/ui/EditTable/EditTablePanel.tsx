@@ -66,6 +66,8 @@ interface EditTablePanelProps<
   // Enables drag-to-reorder column headers, persisted per user under this
   // key (e.g. 'variables').
   columnOrderKey?: string
+  // Items for a row's right-click menu; return null to keep the native menu.
+  rowContextMenu?: (row: T) => React.ReactNode
 }
 
 function EditTablePanelInner<
@@ -84,6 +86,7 @@ function EditTablePanelInner<
     emptyMessage,
     onDirtyChange,
     columnOrderKey,
+    rowContextMenu,
   }: EditTablePanelProps<T>,
   ref: React.ForwardedRef<EditTablePanelHandle<T>>,
 ) {
@@ -135,6 +138,7 @@ function EditTablePanelInner<
         selection={selection}
         emptyMessage={emptyMessage}
         columnOrderKey={columnOrderKey}
+        rowContextMenu={rowContextMenu}
         onDirtyChange={(dirty, count) => {
           setIsDirty(dirty)
           setPendingCount(count)

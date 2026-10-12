@@ -1,5 +1,6 @@
 export * from './Checkbox'
 export * from './ConfirmDialog'
+export * from './ContextMenu'
 export * from './DataTable'
 export * from './Dialog'
 export * from './DropdownMenu'

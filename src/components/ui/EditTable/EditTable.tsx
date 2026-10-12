@@ -19,6 +19,11 @@ import {
 import { Check, GripVertical, RotateCcw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Checkbox } from '../Checkbox'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from '../ContextMenu'
 import { CellSelect } from './CellSelect'
 import { SearchableCellSelect } from './SearchableCellSelect'
 import { useColumnOrder } from './useColumnOrder'
@@ -90,6 +95,9 @@ interface EditTableProps<
   // Enables drag-to-reorder headers; the order is persisted per user under
   // this key. Omit to keep the columns in their declared order.
   columnOrderKey?: string
+  // Items (ContextMenuItem etc.) for the right-click menu of a row. Return
+  // null to keep the native menu for that row (e.g. unsaved new rows).
+  rowContextMenu?: (row: T) => React.ReactNode
 }
 
 function isColEditable(col: EditTableColumn<any>): boolean {
@@ -347,6 +355,7 @@ function EditTableInner<
     selection,
     emptyMessage = 'Nessun elemento.',
     columnOrderKey,
+    rowContextMenu,
   }: EditTableProps<T>,
   ref: React.ForwardedRef<EditTableHandle<T>>,
 ) {
@@ -541,67 +550,152 @@ function EditTableInner<
                 rowSelectKey != null &&
                 (selection?.selectedKeys.has(rowSelectKey) ?? false)
 
-              return (
-              <tr key={rowIndex}>
-                {selection && (
-                  <td
-                    className={cn(
-                      'px-4 py-3.5 text-center align-middle border-r border-border',
-                      rowIndex < currentData.length - 1 &&
-                        'border-b border-border',
-                    )}
-                  >
-                    {rowSelectKey != null && (
-                      <Checkbox
-                        checked={rowSelected}
-                        onCheckedChange={(checked) => {
-                          const next = new Set(selection.selectedKeys)
-                          if (checked) next.add(rowSelectKey)
-                          else next.delete(rowSelectKey)
-                          selection.onSelectionChange(next)
-                        }}
-                        aria-label="Seleziona riga"
-                      />
-                    )}
-                  </td>
-                )}
-                {columns.map((col) => {
-                  const { key } = col
+              const menuItems = rowContextMenu?.(item)
 
-                  const isEditable = isColEditable(col)
-                  const isEditing =
-                    editingCell?.row === rowIndex && editingCell?.key === key
+              const rowEl = (
+                <tr key={rowIndex} className="data-[state=open]:bg-muted/60">
+                  {selection && (
+                    <td
+                      className={cn(
+                        'px-4 py-3.5 text-center align-middle border-r border-border',
+                        rowIndex < currentData.length - 1 &&
+                          'border-b border-border',
+                      )}
+                    >
+                      {rowSelectKey != null && (
+                        <Checkbox
+                          checked={rowSelected}
+                          onCheckedChange={(checked) => {
+                            const next = new Set(selection.selectedKeys)
+                            if (checked) next.add(rowSelectKey)
+                            else next.delete(rowSelectKey)
+                            selection.onSelectionChange(next)
+                          }}
+                          aria-label="Seleziona riga"
+                        />
+                      )}
+                    </td>
+                  )}
+                  {columns.map((col) => {
+                    const { key } = col
 
-                  const modified = isCellModified(rowIndex, key)
+                    const isEditable = isColEditable(col)
+                    const isEditing =
+                      editingCell?.row === rowIndex && editingCell?.key === key
 
-                  const isSelected =
-                    !isEditing &&
-                    selectedCell?.row === rowIndex &&
-                    selectedCell?.key === key
+                    const modified = isCellModified(rowIndex, key)
 
-                  if (isEditing) {
-                    if (col.type === 'select' && col.options) {
-                      const SelectEditor = col.searchable
-                        ? SearchableCellSelect
-                        : CellSelect
+                    const isSelected =
+                      !isEditing &&
+                      selectedCell?.row === rowIndex &&
+                      selectedCell?.key === key
+
+                    if (isEditing) {
+                      if (col.type === 'select' && col.options) {
+                        const SelectEditor = col.searchable
+                          ? SearchableCellSelect
+                          : CellSelect
+                        return (
+                          <td
+                            key={key}
+                            className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
+                          >
+                            <SelectEditor
+                              value={inputValue}
+                              options={col.options}
+                              onCommit={(finalValue: string) => {
+                                commitCell(rowIndex, col, finalValue)
+                                setSelectedCell({ row: rowIndex, key })
+                                focusCell(rowIndex, key)
+                              }}
+                              onCancel={() => {
+                                setEditingCell(null)
+                                setSelectedCell({ row: rowIndex, key })
+                                focusCell(rowIndex, key)
+                              }}
+                            />
+                          </td>
+                        )
+                      }
+
                       return (
                         <td
                           key={key}
                           className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
                         >
-                          <SelectEditor
+                          <input
+                            ref={inputRef}
+                            autoFocus
                             value={inputValue}
-                            options={col.options}
-                            onCommit={(finalValue: string) => {
-                              commitCell(rowIndex, col, finalValue)
-                              setSelectedCell({ row: rowIndex, key })
-                              focusCell(rowIndex, key)
+                            inputMode={
+                              col.type === 'number' ? 'decimal' : undefined
+                            }
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onFocus={(e) => {
+                              if (editTriggeredByTypingRef.current) {
+                                editTriggeredByTypingRef.current = false
+                                const len = e.target.value.length
+                                e.target.setSelectionRange(len, len)
+                              } else {
+                                e.target.select()
+                              }
                             }}
-                            onCancel={() => {
-                              setEditingCell(null)
-                              setSelectedCell({ row: rowIndex, key })
-                              focusCell(rowIndex, key)
+                            onBlur={() => {
+                              const nav = pendingNavRef.current
+                              pendingNavRef.current = null
+                              commitCell(rowIndex, col, inputValue)
+                              if (nav) {
+                                const nextCol = columns.find(
+                                  (c) => c.key === nav.key,
+                                )!
+                                if (canEnterEdit(nextCol)) {
+                                  setSelectedCell(null)
+                                  setEditingCell(nav)
+                                  setInputValue(
+                                    String(
+                                      currentData[nav.row]?.[nav.key] ?? '',
+                                    ),
+                                  )
+                                } else {
+                                  setSelectedCell(nav)
+                                  focusCell(nav.row, nav.key)
+                                }
+                              }
                             }}
+                            onKeyDown={(e) => {
+                              const nav = (dir: NavDirection) => {
+                                e.preventDefault()
+                                pendingNavRef.current = navigateCell(
+                                  rowIndex,
+                                  key,
+                                  dir,
+                                  columns,
+                                  currentData.length,
+                                )
+                                inputRef.current?.blur()
+                              }
+                              switch (e.key) {
+                                case 'Tab':
+                                  nav(e.shiftKey ? 'shift-tab' : 'tab')
+                                  break
+                                case 'Enter':
+                                  nav(e.shiftKey ? 'up' : 'down')
+                                  break
+                                case 'ArrowUp':
+                                  nav('up')
+                                  break
+                                case 'ArrowDown':
+                                  nav('down')
+                                  break
+                                case 'Escape':
+                                  e.preventDefault()
+                                  setEditingCell(null)
+                                  setSelectedCell({ row: rowIndex, key })
+                                  focusCell(rowIndex, key)
+                                  break
+                              }
+                            }}
+                            className="w-full bg-transparent outline-none text-foreground text-sm"
                           />
                         </td>
                       )
@@ -610,219 +704,154 @@ function EditTableInner<
                     return (
                       <td
                         key={key}
-                        className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
-                      >
-                        <input
-                          ref={inputRef}
-                          autoFocus
-                          value={inputValue}
-                          inputMode={
-                            col.type === 'number' ? 'decimal' : undefined
+                        tabIndex={isEditable ? 0 : -1}
+                        data-row={rowIndex}
+                        data-col={key}
+                        onClick={() => {
+                          if (!isEditable) return
+                          if (col.type === 'boolean') {
+                            toggleCell(rowIndex, col)
+                            return
                           }
-                          onChange={(e) => setInputValue(e.target.value)}
-                          onFocus={(e) => {
-                            if (editTriggeredByTypingRef.current) {
-                              editTriggeredByTypingRef.current = false
-                              const len = e.target.value.length
-                              e.target.setSelectionRange(len, len)
-                            } else {
-                              e.target.select()
-                            }
-                          }}
-                          onBlur={() => {
-                            const nav = pendingNavRef.current
-                            pendingNavRef.current = null
-                            commitCell(rowIndex, col, inputValue)
-                            if (nav) {
-                              const nextCol = columns.find(
-                                (c) => c.key === nav.key,
-                              )!
-                              if (canEnterEdit(nextCol)) {
-                                setSelectedCell(null)
-                                setEditingCell(nav)
-                                setInputValue(
-                                  String(currentData[nav.row]?.[nav.key] ?? ''),
+                          startEdit(rowIndex, col)
+                        }}
+                        onFocus={() => setSelectedCell({ row: rowIndex, key })}
+                        onBlur={() => setSelectedCell(null)}
+                        onKeyDown={(e) => {
+                          const moveSelection = (dir: NavDirection) => {
+                            e.preventDefault()
+                            const next = navigateCell(
+                              rowIndex,
+                              key,
+                              dir,
+                              columns,
+                              currentData.length,
+                            )
+                            if (!next) return
+                            setSelectedCell(next)
+                            focusCell(next.row, next.key)
+                          }
+
+                          switch (e.key) {
+                            case 'Tab':
+                              // only intercept if there's a target; otherwise let browser Tab out
+                              {
+                                const next = navigateCell(
+                                  rowIndex,
+                                  key,
+                                  e.shiftKey ? 'shift-tab' : 'tab',
+                                  columns,
+                                  currentData.length,
                                 )
-                              } else {
-                                setSelectedCell(nav)
-                                focusCell(nav.row, nav.key)
+                                if (next) {
+                                  e.preventDefault()
+                                  setSelectedCell(next)
+                                  focusCell(next.row, next.key)
+                                }
                               }
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            const nav = (dir: NavDirection) => {
-                              e.preventDefault()
-                              pendingNavRef.current = navigateCell(
-                                rowIndex,
-                                key,
-                                dir,
-                                columns,
-                                currentData.length,
-                              )
-                              inputRef.current?.blur()
-                            }
-                            switch (e.key) {
-                              case 'Tab':
-                                nav(e.shiftKey ? 'shift-tab' : 'tab')
-                                break
-                              case 'Enter':
-                                nav(e.shiftKey ? 'up' : 'down')
-                                break
-                              case 'ArrowUp':
-                                nav('up')
-                                break
-                              case 'ArrowDown':
-                                nav('down')
-                                break
-                              case 'Escape':
+                              break
+                            case 'ArrowUp':
+                              moveSelection('up')
+                              break
+                            case 'ArrowDown':
+                              moveSelection('down')
+                              break
+                            case 'ArrowLeft':
+                              moveSelection('left')
+                              break
+                            case 'ArrowRight':
+                              moveSelection('right')
+                              break
+                            case ' ':
+                              if (isEditable && col.type === 'boolean') {
                                 e.preventDefault()
-                                setEditingCell(null)
-                                setSelectedCell({ row: rowIndex, key })
-                                focusCell(rowIndex, key)
-                                break
-                            }
-                          }}
-                          className="w-full bg-transparent outline-none text-foreground text-sm"
-                        />
+                                toggleCell(rowIndex, col)
+                              }
+                              break
+                            case 'Enter':
+                            case 'F2':
+                              if (!isEditable) break
+                              e.preventDefault()
+                              if (col.type === 'boolean') {
+                                toggleCell(rowIndex, col)
+                              } else {
+                                startEdit(rowIndex, col)
+                              }
+                              break
+                            default:
+                              if (
+                                canEnterEdit(col) &&
+                                e.key.length === 1 &&
+                                !e.ctrlKey &&
+                                !e.metaKey &&
+                                !e.altKey
+                              ) {
+                                e.preventDefault()
+                                const isFreeInput = col.type !== 'select'
+                                editTriggeredByTypingRef.current = isFreeInput
+                                startEdit(
+                                  rowIndex,
+                                  col,
+                                  isFreeInput ? e.key : undefined,
+                                )
+                              }
+                          }
+                        }}
+                        className={cn(
+                          'px-4 py-3.5 text-muted-foreground focus:outline-none border-r border-border last:border-r-0 whitespace-nowrap',
+                          col.type === 'boolean' && 'text-center',
+                          modified && 'bg-yellow-500/10',
+                          isSelected &&
+                            'ring-2 ring-inset ring-primary/40 bg-primary/5',
+                          isEditable
+                            ? 'cursor-pointer hover:bg-muted/30 hover:text-foreground'
+                            : 'ring-muted',
+                          rowIndex < currentData.length - 1 &&
+                            'border-b border-border',
+                          columnDragClass(columnDrag, columns, key),
+                        )}
+                      >
+                        {displayValue(col, item)}
                       </td>
                     )
-                  }
+                  })}
 
-                  return (
+                  {deletable && (
                     <td
-                      key={key}
-                      tabIndex={isEditable ? 0 : -1}
-                      data-row={rowIndex}
-                      data-col={key}
-                      onClick={() => {
-                        if (!isEditable) return
-                        if (col.type === 'boolean') {
-                          toggleCell(rowIndex, col)
-                          return
-                        }
-                        startEdit(rowIndex, col)
-                      }}
-                      onFocus={() => setSelectedCell({ row: rowIndex, key })}
-                      onBlur={() => setSelectedCell(null)}
-                      onKeyDown={(e) => {
-                        const moveSelection = (dir: NavDirection) => {
-                          e.preventDefault()
-                          const next = navigateCell(
-                            rowIndex,
-                            key,
-                            dir,
-                            columns,
-                            currentData.length,
-                          )
-                          if (!next) return
-                          setSelectedCell(next)
-                          focusCell(next.row, next.key)
-                        }
-
-                        switch (e.key) {
-                          case 'Tab':
-                            // only intercept if there's a target; otherwise let browser Tab out
-                            {
-                              const next = navigateCell(
-                                rowIndex,
-                                key,
-                                e.shiftKey ? 'shift-tab' : 'tab',
-                                columns,
-                                currentData.length,
-                              )
-                              if (next) {
-                                e.preventDefault()
-                                setSelectedCell(next)
-                                focusCell(next.row, next.key)
-                              }
-                            }
-                            break
-                          case 'ArrowUp':
-                            moveSelection('up')
-                            break
-                          case 'ArrowDown':
-                            moveSelection('down')
-                            break
-                          case 'ArrowLeft':
-                            moveSelection('left')
-                            break
-                          case 'ArrowRight':
-                            moveSelection('right')
-                            break
-                          case ' ':
-                            if (isEditable && col.type === 'boolean') {
-                              e.preventDefault()
-                              toggleCell(rowIndex, col)
-                            }
-                            break
-                          case 'Enter':
-                          case 'F2':
-                            if (!isEditable) break
-                            e.preventDefault()
-                            if (col.type === 'boolean') {
-                              toggleCell(rowIndex, col)
-                            } else {
-                              startEdit(rowIndex, col)
-                            }
-                            break
-                          default:
-                            if (
-                              canEnterEdit(col) &&
-                              e.key.length === 1 &&
-                              !e.ctrlKey &&
-                              !e.metaKey &&
-                              !e.altKey
-                            ) {
-                              e.preventDefault()
-                              const isFreeInput = col.type !== 'select'
-                              editTriggeredByTypingRef.current = isFreeInput
-                              startEdit(
-                                rowIndex,
-                                col,
-                                isFreeInput ? e.key : undefined,
-                              )
-                            }
-                        }
-                      }}
                       className={cn(
-                        'px-4 py-3.5 text-muted-foreground focus:outline-none border-r border-border last:border-r-0 whitespace-nowrap',
-                        col.type === 'boolean' && 'text-center',
-                        modified && 'bg-yellow-500/10',
-                        isSelected &&
-                          'ring-2 ring-inset ring-primary/40 bg-primary/5',
-                        isEditable
-                          ? 'cursor-pointer hover:bg-muted/30 hover:text-foreground'
-                          : 'ring-muted',
+                        'px-2 py-2 text-center align-middle',
                         rowIndex < currentData.length - 1 &&
                           'border-b border-border',
-                        columnDragClass(columnDrag, columns, key),
                       )}
                     >
-                      {displayValue(col, item)}
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => deleteRow(rowIndex)}
+                        title="Elimina riga"
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </td>
-                  )
-                })}
+                  )}
+                </tr>
+              )
 
-                {deletable && (
-                  <td
-                    className={cn(
-                      'px-2 py-2 text-center align-middle',
-                      rowIndex < currentData.length - 1 &&
-                        'border-b border-border',
-                    )}
+              if (!menuItems) return rowEl
+
+              // Disabled while a cell in this row is being edited so the
+              // input keeps the native copy/paste menu.
+              return (
+                <ContextMenu key={rowIndex}>
+                  <ContextMenuTrigger
+                    asChild
+                    disabled={editingCell?.row === rowIndex}
                   >
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => deleteRow(rowIndex)}
-                      title="Elimina riga"
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                )}
-              </tr>
+                    {rowEl}
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>{menuItems}</ContextMenuContent>
+                </ContextMenu>
               )
             })}
           </tbody>

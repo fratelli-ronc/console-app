@@ -8,6 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  ContextMenuItem,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -361,6 +362,14 @@ const EMPTY_SUBRECORD_FIELDS = {
   imgAuthPassword: null,
 } satisfies Partial<VariableRow>
 
+// What the clone dialog acts on: the bulk selection, or a single row picked
+// from its context menu (then `name` labels it in the dialog).
+type CloneTarget = {
+  ids: number[]
+  name: string | null
+  fromSelection: boolean
+}
+
 export const VariablesPage: React.FC = () => {
   const panelRef = useRef<EditTablePanelHandle<VariableRow>>(null)
 
@@ -387,6 +396,11 @@ export const VariablesPage: React.FC = () => {
   const [cloneOpen, setCloneOpen] = useState(false)
   const [cloning, setCloning] = useState(false)
   const [cloneGroupId, setCloneGroupId] = useState('')
+  const [cloneTarget, setCloneTarget] = useState<CloneTarget>({
+    ids: [],
+    name: null,
+    fromSelection: true,
+  })
 
   // Class + tags of every currently-loaded (station/group-scoped) row — the
   // source for the tag filter's options, narrowed by the class filter.
@@ -530,11 +544,19 @@ export const VariablesPage: React.FC = () => {
     setTransferOpen(true)
   }
 
-  const openClone = async () => {
+  const openClone = async (target: CloneTarget) => {
     if (!(await guardDiscard())) return
+    setCloneTarget(target)
     setCloneGroupId('')
     setCloneOpen(true)
   }
+
+  const openBulkClone = () =>
+    openClone({
+      ids: Array.from(selectedKeys) as number[],
+      name: null,
+      fromSelection: true,
+    })
 
   const handleBulkDelete = async () => {
     if (selectedKeys.size === 0) return
@@ -564,21 +586,35 @@ export const VariablesPage: React.FC = () => {
     }
   }
 
-  const handleBulkClone = async () => {
-    if (selectedKeys.size === 0 || cloneGroupId === '') return
+  const handleClone = async () => {
+    if (cloneTarget.ids.length === 0 || cloneGroupId === '') return
     setCloning(true)
-    const res = await cloneVariables(
-      Array.from(selectedKeys) as number[],
-      Number(cloneGroupId),
-    )
+    const res = await cloneVariables(cloneTarget.ids, Number(cloneGroupId))
     setCloning(false)
     if (res !== null) {
       setCloneOpen(false)
       setCloneGroupId('')
-      setSelectedKeys(new Set())
+      if (cloneTarget.fromSelection) setSelectedKeys(new Set())
       panelRef.current?.reload()
     }
   }
+
+  // Unsaved new rows have no id yet, so they keep the native menu.
+  const rowContextMenu = (row: VariableRow) =>
+    row.id == null ? null : (
+      <ContextMenuItem
+        onSelect={() =>
+          void openClone({
+            ids: [row.id as number],
+            name: row.name || `#${row.variableId ?? row.id}`,
+            fromSelection: false,
+          })
+        }
+      >
+        <Copy size={14} />
+        Clona
+      </ContextMenuItem>
+    )
 
   // The grid is scoped to a station (or group) — no pagination, so we
   // never fetch the unfiltered variable set.
@@ -683,6 +719,7 @@ export const VariablesPage: React.FC = () => {
         onDirtyChange={setIsDirty}
         deletable
         selection={{ selectedKeys, onSelectionChange: setSelectedKeys }}
+        rowContextMenu={rowContextMenu}
         emptyMessage={
           hasScope
             ? 'Nessuna variabile trovata.'
@@ -766,7 +803,7 @@ export const VariablesPage: React.FC = () => {
                         <ArrowRightLeft size={14} />
                         Sposta in gruppo
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={openClone}>
+                      <DropdownMenuItem onClick={openBulkClone}>
                         <Copy size={14} />
                         Clona
                       </DropdownMenuItem>
@@ -877,15 +914,21 @@ export const VariablesPage: React.FC = () => {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Clona variabili</DialogTitle>
+            <DialogTitle>
+              {cloneTarget.ids.length === 1
+                ? 'Clona variabile'
+                : 'Clona variabili'}
+            </DialogTitle>
             <DialogDescription>
               Crea una copia di{' '}
               <span className="font-medium text-foreground">
-                {selectedKeys.size}{' '}
-                {selectedKeys.size === 1 ? 'variabile' : 'variabili'}
+                {cloneTarget.name ??
+                  `${cloneTarget.ids.length} ${
+                    cloneTarget.ids.length === 1 ? 'variabile' : 'variabili'
+                  }`}
               </span>{' '}
-              nel gruppo selezionato. I dati sono identici agli originali,
-              solo l'ID variabile viene riassegnato.
+              nel gruppo selezionato. I dati sono identici agli originali, solo
+              l'ID variabile viene riassegnato.
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
@@ -909,7 +952,7 @@ export const VariablesPage: React.FC = () => {
             <FilledButton
               type="button"
               disabled={cloning || cloneGroupId === ''}
-              onClick={handleBulkClone}
+              onClick={handleClone}
             >
               {cloning ? 'Clonazione…' : 'Clona'}
             </FilledButton>
