@@ -5,6 +5,7 @@ import {
   FormPage,
   ToggleSwitch,
   SearchableSelect,
+  useConfirm,
 } from '@/components'
 import {
   Select,
@@ -17,11 +18,13 @@ import {
   Group,
   Station,
   createGroup,
+  getGroup,
   getNextGroupId,
   updateGroup,
   listStations,
 } from '@/client'
 import { listServers, type Server } from '@/client/coolify'
+import { saveFormResolvingConflicts } from '@/lib/versionConflicts'
 import { GroupTagPicker } from './GroupTagPicker'
 
 interface GroupFormPageProps {
@@ -43,72 +46,126 @@ export const NETWORK_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'NB_IoT', label: 'NB-IoT' },
 ]
 
+const optionalNumber = (value: number | null | undefined) =>
+  value != null ? String(value) : ''
+
+const numberOrUndefined = (value: string) =>
+  value === '' ? undefined : Number(value)
+
+// The form's state for group (blank for a new one), as strings wherever a
+// text input edits it.
+const toFormValues = (group?: Group) => ({
+  groupId: group ? String(group.groupId) : '',
+  name: group?.name ?? '',
+  stationId: optionalNumber(group?.stationId),
+  protocol: group?.protocol ?? PROTOCOL_OPTIONS[0].value,
+  networkType: group?.networkType ?? NETWORK_TYPE_OPTIONS[0].value,
+  serverIp: group?.serverIp ?? '',
+  ipAddress: group?.ipAddress ?? '',
+  portNumber: optionalNumber(group?.portNumber),
+  connectionTimeout: optionalNumber(group?.connectionTimeout),
+  transactionTimeout: optionalNumber(group?.transactionTimeout),
+  unitId: optionalNumber(group?.unitId),
+  unitIdModBusSlave: optionalNumber(group?.unitIdModBusSlave),
+  ordPrint: optionalNumber(group?.ordPrint),
+  lat: optionalNumber(group?.lat),
+  long: optionalNumber(group?.long),
+  tel: group?.tel ?? '',
+  webcamUrl: group?.webcamUrl ?? '',
+  driveDocUrl: group?.driveDocUrl ?? '',
+  drivePhotoUrl: group?.drivePhotoUrl ?? '',
+  enabled: group?.enabled ?? true,
+  tagIds: group?.tags.map((t) => t.id) ?? [],
+})
+
+type FormValues = ReturnType<typeof toFormValues>
+
+// What a save sends for values - all but the business id, which is fixed
+// once the group exists.
+const toFields = (values: FormValues) => ({
+  stationId: values.stationId === '' ? null : Number(values.stationId),
+  name: values.name,
+  enabled: values.enabled,
+  unitId: numberOrUndefined(values.unitId),
+  ordPrint: numberOrUndefined(values.ordPrint),
+  lat: numberOrUndefined(values.lat),
+  long: numberOrUndefined(values.long),
+  webcamUrl: values.webcamUrl,
+  driveDocUrl: values.driveDocUrl,
+  drivePhotoUrl: values.drivePhotoUrl,
+  tel: values.tel,
+  serverIp: values.serverIp,
+  ipAddress: values.ipAddress,
+  portNumber: numberOrUndefined(values.portNumber),
+  connectionTimeout: numberOrUndefined(values.connectionTimeout),
+  transactionTimeout: numberOrUndefined(values.transactionTimeout),
+  protocol: values.protocol,
+  networkType: values.networkType,
+  unitIdModBusSlave: numberOrUndefined(values.unitIdModBusSlave),
+  tagIds: values.tagIds,
+})
+
+const FIELD_LABELS: Record<keyof ReturnType<typeof toFields>, string> = {
+  stationId: 'Stazione',
+  name: 'Nome',
+  enabled: 'Gruppo attivo',
+  unitId: 'Unit ID',
+  ordPrint: 'Ordine di stampa',
+  lat: 'Latitudine',
+  long: 'Longitudine',
+  webcamUrl: 'URL webcam',
+  driveDocUrl: 'URL documenti Drive',
+  drivePhotoUrl: 'URL foto Drive',
+  tel: 'Telefono',
+  serverIp: 'Server',
+  ipAddress: 'Indirizzo IP',
+  portNumber: 'Porta',
+  connectionTimeout: 'Timeout connessione',
+  transactionTimeout: 'Timeout transazione',
+  protocol: 'Protocollo',
+  networkType: 'Rete',
+  unitIdModBusSlave: 'Unit ID (Modbus slave)',
+  tagIds: 'Tag',
+}
+
 export const GroupFormPage: React.FC<GroupFormPageProps> = ({
   mode,
   initialValues,
 }) => {
   const navigate = useNavigate()
+  const { confirm, confirmDialog } = useConfirm()
 
   const [stations, setStations] = useState<Station[] | null>(null)
   const [servers, setServers] = useState<Server[] | null>(null)
 
-  const [groupId, setGroupId] = useState(
-    initialValues ? String(initialValues.groupId) : '',
-  )
-  const [name, setName] = useState(initialValues?.name ?? '')
-  const [stationId, setStationId] = useState(
-    initialValues?.stationId != null ? String(initialValues.stationId) : '',
-  )
-  const [protocol, setProtocol] = useState(
-    initialValues?.protocol ?? PROTOCOL_OPTIONS[0].value,
-  )
-  const [networkType, setNetworkType] = useState(
-    initialValues?.networkType ?? NETWORK_TYPE_OPTIONS[0].value,
-  )
-  const [serverIp, setServerIp] = useState(initialValues?.serverIp ?? '')
-  const [ipAddress, setIpAddress] = useState(initialValues?.ipAddress ?? '')
-  const [portNumber, setPortNumber] = useState(
-    initialValues?.portNumber != null ? String(initialValues.portNumber) : '',
-  )
+  const [initial] = useState(() => toFormValues(initialValues))
+  const [groupId, setGroupId] = useState(initial.groupId)
+  const [name, setName] = useState(initial.name)
+  const [stationId, setStationId] = useState(initial.stationId)
+  const [protocol, setProtocol] = useState(initial.protocol)
+  const [networkType, setNetworkType] = useState(initial.networkType)
+  const [serverIp, setServerIp] = useState(initial.serverIp)
+  const [ipAddress, setIpAddress] = useState(initial.ipAddress)
+  const [portNumber, setPortNumber] = useState(initial.portNumber)
   const [connectionTimeout, setConnectionTimeout] = useState(
-    initialValues?.connectionTimeout != null
-      ? String(initialValues.connectionTimeout)
-      : '',
+    initial.connectionTimeout,
   )
   const [transactionTimeout, setTransactionTimeout] = useState(
-    initialValues?.transactionTimeout != null
-      ? String(initialValues.transactionTimeout)
-      : '',
+    initial.transactionTimeout,
   )
-  const [unitId, setUnitId] = useState(
-    initialValues?.unitId != null ? String(initialValues.unitId) : '',
-  )
+  const [unitId, setUnitId] = useState(initial.unitId)
   const [unitIdModBusSlave, setUnitIdModBusSlave] = useState(
-    initialValues?.unitIdModBusSlave != null
-      ? String(initialValues.unitIdModBusSlave)
-      : '',
+    initial.unitIdModBusSlave,
   )
-  const [ordPrint, setOrdPrint] = useState(
-    initialValues?.ordPrint != null ? String(initialValues.ordPrint) : '',
-  )
-  const [lat, setLat] = useState(
-    initialValues?.lat != null ? String(initialValues.lat) : '',
-  )
-  const [long, setLong] = useState(
-    initialValues?.long != null ? String(initialValues.long) : '',
-  )
-  const [tel, setTel] = useState(initialValues?.tel ?? '')
-  const [webcamUrl, setWebcamUrl] = useState(initialValues?.webcamUrl ?? '')
-  const [driveDocUrl, setDriveDocUrl] = useState(
-    initialValues?.driveDocUrl ?? '',
-  )
-  const [drivePhotoUrl, setDrivePhotoUrl] = useState(
-    initialValues?.drivePhotoUrl ?? '',
-  )
-  const [enabled, setEnabled] = useState(initialValues?.enabled ?? true)
-  const [tagIds, setTagIds] = useState(
-    initialValues?.tags.map((t) => t.id) ?? [],
-  )
+  const [ordPrint, setOrdPrint] = useState(initial.ordPrint)
+  const [lat, setLat] = useState(initial.lat)
+  const [long, setLong] = useState(initial.long)
+  const [tel, setTel] = useState(initial.tel)
+  const [webcamUrl, setWebcamUrl] = useState(initial.webcamUrl)
+  const [driveDocUrl, setDriveDocUrl] = useState(initial.driveDocUrl)
+  const [drivePhotoUrl, setDrivePhotoUrl] = useState(initial.drivePhotoUrl)
+  const [enabled, setEnabled] = useState(initial.enabled)
+  const [tagIds, setTagIds] = useState(initial.tagIds)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -149,38 +206,48 @@ export const GroupFormPage: React.FC<GroupFormPageProps> = ({
     e.preventDefault()
     setLoading(true)
 
-    const fields = {
-      stationId: stationId === '' ? null : Number(stationId),
+    const fields = toFields({
+      groupId,
       name,
-      enabled,
-      unitId: unitId === '' ? undefined : Number(unitId),
-      ordPrint: ordPrint === '' ? undefined : Number(ordPrint),
-      lat: lat === '' ? undefined : Number(lat),
-      long: long === '' ? undefined : Number(long),
+      stationId,
+      protocol,
+      networkType,
+      serverIp,
+      ipAddress,
+      portNumber,
+      connectionTimeout,
+      transactionTimeout,
+      unitId,
+      unitIdModBusSlave,
+      ordPrint,
+      lat,
+      long,
+      tel,
       webcamUrl,
       driveDocUrl,
       drivePhotoUrl,
-      tel,
-      serverIp,
-      ipAddress,
-      portNumber: portNumber === '' ? undefined : Number(portNumber),
-      connectionTimeout:
-        connectionTimeout === '' ? undefined : Number(connectionTimeout),
-      transactionTimeout:
-        transactionTimeout === '' ? undefined : Number(transactionTimeout),
-      protocol,
-      networkType,
-      unitIdModBusSlave:
-        unitIdModBusSlave === '' ? undefined : Number(unitIdModBusSlave),
+      enabled,
       tagIds,
-    }
+    })
 
-    const res = isCreate
-      ? await createGroup({ groupId: Number(groupId), ...fields })
-      : await updateGroup(initialValues!.id, fields)
+    const done = isCreate
+      ? (await createGroup({ groupId: Number(groupId), ...fields })) !== null
+      : await saveFormResolvingConflicts({
+          initial: initialValues!,
+          fields,
+          toFields: (group) => toFields(toFormValues(group)),
+          update: (payload) => updateGroup(initialValues!.id, payload),
+          refetch: () => getGroup(initialValues!.id),
+          labels: FIELD_LABELS,
+          subject: {
+            changed: 'Il gruppo è stato modificato',
+            deleted: 'Il gruppo è stato eliminato',
+          },
+          confirm,
+        })
 
     setLoading(false)
-    if (res !== null) navigate('/groups')
+    if (done) navigate('/groups')
   }
 
   return (
@@ -399,6 +466,8 @@ export const GroupFormPage: React.FC<GroupFormPageProps> = ({
         </div>
         <ToggleSwitch checked={enabled} onChange={setEnabled} />
       </div>
+
+      {confirmDialog}
     </FormPage>
   )
 }

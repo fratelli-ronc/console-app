@@ -30,11 +30,43 @@ import {
   Variable,
   VariableBatchRequest,
   VariableBatchResult,
+  VersionConflicts,
 } from './dtos'
+import { isAxiosError } from 'axios'
 import { withErrorHandling } from '../withErrorHandling'
 import { endSession } from '../withAuthInterceptors'
 import { getToken } from '../tokenStore'
 import { readSSE } from '@/lib/sse'
+
+// What an update sending `version` ended in: saved, or refused because
+// someone saved the entity since it was loaded - nothing was written then.
+// null (from withErrorHandling) means it failed otherwise, already toasted.
+export type SaveOutcome<T> =
+  | { kind: 'saved'; data: T }
+  | { kind: 'conflict'; conflicts: VersionConflicts }
+
+// withErrorHandling, except that a version conflict comes back as an
+// outcome for the caller to resolve rather than as a toast.
+const withVersionConflicts = <T>(
+  fn: () => Promise<T>,
+): Promise<SaveOutcome<T> | null> =>
+  withErrorHandling(async () => {
+    try {
+      return { kind: 'saved', data: await fn() }
+    } catch (error) {
+      if (
+        isAxiosError(error) &&
+        error.response?.status === 409 &&
+        Array.isArray(error.response.data?.conflicts)
+      ) {
+        return {
+          kind: 'conflict',
+          conflicts: error.response.data as VersionConflicts,
+        }
+      }
+      throw error
+    }
+  })
 
 export const getServerTree = (): Promise<ServerTreeRelation[] | null> =>
   withErrorHandling(async () => {
@@ -77,8 +109,8 @@ export const createStation = (
 export const updateStation = (
   id: number | string,
   payload: UpdateStationRequest,
-): Promise<Station | null> =>
-  withErrorHandling(async () => {
+): Promise<SaveOutcome<Station> | null> =>
+  withVersionConflicts(async () => {
     const { data } = await consoleClient.put<Station>(
       `/stations/${id}`,
       payload,
@@ -320,8 +352,8 @@ export const createGroup = (
 export const updateGroup = (
   id: number | string,
   payload: UpdateGroupRequest,
-): Promise<Group | null> =>
-  withErrorHandling(async () => {
+): Promise<SaveOutcome<Group> | null> =>
+  withVersionConflicts(async () => {
     const { data } = await consoleClient.put<Group>(`/groups/${id}`, payload)
     return data
   })
@@ -481,10 +513,11 @@ export const cloneVariables = (
     return data
   })
 
+// A conflict on any updated row refuses the whole batch.
 export const saveVariablesBatch = (
   payload: VariableBatchRequest,
-): Promise<VariableBatchResult | null> =>
-  withErrorHandling(async () => {
+): Promise<SaveOutcome<VariableBatchResult> | null> =>
+  withVersionConflicts(async () => {
     const { data } = await consoleClient.post<VariableBatchResult>(
       '/variables/batch',
       payload,

@@ -14,6 +14,19 @@ export type EditTableSaveFn<T> = (
   changes: EditTableChanges<T>,
 ) => boolean | void | Promise<boolean | void>
 
+// What rebase did: how many cells someone else changed to another value
+// than the edit replayed over them, and how many edited rows were dropped
+// because someone deleted them.
+export type EditTableRebaseResult = {
+  conflicts: number
+  dropped: number
+}
+
+const sameValue = (a: unknown, b: unknown) =>
+  JSON.stringify(a) === JSON.stringify(b)
+
+const cellId = (key: RowKey, field: string) => `${key}\u0000${field}`
+
 export interface UseEditTableOptions<T> {
   fetchFn: () => Promise<T[]>
   onSave?: EditTableSaveFn<T>
@@ -45,6 +58,9 @@ export function useEditTable<T extends Record<string, unknown>>({
     key: string
   } | null>(null)
   const [inputValue, setInputValue] = useState('')
+  // Cells (see cellId) rebase replayed an edit over that someone else had
+  // changed too. Cleared by the next load or discard.
+  const [conflictCells, setConflictCells] = useState<Set<string>>(new Set())
 
   const containerRef = useRef<HTMLDivElement>(null)
   const historyIndexRef = useRef(historyIndex)
@@ -121,8 +137,69 @@ export function useEditTable<T extends Record<string, unknown>>({
       setHistoryIndex(0)
       setEditingCell(null)
       setSelectedCell(null)
+      setConflictCells(new Set())
     })
   }, [fetchFn])
+
+  // Refetches, then replays the unsaved edits on top: every field edited
+  // here is set again on the fresh row, rows deleted here stay deleted and
+  // new rows are kept. Edits to rows deleted since are dropped. Use it when
+  // a save was refused because the rows changed underneath: saving again
+  // then writes only these edits over the fresh data.
+  const rebase = async (): Promise<EditTableRebaseResult> => {
+    const fresh = await fetchFn()
+
+    const currentByKey = new Map<RowKey, T>()
+    for (const row of fullData) {
+      const key = keyOf(row)
+      if (key != null) currentByKey.set(key, row)
+    }
+
+    const conflicts = new Set<string>()
+    const rows: T[] = []
+    const freshKeys = new Set<RowKey>()
+    for (const freshRow of fresh) {
+      const key = keyOf(freshRow)
+      const initial = key == null ? undefined : initialByKey.get(key)
+      if (key == null || !initial) {
+        // Added by someone else since the last load.
+        rows.push(freshRow)
+        continue
+      }
+      freshKeys.add(key)
+      const current = currentByKey.get(key)
+      if (!current) continue // deleted here
+
+      const merged: Record<string, unknown> = { ...freshRow }
+      for (const field of Object.keys(current)) {
+        if (sameValue(current[field], initial[field])) continue
+        if (
+          !sameValue(freshRow[field], initial[field]) &&
+          !sameValue(freshRow[field], current[field])
+        ) {
+          conflicts.add(cellId(key, field))
+        }
+        merged[field] = current[field]
+      }
+      rows.push(merged as T)
+    }
+
+    let dropped = 0
+    for (const [key, current] of currentByKey) {
+      const initial = initialByKey.get(key)
+      if (!freshKeys.has(key) && initial && !sameValue(initial, current))
+        dropped++
+    }
+    rows.push(...fullData.filter((row) => keyOf(row) == null))
+
+    setInitialRows(fresh)
+    setHistory([rows])
+    setHistoryIndex(0)
+    setEditingCell(null)
+    setSelectedCell(null)
+    setConflictCells(conflicts)
+    return { conflicts: conflicts.size, dropped }
+  }
 
   // Refetch whenever the caller swaps in a new fetchFn (i.e. the scope
   // changed). Protecting unsaved edits against a scope change is the
@@ -206,6 +283,7 @@ export function useEditTable<T extends Record<string, unknown>>({
     setHistory([initialRows])
     setHistoryIndex(0)
     setEditingCell(null)
+    setConflictCells(new Set())
   }
 
   const isCellModified = (row: number, key: string) => {
@@ -216,6 +294,12 @@ export function useEditTable<T extends Record<string, unknown>>({
     const initial = initialByKey.get(rowId)
     if (!initial) return true
     return String(current[key] ?? '') !== String(initial[key] ?? '')
+  }
+
+  const isCellConflicted = (row: number, key: string) => {
+    const current = currentData[row]
+    const rowId = current && keyOf(current)
+    return rowId != null && conflictCells.has(cellId(rowId, key))
   }
 
   return {
@@ -230,6 +314,7 @@ export function useEditTable<T extends Record<string, unknown>>({
     keyOf,
     setInputValue,
     isCellModified,
+    isCellConflicted,
     commitEdit,
     addRow,
     deleteRow,
@@ -238,5 +323,6 @@ export function useEditTable<T extends Record<string, unknown>>({
     handleDiscard,
     handleSave,
     reload: doLoad,
+    rebase,
   }
 }

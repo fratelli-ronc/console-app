@@ -38,6 +38,7 @@ import {
   UpdateVariableRequest,
   Variable,
   VariableBatchRequest,
+  VersionConflicts,
   VARIABLE_CLASS_TYPE_OPTIONS,
   VARIABLE_DRIVER_OPTIONS,
   VARIABLE_FORMAT_OPTIONS,
@@ -54,6 +55,7 @@ import {
   saveVariablesBatch,
   transferVariables,
 } from '@/client'
+import { describeConflictAuthor } from '@/lib/versionConflicts'
 
 // Flattened, grid-editable projection of a Variable — including the 1:1
 // history / memory-map / image sub-records (hist*/mm*/img* fields). The
@@ -61,6 +63,8 @@ import {
 // are reserved for a future per-variable detail view.
 type VariableRow = {
   id: number | null
+  // Not a column: sent back on update, null on rows not saved yet.
+  version: number | null
   variableId: number | null
   groupId: string
   name: string | null
@@ -105,6 +109,7 @@ type VariableRow = {
 
 const toRow = (variable: Variable): VariableRow => ({
   id: variable.id,
+  version: variable.version,
   variableId: variable.variableId,
   groupId: variable.groupId == null ? '' : String(variable.groupId),
   name: variable.name,
@@ -200,6 +205,9 @@ const toFields = (row: VariableRow): UpdateVariableRequest => ({
     },
   },
 })
+
+// How many conflicting variables the conflict dialog names one by one.
+const MAX_CONFLICTS_LISTED = 5
 
 // Sentinel for the "no class filter" option — Radix Select can't use an
 // empty-string value.
@@ -656,12 +664,70 @@ export const VariablesPage: React.FC = () => {
     [classType, tag, search],
   )
 
+  // A save refused because some of the updated rows were saved by someone
+  // else since the grid loaded them - nothing was written. Says who, then
+  // (if the user agrees) reloads the grid with the edits replayed on top,
+  // so saving again keeps both sides' changes to different cells.
+  const resolveConflicts = useCallback(
+    async (conflicts: VersionConflicts, updated: VariableRow[]) => {
+      const lines = conflicts.conflicts.map((conflict) => {
+        const row = updated.find((r) => r.id === conflict.id)
+        const label = row?.name || `#${row?.variableId ?? conflict.id}`
+        const what = conflict.deleted ? 'eliminata' : 'modificata'
+        return [label + ':', what, describeConflictAuthor(conflict)]
+          .filter(Boolean)
+          .join(' ')
+      })
+      const shown = lines.slice(0, MAX_CONFLICTS_LISTED)
+
+      const ok = await confirm({
+        title: 'Modifiche in conflitto',
+        description: (
+          <>
+            Alcune variabili sono state cambiate da altri dopo che le hai
+            caricate, quindi nulla è stato salvato.
+            <ul className="my-2 list-disc pl-5">
+              {shown.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+              {lines.length > shown.length && (
+                <li>e altre {lines.length - shown.length}</li>
+              )}
+            </ul>
+            Aggiorna la tabella per riapplicare le tue modifiche sui valori
+            attuali: le celle cambiate anche da altri saranno evidenziate in
+            rosso.
+          </>
+        ),
+        confirmLabel: 'Aggiorna e riapplica',
+      })
+      if (!ok) return
+
+      const result = await panelRef.current?.rebase()
+      if (!result) return
+      if (result.dropped > 0) {
+        toast(
+          result.dropped === 1
+            ? 'Le modifiche a una variabile eliminata sono state scartate.'
+            : `Le modifiche a ${result.dropped} variabili eliminate sono state scartate.`,
+        )
+      }
+      toast(
+        result.conflicts > 0
+          ? 'Controlla le celle evidenziate, poi salva di nuovo.'
+          : 'Tabella aggiornata: salva di nuovo per applicare le tue modifiche.',
+      )
+    },
+    [confirm],
+  )
+
   const handleSave = useCallback(
     async (changes: EditTableChanges<VariableRow>) => {
       const payload: VariableBatchRequest = {
         create: changes.created.map(toFields),
         update: changes.updated.map((row) => ({
           id: row.id as number,
+          version: row.version ?? undefined,
           ...toFields(row),
         })),
         delete: changes.deleted.map(Number),
@@ -669,16 +735,21 @@ export const VariablesPage: React.FC = () => {
 
       const res = await saveVariablesBatch(payload)
       if (!res) return false // keep the grid dirty so nothing is lost
+      if (res.kind === 'conflict') {
+        void resolveConflicts(res.conflicts, changes.updated)
+        return false
+      }
 
       setSelectedKeys(new Set())
       toast.success('Variabili salvate')
     },
-    [],
+    [resolveConflicts],
   )
 
   const addVariableRow = useCallback(() => {
     panelRef.current?.addRow({
       id: null,
+      version: null,
       variableId: null,
       groupId,
       name: '',

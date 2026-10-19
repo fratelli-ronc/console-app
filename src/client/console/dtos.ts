@@ -54,6 +54,9 @@ export interface Station {
   smsServer: string | null
   photo: StationPhotoRef | null
   tags: StationTag[]
+  // Sent back on an update, which is refused (409) if someone saved the
+  // station since. Station photo uploads don't change it.
+  version: number
   createdAt: string
   updatedAt: string
 }
@@ -71,7 +74,10 @@ export interface CreateStationRequest {
   tagIds?: number[]
 }
 
+// version is the station's version as loaded: the update is refused with a
+// 409 (see VersionConflicts) if the station was saved since.
 export interface UpdateStationRequest {
+  version?: number
   enabled?: boolean
   name?: string
   address?: string
@@ -143,6 +149,9 @@ export interface Group {
   networkType: string
   unitIdModBusSlave: number | null
   tags: GroupTag[]
+  // Sent back on an update, which is refused (409) if someone saved the
+  // group since.
+  version: number
   createdAt: string
   updatedAt: string
 }
@@ -261,6 +270,9 @@ export interface Variable {
   presentations: VariablePresentation[]
   note: string | null
   writeAuthorizationLevel: number | null
+  // Sent back on an update, which is refused (409) if someone saved the
+  // variable since.
+  version: number
   createdAt: string
   updatedAt: string
 }
@@ -309,7 +321,14 @@ export interface CreateVariableRequest {
 }
 
 // All fields optional: omitted/null fields are left unchanged server-side.
-export type UpdateVariableRequest = Omit<CreateVariableRequest, 'variableId'>
+// version is the variable's version as loaded: the update is refused with a
+// 409 (see VersionConflicts) if the variable was saved since.
+export type UpdateVariableRequest = Omit<
+  CreateVariableRequest,
+  'variableId'
+> & {
+  version?: number
+}
 
 export interface VariableBatchRequest {
   create: CreateVariableRequest[]
@@ -327,11 +346,10 @@ export interface VariableBatchResult {
 // at least once but changed since; "deployed" - deployed and unchanged.
 export type DeploymentStatusValue = 'not_deployed' | 'pending' | 'deployed'
 
-// lastDeployedByUserId resolved to a display name/avatar by console-api
-// (which looks it up against goauth-gate). Absent (null) whenever
-// lastDeployedByUserId is null, and also, best-effort, if that lookup
-// failed - it's a display nicety, not guaranteed to be present.
-export interface DeployedByUser {
+// A user id resolved to a display name/avatar by console-api (which looks
+// it up against goauth-gate). Best-effort: wherever one appears it is null
+// if that lookup failed - a display nicety, not guaranteed to be present.
+export interface ConsoleUser {
   id: number
   username: string
   name: string
@@ -345,7 +363,8 @@ export interface StationDeploymentStatus {
   pending: boolean
   lastDeployedAt: string | null
   lastDeployedByUserId: number | null
-  lastDeployedBy: DeployedByUser | null
+  // null whenever lastDeployedByUserId is, or the lookup failed.
+  lastDeployedBy: ConsoleUser | null
 }
 
 export interface GroupDeploymentStatus {
@@ -416,7 +435,10 @@ export interface DeployStationsResponse {
   servers: DeployServer[]
 }
 
+// version is the group's version as loaded: the update is refused with a
+// 409 (see VersionConflicts) if the group was saved since.
 export interface UpdateGroupRequest {
+  version?: number
   stationId?: number | null
   name?: string
   enabled?: boolean
@@ -437,4 +459,24 @@ export interface UpdateGroupRequest {
   networkType?: string
   unitIdModBusSlave?: number
   tagIds?: number[]
+}
+
+// One entity an update was refused over: it is at currentVersion rather
+// than the expectedVersion sent, or deleted (currentVersion 0). changedAt /
+// changedBy are its newest change, when the change log has one.
+export interface VersionConflict {
+  id: number
+  expectedVersion: number
+  currentVersion: number
+  deleted: boolean
+  changedAt: string | null
+  changedByUserId: number | null
+  changedBy: ConsoleUser | null
+}
+
+// The 409 body of a refused update. Nothing in the request was written.
+export interface VersionConflicts {
+  error: string
+  entityType: 'variable' | 'group' | 'station'
+  conflicts: VersionConflict[]
 }

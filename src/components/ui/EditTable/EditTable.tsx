@@ -29,7 +29,12 @@ import {
 import { CellSelect } from './CellSelect'
 import { SearchableCellSelect } from './SearchableCellSelect'
 import { useColumnOrder } from './useColumnOrder'
-import { useEditTable, type EditTableSaveFn, type RowKey } from './useEditTable'
+import {
+  useEditTable,
+  type EditTableRebaseResult,
+  type EditTableSaveFn,
+  type RowKey,
+} from './useEditTable'
 
 export type EditTableCellType = 'text' | 'number' | 'boolean' | 'select'
 
@@ -68,6 +73,10 @@ export interface EditTableHandle<
   // action that changed rows out from under the grid (e.g. a selection
   // targeting an immediate API call rather than the save buffer).
   reload: () => void
+  // Refetches from fetchFn and replays the unsaved edits on top, flagging
+  // the cells someone else changed too. Use after a save was refused
+  // because the rows changed underneath (a version conflict).
+  rebase: () => Promise<EditTableRebaseResult>
 }
 
 export interface EditTableSelection {
@@ -372,6 +381,7 @@ function EditTableInner<
     inputValue,
     setInputValue,
     isCellModified,
+    isCellConflicted,
     keyOf,
     commitEdit,
     addRow,
@@ -381,6 +391,7 @@ function EditTableInner<
     handleDiscard,
     handleSave,
     reload,
+    rebase,
   } = useEditTable<T>({ fetchFn, onSave, onDirtyChange, rowKey, filterFn })
 
   // Everything below (rendering, keyboard navigation) works off this ordered
@@ -405,6 +416,7 @@ function EditTableInner<
       })
     },
     reload,
+    rebase,
   }))
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -602,6 +614,7 @@ function EditTableInner<
                       editingCell?.row === rowIndex && editingCell?.key === key
 
                     const modified = isCellModified(rowIndex, key)
+                    const conflicted = isCellConflicted(rowIndex, key)
 
                     const isSelected =
                       !isEditing &&
@@ -725,6 +738,11 @@ function EditTableInner<
                         tabIndex={isEditable ? 0 : -1}
                         data-row={rowIndex}
                         data-col={key}
+                        title={
+                          conflicted
+                            ? 'Modificato anche da un altro utente: salvando, il tuo valore sostituirà il suo.'
+                            : undefined
+                        }
                         onClick={() => {
                           if (!isEditable) return
                           if (col.type === 'boolean') {
@@ -819,6 +837,7 @@ function EditTableInner<
                           'px-4 py-3.5 text-muted-foreground focus:outline-none border-r border-border last:border-r-0 whitespace-nowrap',
                           col.type === 'boolean' && 'text-center',
                           modified && 'bg-yellow-500/10',
+                          conflicted && 'bg-destructive/15',
                           isSelected &&
                             'ring-2 ring-inset ring-primary/40 bg-primary/5',
                           isEditable

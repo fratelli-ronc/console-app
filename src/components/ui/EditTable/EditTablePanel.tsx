@@ -16,11 +16,17 @@ import {
   type EditTableHandle,
   type EditTableSelection,
 } from './EditTable'
-import type { EditTableChanges, EditTableSaveFn, RowKey } from './useEditTable'
+import type {
+  EditTableChanges,
+  EditTableRebaseResult,
+  EditTableSaveFn,
+  RowKey,
+} from './useEditTable'
 
 export type {
   EditTableChanges,
   EditTableColumn,
+  EditTableRebaseResult,
   EditTableSaveFn,
   EditTableSelection,
   RowKey,
@@ -37,6 +43,10 @@ export interface EditTablePanelHandle<
   // action that changed rows out from under the grid (e.g. a selection
   // targeting an immediate API call rather than the save buffer).
   reload: () => void
+  // Refetches from fetchFn and replays the unsaved edits on top, flagging
+  // the cells someone else changed too - after a save refused with a
+  // version conflict. Resolves to null if the grid isn't mounted.
+  rebase: () => Promise<EditTableRebaseResult | null>
 }
 
 interface EditTablePanelProps<
@@ -101,6 +111,7 @@ function EditTablePanelInner<
   useImperativeHandle(ref, () => ({
     addRow: (seed: T) => tableRef.current?.addRow(seed),
     reload: () => tableRef.current?.reload(),
+    rebase: async () => (await tableRef.current?.rebase()) ?? null,
   }))
 
   const runSave = useCallback(async () => {

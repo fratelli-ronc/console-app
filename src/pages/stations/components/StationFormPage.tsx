@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TextInput, FormPage, ToggleSwitch } from '@/components'
+import { TextInput, FormPage, ToggleSwitch, useConfirm } from '@/components'
 import {
   Select,
   SelectContent,
@@ -13,10 +13,55 @@ import {
   StationPhotoRef,
   createStation,
   getNextStationId,
+  getStation,
   updateStation,
 } from '@/client'
+import { saveFormResolvingConflicts } from '@/lib/versionConflicts'
 import { TagPicker } from './TagPicker'
 import { StationPhotoField } from './StationPhotoField'
+
+// The form's state for station (blank for a new one), as strings wherever
+// a text input edits it.
+const toFormValues = (station?: Station) => ({
+  stationId: station ? String(station.stationId) : '',
+  name: station?.name ?? '',
+  address: station?.address ?? '',
+  city: station?.city ?? '',
+  tel: station?.tel ?? '',
+  smsServer: station?.smsServer ?? '',
+  maintenanceMode: station?.maintenanceMode ?? '',
+  ordPrint: station?.ordPrint != null ? String(station.ordPrint) : '',
+  enabled: station?.enabled ?? true,
+  tagIds: station?.tags.map((t) => t.id) ?? [],
+})
+
+type FormValues = ReturnType<typeof toFormValues>
+
+// What a save sends for values - all but the business id, which is fixed
+// once the station exists.
+const toFields = (values: FormValues) => ({
+  enabled: values.enabled,
+  name: values.name,
+  address: values.address,
+  city: values.city,
+  tel: values.tel,
+  smsServer: values.smsServer,
+  maintenanceMode: values.maintenanceMode,
+  ordPrint: values.ordPrint === '' ? undefined : Number(values.ordPrint),
+  tagIds: values.tagIds,
+})
+
+const FIELD_LABELS: Record<keyof ReturnType<typeof toFields>, string> = {
+  enabled: 'Stazione attiva',
+  name: 'Nome',
+  address: 'Indirizzo',
+  city: 'Città',
+  tel: 'Telefono',
+  smsServer: 'Server SMS',
+  maintenanceMode: 'Modalità manutenzione',
+  ordPrint: 'Ordine di stampa',
+  tagIds: 'Tag',
+}
 
 interface StationFormPageProps {
   mode: 'create' | 'edit'
@@ -28,25 +73,21 @@ export const StationFormPage: React.FC<StationFormPageProps> = ({
   initialValues,
 }) => {
   const navigate = useNavigate()
+  const { confirm, confirmDialog } = useConfirm()
 
-  const [stationId, setStationId] = useState(
-    initialValues ? String(initialValues.stationId) : '',
-  )
-  const [name, setName] = useState(initialValues?.name ?? '')
-  const [address, setAddress] = useState(initialValues?.address ?? '')
-  const [city, setCity] = useState(initialValues?.city ?? '')
-  const [tel, setTel] = useState(initialValues?.tel ?? '')
-  const [smsServer, setSmsServer] = useState(initialValues?.smsServer ?? '')
+  const [initial] = useState(() => toFormValues(initialValues))
+  const [stationId, setStationId] = useState(initial.stationId)
+  const [name, setName] = useState(initial.name)
+  const [address, setAddress] = useState(initial.address)
+  const [city, setCity] = useState(initial.city)
+  const [tel, setTel] = useState(initial.tel)
+  const [smsServer, setSmsServer] = useState(initial.smsServer)
   const [maintenanceMode, setMaintenanceMode] = useState(
-    initialValues?.maintenanceMode ?? '',
+    initial.maintenanceMode,
   )
-  const [ordPrint, setOrdPrint] = useState(
-    initialValues?.ordPrint != null ? String(initialValues.ordPrint) : '',
-  )
-  const [enabled, setEnabled] = useState(initialValues?.enabled ?? true)
-  const [tagIds, setTagIds] = useState(
-    initialValues?.tags.map((t) => t.id) ?? [],
-  )
+  const [ordPrint, setOrdPrint] = useState(initial.ordPrint)
+  const [enabled, setEnabled] = useState(initial.enabled)
+  const [tagIds, setTagIds] = useState(initial.tagIds)
   const [photo, setPhoto] = useState<StationPhotoRef | null>(
     initialValues?.photo ?? null,
   )
@@ -67,24 +108,38 @@ export const StationFormPage: React.FC<StationFormPageProps> = ({
     e.preventDefault()
     setLoading(true)
 
-    const fields = {
-      enabled,
+    const fields = toFields({
+      stationId,
       name,
       address,
       city,
       tel,
       smsServer,
       maintenanceMode,
-      ordPrint: ordPrint === '' ? undefined : Number(ordPrint),
+      ordPrint,
+      enabled,
       tagIds,
-    }
+    })
 
-    const res = isCreate
-      ? await createStation({ stationId: Number(stationId), ...fields })
-      : await updateStation(initialValues!.id, fields)
+    const done = isCreate
+      ? (await createStation({ stationId: Number(stationId), ...fields })) !==
+        null
+      : await saveFormResolvingConflicts({
+          initial: initialValues!,
+          fields,
+          toFields: (station) => toFields(toFormValues(station)),
+          update: (payload) => updateStation(initialValues!.id, payload),
+          refetch: () => getStation(initialValues!.id),
+          labels: FIELD_LABELS,
+          subject: {
+            changed: 'La stazione è stata modificata',
+            deleted: 'La stazione è stata eliminata',
+          },
+          confirm,
+        })
 
     setLoading(false)
-    if (res !== null) navigate('/stations')
+    if (done) navigate('/stations')
   }
 
   return (
@@ -205,6 +260,8 @@ export const StationFormPage: React.FC<StationFormPageProps> = ({
         </div>
         <ToggleSwitch checked={enabled} onChange={setEnabled} />
       </div>
+
+      {confirmDialog}
     </FormPage>
   )
 }
