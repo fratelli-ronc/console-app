@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Rocket, UploadCloud } from 'lucide-react'
+import { ListChecks, Rocket, UploadCloud } from 'lucide-react'
 import {
   DataTable,
   type DataTableColumn,
@@ -10,6 +10,7 @@ import {
   Search,
   SearchableSelect,
   StatusBadge,
+  TextButton,
 } from '@/components'
 import {
   deployStations,
@@ -23,21 +24,14 @@ import {
   StationDeploymentStatus,
 } from '@/client'
 import { listServers, type Server } from '@/client/coolify'
+import { formatDateTime, userLabel, type ChangeNames } from '@/lib/changeLog'
 import { cn } from '@/lib/utils'
 import { useUserStore } from '@/store'
 import {
   DeployResultDialog,
   type DeployDialogState,
 } from './components/DeployResultDialog'
-
-const formatDateTime = (iso: string) =>
-  new Date(iso).toLocaleString('it-IT', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+import { PendingChangesDialog } from './components/PendingChangesDialog'
 
 const distinctServerIps = (groups: Group[]) =>
   Array.from(
@@ -82,6 +76,7 @@ export const DeployPage: React.FC = () => {
   const [deployDialog, setDeployDialog] = useState<DeployDialogState | null>(
     null,
   )
+  const [reviewedId, setReviewedId] = useState<number | null>(null)
 
   const fetchData = async () => {
     const [stationsRes, groupsRes, serversRes, statusesRes] =
@@ -132,6 +127,30 @@ export const DeployPage: React.FC = () => {
     }
     return map
   }, [groups])
+
+  // Names for the ids a change refers to; deleted groups and stations are
+  // no longer listed, so they fall back to their internal id.
+  const changeNames = useMemo<ChangeNames>(() => {
+    const groupById = new Map(groups.map((g) => [g.id, g]))
+    const stationById = new Map((stations ?? []).map((s) => [s.id, s]))
+    return {
+      groupName: (id) => {
+        const group = groupById.get(id)
+        if (!group) return `gruppo #${id}`
+        return group.name || `ID ${group.groupId}`
+      },
+      stationName: (id) => {
+        const station = stationById.get(id)
+        if (!station) return `stazione #${id}`
+        return station.name || `ID ${station.stationId}`
+      },
+    }
+  }, [groups, stations])
+
+  const reviewedStation =
+    reviewedId == null
+      ? null
+      : ((stations ?? []).find((s) => s.id === reviewedId) ?? null)
 
   const stationGroups = (station: Station) =>
     groupsByStation.get(station.id) ?? []
@@ -361,12 +380,32 @@ export const DeployPage: React.FC = () => {
           )
         }
         if (status?.status === 'pending') {
+          const summary = status.pendingChanges
           return (
-            <StatusBadge
-              dot="bg-secondary"
-              badge="border-secondary/30 text-secondary-foreground bg-secondary/10"
-              label="Modifiche in sospeso"
-            />
+            <div>
+              <StatusBadge
+                dot="bg-secondary"
+                badge="border-secondary/30 text-secondary-foreground bg-secondary/10"
+                label="Modifiche in sospeso"
+              />
+              {summary && summary.changeSets > 0 && (
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {summary.changeSets === 1
+                    ? '1 modifica'
+                    : `${summary.changeSets} modifiche`}
+                  {summary.userIds.length > 0 &&
+                    ` di ${summary.userIds
+                      .map((id) =>
+                        userLabel(
+                          summary.users.find((u) => u.id === id) ?? null,
+                          id,
+                          currentUser?.username,
+                        ),
+                      )
+                      .join(', ')}`}
+                </div>
+              )}
+            </div>
           )
         }
         return (
@@ -383,15 +422,27 @@ export const DeployPage: React.FC = () => {
       header: '',
       cellClassName: 'text-right',
       render: (station) => (
-        <OutlinedButton
-          type="button"
-          className="inline-flex items-center gap-2"
-          disabled={!canDeploy(station) || deployingIds.has(station.id)}
-          onClick={() => runDeploy([station.id])}
-        >
-          <UploadCloud size={14} />
-          Distribuisci
-        </OutlinedButton>
+        <div className="inline-flex items-center gap-2">
+          {stationStatuses[station.id]?.status === 'pending' && (
+            <TextButton
+              type="button"
+              className="inline-flex items-center gap-2"
+              onClick={() => setReviewedId(station.id)}
+            >
+              <ListChecks size={14} />
+              Rivedi
+            </TextButton>
+          )}
+          <OutlinedButton
+            type="button"
+            className="inline-flex items-center gap-2"
+            disabled={!canDeploy(station) || deployingIds.has(station.id)}
+            onClick={() => runDeploy([station.id])}
+          >
+            <UploadCloud size={14} />
+            Distribuisci
+          </OutlinedButton>
+        </div>
       ),
     },
   ]
@@ -519,6 +570,24 @@ export const DeployPage: React.FC = () => {
           title: 'Nessuna stazione trovata',
           description: 'Prova a modificare la ricerca o i filtri.',
         }}
+      />
+
+      <PendingChangesDialog
+        station={reviewedStation}
+        status={reviewedId == null ? undefined : stationStatuses[reviewedId]}
+        names={changeNames}
+        currentUsername={currentUser?.username}
+        canDeploy={
+          reviewedStation != null &&
+          canDeploy(reviewedStation) &&
+          !deployingIds.has(reviewedStation.id)
+        }
+        onDeploy={() => {
+          if (reviewedId == null) return
+          setReviewedId(null)
+          void runDeploy([reviewedId])
+        }}
+        onClose={() => setReviewedId(null)}
       />
 
       <DeployResultDialog

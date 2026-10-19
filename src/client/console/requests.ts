@@ -20,6 +20,8 @@ import {
   ServerTreeRelationRequest,
   Station,
   StationDeploymentStatus,
+  StationPendingChanges,
+  StationPendingDiff,
   StationPhoto,
   StationTag,
   StationTagDetailed,
@@ -219,6 +221,31 @@ export const getStationDeploymentStatus = (
   withErrorHandling(async () => {
     const { data } = await consoleClient.get<StationDeploymentStatus>(
       `/stations/${id}/deployment-status`,
+    )
+    return data
+  })
+
+// What deploying the station would change, one net change per entity.
+export const getStationPendingDiff = (
+  id: number | string,
+): Promise<StationPendingDiff | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<StationPendingDiff>(
+      `/stations/${id}/pending-diff`,
+    )
+    return data
+  })
+
+// One page of the change sets the station has not deployed, newest first;
+// before is the change set id the page ends before.
+export const getStationPendingChanges = (
+  id: number | string,
+  params: { before?: number; limit?: number } = {},
+): Promise<StationPendingChanges | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<StationPendingChanges>(
+      `/stations/${id}/pending-changes`,
+      { params },
     )
     return data
   })

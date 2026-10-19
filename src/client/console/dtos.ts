@@ -365,6 +365,95 @@ export interface StationDeploymentStatus {
   lastDeployedByUserId: number | null
   // null whenever lastDeployedByUserId is, or the lookup failed.
   lastDeployedBy: ConsoleUser | null
+  // The newest change set the last deploy shipped; null if the station has
+  // not been deployed since the change log was introduced.
+  deployedThroughChangeSetId: number | null
+  // null only if console-api could not work it out.
+  pendingChanges: PendingChangesSummary | null
+}
+
+// The change sets a station has not deployed yet: how many, the newest's
+// time, and who made them (users: the ones that could be resolved). A
+// station changed only before the change log existed is pending with none.
+export interface PendingChangesSummary {
+  changeSets: number
+  lastChangedAt: string | null
+  userIds: number[]
+  users: ConsoleUser[]
+}
+
+export type ChangeEntityType = 'variable' | 'group' | 'station'
+export type ChangeOp = 'create' | 'update' | 'delete'
+
+// A change to one variable, group or station. businessId and name identify
+// it (variableId, groupId or stationId) as of the change. before / after
+// carry only changedFields, keyed like the entity's payloads with
+// sub-records flattened ("history.enabled", "image.auth.user"); tags come
+// as [{ id, name }] on groups and stations, the photo as
+// "photo.contentType" / "photo.sha256". before is null on a create, after
+// on a delete. The group / station ids are internal: where the entity was
+// before and after.
+export interface EntityChange {
+  entityType: ChangeEntityType
+  entityId: number
+  businessId: number
+  name: string | null
+  op: ChangeOp
+  changedFields: string[]
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+  groupIdBefore: number | null
+  groupIdAfter: number | null
+  stationIdBefore: number | null
+  stationIdAfter: number | null
+}
+
+export interface ChangeEntry extends EntityChange {
+  id: number
+}
+
+// One save in the change log; kind names the operation ("batch",
+// "group_transfer", ...).
+export interface ChangeSet {
+  id: number
+  createdAt: string
+  kind: string
+  userId: number
+  user: ConsoleUser | null
+  entries: ChangeEntry[]
+}
+
+// One page, newest first, of the change sets a station has not deployed,
+// each with only its entries touching the station. hasMore: older ones
+// are left - ask for the page before the last id listed. complete is false
+// while the station has not been deployed since the change log began.
+export interface StationPendingChanges {
+  stationId: number
+  deployedThroughChangeSetId: number | null
+  complete: boolean
+  changeSets: ChangeSet[]
+  hasMore: boolean
+}
+
+// One entity's net change since the station's last deploy. op is from the
+// station's point of view: "create" for an entity on it now but not when
+// deployed (created, or moved from stationIdBefore), "delete" the other
+// way round (deleted, or moved to stationIdAfter). A variable that came or
+// went with its whole group is covered by the group's change.
+export interface PendingEntityChange extends EntityChange {
+  lastChangedAt: string
+  userIds: number[]
+  users: ConsoleUser[]
+}
+
+// What deploying a station would change: the station, then its groups by
+// groupId, then its variables by variableId. complete is false (and
+// changes empty) while what it last deployed is not known.
+export interface StationPendingDiff {
+  stationId: number
+  deployedThroughChangeSetId: number | null
+  complete: boolean
+  changes: PendingEntityChange[]
 }
 
 export interface GroupDeploymentStatus {
