@@ -22,6 +22,8 @@ import { Checkbox } from '../Checkbox'
 import {
   ContextMenu,
   ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from '../ContextMenu'
 import { CellSelect } from './CellSelect'
@@ -84,7 +86,8 @@ interface EditTableProps<
   rowKey?: (row: T) => RowKey | null | undefined
   // Client-side view filter: non-matching rows are hidden but kept in state.
   filterFn?: (row: T) => boolean
-  // Renders a trailing trash-button column that removes the row.
+  // Adds an "Elimina riga" item to the row's context menu (buffered like any
+  // other edit until save).
   deletable?: boolean
   // Renders a leading checkbox column for bulk row selection. Rows without a
   // key (unsaved new rows) can't be selected since bulk actions target
@@ -96,7 +99,8 @@ interface EditTableProps<
   // this key. Omit to keep the columns in their declared order.
   columnOrderKey?: string
   // Items (ContextMenuItem etc.) for the right-click menu of a row. Return
-  // null to keep the native menu for that row (e.g. unsaved new rows).
+  // null for no custom items; with no items and no delete entry the row
+  // keeps the native menu.
   rowContextMenu?: (row: T) => React.ReactNode
 }
 
@@ -488,7 +492,6 @@ function EditTableInner<
                   style={col.width ? { width: col.width } : undefined}
                 />
               ))}
-              {deletable && <col style={{ width: '3rem' }} />}
             </colgroup>
           )}
 
@@ -539,7 +542,6 @@ function EditTableInner<
                   </th>
                 ))
               )}
-              {deletable && <th className="px-2 py-3 border-b border-border" />}
             </tr>
           </thead>
 
@@ -550,7 +552,23 @@ function EditTableInner<
                 rowSelectKey != null &&
                 (selection?.selectedKeys.has(rowSelectKey) ?? false)
 
-              const menuItems = rowContextMenu?.(item)
+              const customItems = rowContextMenu?.(item)
+              const menuItems =
+                customItems || deletable ? (
+                  <>
+                    {customItems}
+                    {customItems && deletable && <ContextMenuSeparator />}
+                    {deletable && (
+                      <ContextMenuItem
+                        variant="destructive"
+                        onSelect={() => deleteRow(rowIndex)}
+                      >
+                        <Trash2 size={14} />
+                        Elimina riga
+                      </ContextMenuItem>
+                    )}
+                  </>
+                ) : null
 
               const rowEl = (
                 <tr key={rowIndex} className="data-[state=open]:bg-muted/60">
@@ -815,26 +833,6 @@ function EditTableInner<
                       </td>
                     )
                   })}
-
-                  {deletable && (
-                    <td
-                      className={cn(
-                        'px-2 py-2 text-center align-middle',
-                        rowIndex < currentData.length - 1 &&
-                          'border-b border-border',
-                      )}
-                    >
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        onClick={() => deleteRow(rowIndex)}
-                        title="Elimina riga"
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  )}
                 </tr>
               )
 

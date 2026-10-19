@@ -53,7 +53,7 @@ interface EditTablePanelProps<
   filterFn?: (row: T) => boolean
   className?: string
   filters?: React.ReactNode
-  // Renders a per-row trash button.
+  // Adds a delete entry to each row's context menu.
   deletable?: boolean
   // Renders a leading checkbox column for bulk row selection.
   selection?: EditTableSelection
@@ -66,7 +66,8 @@ interface EditTablePanelProps<
   // Enables drag-to-reorder column headers, persisted per user under this
   // key (e.g. 'variables').
   columnOrderKey?: string
-  // Items for a row's right-click menu; return null to keep the native menu.
+  // Custom items for a row's right-click menu (shown above the delete entry
+  // when `deletable`).
   rowContextMenu?: (row: T) => React.ReactNode
 }
 

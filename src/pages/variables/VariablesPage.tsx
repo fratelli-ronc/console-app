@@ -599,7 +599,8 @@ export const VariablesPage: React.FC = () => {
     }
   }
 
-  // Unsaved new rows have no id yet, so they keep the native menu.
+  // Unsaved new rows have no id yet, so they can't be cloned (they still get
+  // the table's delete entry).
   const rowContextMenu = (row: VariableRow) =>
     row.id == null ? null : (
       <ContextMenuItem
