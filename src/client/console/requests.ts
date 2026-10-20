@@ -19,8 +19,8 @@ import {
   ServerTreeRelation,
   ServerTreeRelationRequest,
   Station,
+  StationChanges,
   StationDeploymentStatus,
-  StationPendingChanges,
   StationPendingDiff,
   StationPhoto,
   StationTag,
@@ -236,15 +236,15 @@ export const getStationPendingDiff = (
     return data
   })
 
-// One page of the change sets the station has not deployed, newest first;
-// before is the change set id the page ends before.
-export const getStationPendingChanges = (
+// One page of the station's whole change history, newest first; before is
+// the change set id the page ends before.
+export const getStationChanges = (
   id: number | string,
   params: { before?: number; limit?: number } = {},
-): Promise<StationPendingChanges | null> =>
+): Promise<StationChanges | null> =>
   withErrorHandling(async () => {
-    const { data } = await consoleClient.get<StationPendingChanges>(
-      `/stations/${id}/pending-changes`,
+    const { data } = await consoleClient.get<StationChanges>(
+      `/stations/${id}/changes`,
       { params },
     )
     return data

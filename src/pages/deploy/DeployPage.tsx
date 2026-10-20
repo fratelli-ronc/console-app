@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ListChecks, Rocket, UploadCloud } from 'lucide-react'
+import { History, ListChecks, Rocket, UploadCloud } from 'lucide-react'
 import {
   DataTable,
   type DataTableColumn,
@@ -31,7 +31,7 @@ import {
   DeployResultDialog,
   type DeployDialogState,
 } from './components/DeployResultDialog'
-import { PendingChangesDialog } from './components/PendingChangesDialog'
+import { StationChangesDialog } from './components/StationChangesDialog'
 
 const distinctServerIps = (groups: Group[]) =>
   Array.from(
@@ -423,16 +423,23 @@ export const DeployPage: React.FC = () => {
       cellClassName: 'text-right',
       render: (station) => (
         <div className="inline-flex items-center gap-2">
-          {stationStatuses[station.id]?.status === 'pending' && (
-            <TextButton
-              type="button"
-              className="inline-flex items-center gap-2"
-              onClick={() => setReviewedId(station.id)}
-            >
-              <ListChecks size={14} />
-              Rivedi
-            </TextButton>
-          )}
+          <TextButton
+            type="button"
+            className="inline-flex items-center gap-2"
+            onClick={() => setReviewedId(station.id)}
+          >
+            {stationStatuses[station.id]?.status === 'pending' ? (
+              <>
+                <ListChecks size={14} />
+                Rivedi
+              </>
+            ) : (
+              <>
+                <History size={14} />
+                Cronologia
+              </>
+            )}
+          </TextButton>
           <OutlinedButton
             type="button"
             className="inline-flex items-center gap-2"
@@ -572,7 +579,7 @@ export const DeployPage: React.FC = () => {
         }}
       />
 
-      <PendingChangesDialog
+      <StationChangesDialog
         station={reviewedStation}
         status={reviewedId == null ? undefined : stationStatuses[reviewedId]}
         names={changeNames}

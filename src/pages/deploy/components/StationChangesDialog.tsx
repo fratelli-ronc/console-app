@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { History, Info, UploadCloud } from 'lucide-react'
 import {
-  getStationPendingChanges,
+  getStationChanges,
   getStationPendingDiff,
   type ChangeSet,
   type EntityChange,
@@ -62,8 +62,8 @@ const OP_STYLES = {
 const agree = (change: EntityChange, stem: string) =>
   stem + (change.entityType === 'group' ? 'o' : 'a')
 
-interface PendingChangesDialogProps {
-  // The station under review; null keeps the dialog closed.
+interface StationChangesDialogProps {
+  // The station shown; null keeps the dialog closed.
   station: Station | null
   status: StationDeploymentStatus | undefined
   names: ChangeNames
@@ -73,9 +73,12 @@ interface PendingChangesDialogProps {
   onClose: () => void
 }
 
-// Reviews what deploying a station would ship: the net difference from its
-// last deploy, entity by entity, or every change set since, newest first.
-export const PendingChangesDialog: React.FC<PendingChangesDialogProps> = ({
+// A station's changes. For one with changes pending, it reviews what
+// deploying it would ship - the net difference from its last deploy,
+// entity by entity - next to its history; otherwise it shows just the
+// history: every change set, newest first, the last deploy marked among
+// them.
+export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
   station,
   status,
   names,
@@ -97,13 +100,16 @@ export const PendingChangesDialog: React.FC<PendingChangesDialogProps> = ({
   const shownStatus = last.current.status
 
   const stationId = station?.id
+  const pending = status?.status === 'pending'
+  const reviewing = shownStatus?.status === 'pending'
 
   useEffect(() => {
     if (stationId == null) return
-    setView('diff')
+    setView(pending ? 'diff' : 'history')
     setDiff(null)
     setSets(null)
     setHasMore(false)
+    if (!pending) return
 
     let active = true
     getStationPendingDiff(stationId).then((res) => {
@@ -116,13 +122,13 @@ export const PendingChangesDialog: React.FC<PendingChangesDialogProps> = ({
     return () => {
       active = false
     }
-  }, [stationId])
+  }, [stationId, pending])
 
   // The chronology loads the first time it is shown.
   useEffect(() => {
     if (view !== 'history' || stationId == null || sets !== null) return
     let active = true
-    getStationPendingChanges(stationId).then((res) => {
+    getStationChanges(stationId).then((res) => {
       if (!active || !res) return
       setSets(res.changeSets)
       setHasMore(res.hasMore)
@@ -135,7 +141,7 @@ export const PendingChangesDialog: React.FC<PendingChangesDialogProps> = ({
   const loadMore = async () => {
     if (stationId == null || !sets?.length) return
     setLoadingMore(true)
-    const res = await getStationPendingChanges(stationId, {
+    const res = await getStationChanges(stationId, {
       before: sets[sets.length - 1].id,
     })
     setLoadingMore(false)
@@ -146,7 +152,7 @@ export const PendingChangesDialog: React.FC<PendingChangesDialogProps> = ({
 
   const lastDeploy =
     shownStatus?.lastDeployedAt &&
-    `Rispetto alla distribuzione del ${formatDateTime(shownStatus.lastDeployedAt)}${
+    `${reviewing ? 'Rispetto alla' : 'Ultima'} distribuzione del ${formatDateTime(shownStatus.lastDeployedAt)}${
       shownStatus.lastDeployedBy
         ? ` di ${userLabel(shownStatus.lastDeployedBy, shownStatus.lastDeployedByUserId!, currentUsername)}`
         : ''
@@ -157,16 +163,23 @@ export const PendingChangesDialog: React.FC<PendingChangesDialogProps> = ({
       <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            Modifiche da distribuire — {shown?.name || `ID ${shown?.stationId}`}
+            {reviewing ? 'Modifiche da distribuire' : 'Cronologia modifiche'} —{' '}
+            {shown?.name || `ID ${shown?.stationId}`}
           </DialogTitle>
           <DialogDescription>
             {lastDeploy || 'La stazione non è mai stata distribuita.'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex">
-          <FilterPills options={VIEW_OPTIONS} value={view} onChange={setView} />
-        </div>
+        {reviewing && (
+          <div className="flex">
+            <FilterPills
+              options={VIEW_OPTIONS}
+              value={view}
+              onChange={setView}
+            />
+          </div>
+        )}
 
         <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6">
           {view === 'diff' ? (
@@ -181,6 +194,8 @@ export const PendingChangesDialog: React.FC<PendingChangesDialogProps> = ({
               hasMore={hasMore}
               loadingMore={loadingMore}
               onLoadMore={loadMore}
+              deployedThrough={shownStatus?.deployedThroughChangeSetId ?? null}
+              lastDeployedAt={shownStatus?.lastDeployedAt ?? null}
               names={names}
               currentUsername={currentUsername}
             />
@@ -451,6 +466,9 @@ interface HistoryViewProps {
   hasMore: boolean
   loadingMore: boolean
   onLoadMore: () => void
+  // The newest change set the last deploy shipped, and when it ran.
+  deployedThrough: number | null
+  lastDeployedAt: string | null
   names: ChangeNames
   currentUsername: string | undefined
 }
@@ -466,6 +484,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   hasMore,
   loadingMore,
   onLoadMore,
+  deployedThrough,
+  lastDeployedAt,
   names,
   currentUsername,
 }) => {
@@ -473,65 +493,76 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   if (sets.length === 0) {
     return (
       <Notice>
-        Nessuna modifica registrata dall'ultima distribuzione. Se la stazione
-        risulta in sospeso, le modifiche risalgono a prima dell'attivazione del
-        registro.
+        Nessuna modifica registrata per questa stazione. Il registro tiene
+        traccia delle modifiche solo da quando è stato attivato.
       </Notice>
     )
   }
 
+  // The last deploy goes above the newest change set it shipped.
+  const deployedFrom =
+    deployedThrough == null
+      ? -1
+      : sets.findIndex((set) => set.id <= deployedThrough)
+
   return (
     <div className="space-y-3 pb-1">
       <ol className="space-y-3">
-        {sets.map((set) => (
-          <li key={set.id} className="rounded-lg border border-border">
-            <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5">
-              <History size={14} className="text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">
-                {changeKindLabel(set.kind)}
-              </span>
-              <span className="ml-auto text-xs text-muted-foreground">
-                {userLabel(set.user, set.userId, currentUsername)} ·{' '}
-                {formatDateTime(set.createdAt)}
-              </span>
-            </div>
-            <ul className="divide-y divide-border/60 text-sm">
-              {set.entries.map((entry) => (
-                <li key={entry.id} className="px-4 py-2">
-                  <span className="text-foreground">
-                    {ENTITY_NOUNS[entry.entityType]} {entityLabel(entry)}
-                  </span>{' '}
-                  <span className="text-muted-foreground">
-                    (ID {entry.businessId}) {agree(entry, ENTRY_OPS[entry.op])}
-                  </span>
-                  {entry.op === 'update' && (
-                    <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                      {entry.changedFields.map((field) => (
-                        <li key={field} className="break-all">
-                          {fieldLabel(entry.entityType, field)}:{' '}
-                          {formatChangeValue(
-                            entry.entityType,
-                            field,
-                            entry.before?.[field],
-                            names,
-                          )}{' '}
-                          →{' '}
-                          <span className="text-foreground">
+        {sets.map((set, index) => (
+          <Fragment key={set.id}>
+            {index === deployedFrom && (
+              <DeployMarker lastDeployedAt={lastDeployedAt} />
+            )}
+            <li className="rounded-lg border border-border">
+              <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5">
+                <History size={14} className="text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">
+                  {changeKindLabel(set.kind)}
+                </span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {userLabel(set.user, set.userId, currentUsername)} ·{' '}
+                  {formatDateTime(set.createdAt)}
+                </span>
+              </div>
+              <ul className="divide-y divide-border/60 text-sm">
+                {set.entries.map((entry) => (
+                  <li key={entry.id} className="px-4 py-2">
+                    <span className="text-foreground">
+                      {ENTITY_NOUNS[entry.entityType]} {entityLabel(entry)}
+                    </span>{' '}
+                    <span className="text-muted-foreground">
+                      (ID {entry.businessId}){' '}
+                      {agree(entry, ENTRY_OPS[entry.op])}
+                    </span>
+                    {entry.op === 'update' && (
+                      <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                        {entry.changedFields.map((field) => (
+                          <li key={field} className="break-all">
+                            {fieldLabel(entry.entityType, field)}:{' '}
                             {formatChangeValue(
                               entry.entityType,
                               field,
-                              entry.after?.[field],
+                              entry.before?.[field],
                               names,
-                            )}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </li>
+                            )}{' '}
+                            →{' '}
+                            <span className="text-foreground">
+                              {formatChangeValue(
+                                entry.entityType,
+                                field,
+                                entry.after?.[field],
+                                names,
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          </Fragment>
         ))}
       </ol>
       {hasMore && (
@@ -548,3 +579,18 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     </div>
   )
 }
+
+// Where the last deploy falls in the history: what is above it is pending.
+const DeployMarker: React.FC<{ lastDeployedAt: string | null }> = ({
+  lastDeployedAt,
+}) => (
+  <li className="flex items-center gap-3 text-xs text-muted-foreground">
+    <span className="h-px flex-1 bg-border" />
+    <span className="inline-flex items-center gap-1.5 font-medium">
+      <UploadCloud size={12} />
+      Ultima distribuzione
+      {lastDeployedAt && ` · ${formatDateTime(lastDeployedAt)}`}
+    </span>
+    <span className="h-px flex-1 bg-border" />
+  </li>
+)

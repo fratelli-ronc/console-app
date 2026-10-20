@@ -423,14 +423,12 @@ export interface ChangeSet {
   entries: ChangeEntry[]
 }
 
-// One page, newest first, of the change sets a station has not deployed,
-// each with only its entries touching the station. hasMore: older ones
-// are left - ask for the page before the last id listed. complete is false
-// while the station has not been deployed since the change log began.
-export interface StationPendingChanges {
+// One page, newest first, of every change set that touched a station,
+// deployed or not, each with only its entries touching the station; the
+// ones up to its deployedThroughChangeSetId are deployed. hasMore: older
+// ones are left - ask for the page before the last id listed.
+export interface StationChanges {
   stationId: number
-  deployedThroughChangeSetId: number | null
-  complete: boolean
   changeSets: ChangeSet[]
   hasMore: boolean
 }
