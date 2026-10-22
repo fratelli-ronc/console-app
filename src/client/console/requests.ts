@@ -28,7 +28,6 @@ import {
   UpdateGroupRequest,
   UpdateStationPhotoRequest,
   UpdateStationRequest,
-  UpdateVariableRequest,
   Variable,
   VariableBatchRequest,
   VariableBatchResult,
@@ -495,18 +494,6 @@ export const createVariable = (
 ): Promise<Variable | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.post<Variable>('/variables', payload)
-    return data
-  })
-
-export const updateVariable = (
-  id: number | string,
-  payload: UpdateVariableRequest,
-): Promise<Variable | null> =>
-  withErrorHandling(async () => {
-    const { data } = await consoleClient.put<Variable>(
-      `/variables/${id}`,
-      payload,
-    )
     return data
   })
 
