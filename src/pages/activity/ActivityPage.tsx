@@ -265,58 +265,64 @@ export const ActivityPage: React.FC = () => {
         subtitle="Tutte le modifiche a stazioni, gruppi e variabili, dalla più recente."
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchableSelect
-          className="w-56"
-          value={filter.user}
-          onValueChange={(value) => setFilter('user', value)}
-          placeholder="Tutti gli utenti"
-          searchPlaceholder="Cerca utente…"
-          emptyMessage="Nessun utente trovato."
-          options={userOptions}
-        />
-
-        <SearchableSelect
-          className="w-64"
-          value={filter.station}
-          onValueChange={(value) => setFilter('station', value)}
-          placeholder="Tutte le stazioni"
-          searchPlaceholder="Cerca stazione…"
-          emptyMessage="Nessuna stazione trovata."
-          options={stationOptions}
-        />
-
-        <FilterPills
-          options={TYPE_OPTIONS}
-          value={filter.type as ChangeEntityType | ''}
-          onChange={(value) => setFilter('type', value)}
-        />
-
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Dal</span>
-          <DatePicker
-            value={filter.from}
-            max={filter.to || undefined}
-            onChange={(value) => setFilter('from', value)}
+      <div>
+        <div className="flex items-center gap-3">
+          <SearchableSelect
+            className="w-56"
+            value={filter.user}
+            onValueChange={(value) => setFilter('user', value)}
+            placeholder="Tutti gli utenti"
+            searchPlaceholder="Cerca utente…"
+            emptyMessage="Nessun utente trovato."
+            options={userOptions}
           />
-          <span>al</span>
-          <DatePicker
-            value={filter.to}
-            min={filter.from || undefined}
-            onChange={(value) => setFilter('to', value)}
+
+          <SearchableSelect
+            className="w-64"
+            value={filter.station}
+            onValueChange={(value) => setFilter('station', value)}
+            placeholder="Tutte le stazioni"
+            searchPlaceholder="Cerca stazione…"
+            emptyMessage="Nessuna stazione trovata."
+            options={stationOptions}
           />
+
+          <FilterPills
+            options={TYPE_OPTIONS}
+            value={filter.type as ChangeEntityType | ''}
+            onChange={(value) => setFilter('type', value)}
+          />
+
+          <ReloadButton isReloading={reloading} onReload={handleReload} />
         </div>
 
-        {filtered && (
-          <TextButton
-            type="button"
-            onClick={() => setParams(new URLSearchParams(), { replace: true })}
-          >
-            Azzera filtri
-          </TextButton>
-        )}
+        <div className="mt-4 flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Dal</span>
+            <DatePicker
+              value={filter.from}
+              max={filter.to || undefined}
+              onChange={(value) => setFilter('from', value)}
+            />
+            <span>al</span>
+            <DatePicker
+              value={filter.to}
+              min={filter.from || undefined}
+              onChange={(value) => setFilter('to', value)}
+            />
+          </div>
 
-        <ReloadButton isReloading={reloading} onReload={handleReload} />
+          {filtered && (
+            <TextButton
+              type="button"
+              onClick={() =>
+                setParams(new URLSearchParams(), { replace: true })
+              }
+            >
+              Azzera filtri
+            </TextButton>
+          )}
+        </div>
       </div>
 
       {sets === null ? (
