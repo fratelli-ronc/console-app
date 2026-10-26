@@ -2,13 +2,18 @@
 
 ### New Features
 
-- **Review changes before deploying** — On the Deploy page, stations with pending changes show how many changes are waiting and who made them. A new "Rivedi" button opens the changes that deploying would send. The "Differenze" view shows the net difference from the last deploy, field by field ("Distribuito" vs "Attuale"), for the station, its groups and its variables by group. The "Cronologia" view lists every change since then, newest first, with "Carica modifiche precedenti" to load older ones. You can deploy the station directly from this dialog.
-- **Change history for every station** — Stations with no pending changes get a "Cronologia" button that opens their change history, with the date and author of the last deploy.
-- **Save conflicts are detected** — If someone else saved a station, group or variable after you opened it, you are told before your save overwrites their changes:
-  - **Station and group forms** only send the fields you changed. On a conflict, the form says who made the other change and when, and which fields you both changed. You can then save your values on top of theirs. Their changes to other fields are kept. If the item was deleted in the meantime, you are told and can go back to the list.
-  - **Variables grid** — If some rows were changed by someone else, nothing is saved and the dialog lists the affected variables and who changed them. "Aggiorna e riapplica" reloads the grid and reapplies your unsaved edits on the current values. Cells changed on both sides are highlighted in red, so you can check them before saving again. Edits to variables that were deleted in the meantime are discarded.
-- **Right-click menu on variable rows** — Right-click a row in the variables grid to clone that single variable into a group, or to delete the row.
+- **Activity page** — A new "Attività" page in the sidebar lists every change to stations, groups and variables across all stations, newest first, grouped by day ("Oggi", "Ieri", then the date). Each change shows who made it, at what time, and the fields that changed, from the old value to the new one.
+  - **Filters** — Filter by user, by station, by type ("Tutto", "Stazioni", "Gruppi", "Variabili") and by date range ("Dal" … "al"). "Azzera filtri" clears them all. Filters are kept when you reload the page.
+  - **Deploy status per change** — Each change shows the stations it affects and whether it has reached them: "Distribuita", "In sospeso", "Mai distribuita" or "Stazione eliminata".
+  - Changes that touch many items show the first 8, with "Mostra altre N modifiche" to expand the rest. "Carica modifiche precedenti" loads older changes.
+- **Edit a single variable** — Right-click a row in the variables grid and choose "Modifica" to open a dialog with all of the variable's settings, including the ones that are not in the grid (notes, graph group, presentations…).
+  - The dialog shows only the sections that apply to the variable's kind: Modbus, Modbus MX3, internal variable, mirroring, Python script, HTTP camera or TCP camera. The sections are "Generale", "Mappa memoria", "Trattamento dato grezzo", "Storico", "Telecamera", "Descrizione e visualizzazione" and "Presentazioni".
+  - You can move the variable to another group of the same station. To move it to another station, use "Sposta in gruppo" in the grid as before.
+  - **Camera variables** are recognised by their group's protocol. For HTTP cameras you can set the snapshot path, an optional preset path called before the snapshot, the delay between the two, and the authentication.
+  - **Python variables** — The script itself is still managed by the Python scripts console; here you edit only how the variable is shown.
+  - Saves are checked for conflicts like station and group forms: if someone else changed the variable after you opened it, you are told before overwriting their changes. If the grid has unsaved edits, you are asked to discard them before the dialog opens. Closing the dialog with unsaved changes asks for confirmation.
+- **Presentations editor** — In the variable dialog you can add, reorder ("Sposta su" / "Sposta giù") and delete the variable's presentations. Supported types are "Stato testuale", "Preset (slider)", "Comando singolo", "Comando doppio", "Interruttore" and "Abilitazione", each with its own fields. "Stato testuale" shows a preview of the text and colors. "Modifica JSON" lets you edit an entry as raw JSON. Settings the editor has no field for are kept unchanged.
 
 ### Changes
 
-- **Row delete moved to the right-click menu** — The trash button at the end of each row in the variables grid has been removed. Use "Elimina riga" from the row's right-click menu instead. As before, the deletion is applied only when you save.
+- **Camera groups must have exactly one variable to be deployed** — Deploying a station is refused if one of its camera groups has no variable ("Telecamera senza variabile") or more than one ("Telecamera con più di una variabile"). The deploy dialog says which groups cannot be deployed.
