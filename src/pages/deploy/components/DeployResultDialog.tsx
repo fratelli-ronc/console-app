@@ -46,7 +46,12 @@ export type DeployDialogState =
 // it came. Unreachable / failed servers aren't here: their summary is
 // worded from the servers themselves.
 const API_MESSAGES: Record<string, string> = {
+  'some groups cannot be deployed':
+    'Alcuni gruppi non possono essere distribuiti.',
   'group is not assigned to a server': 'Nessun server assegnato',
+  'camera group has no variable': 'Telecamera senza variabile',
+  'camera group has more than one variable':
+    'Telecamera con più di una variabile',
   'another deploy is already running':
     "Un'altra distribuzione è già in corso. Riprova tra poco.",
   'config files were written, but the deploy could not be recorded':
@@ -89,8 +94,7 @@ const formatSize = (content: string) => {
 const plural = (count: number, one: string, many: string) =>
   `${count} ${count === 1 ? one : many}`
 
-const stationsLabel = (count: number) =>
-  plural(count, 'stazione', 'stazioni')
+const stationsLabel = (count: number) => plural(count, 'stazione', 'stazioni')
 
 interface Props {
   state: DeployDialogState | null
@@ -246,14 +250,14 @@ const Summary: React.FC<SummaryProps> = ({ tone, icon, title, detail }) => (
     <div className="mt-0.5 shrink-0">{icon}</div>
     <div className="min-w-0">
       <p className="text-sm font-medium text-foreground">{title}</p>
-      {detail && <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>}
+      {detail && (
+        <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>
+      )}
     </div>
   </div>
 )
 
-const RunningSummary: React.FC<{ servers: DeployServer[] }> = ({
-  servers,
-}) => {
+const RunningSummary: React.FC<{ servers: DeployServer[] }> = ({ servers }) => {
   const pinging = servers.some(
     (s) => s.state === 'waiting' || s.state === 'pinging',
   )
@@ -396,7 +400,8 @@ const ServerRow: React.FC<ServerRowProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(false)
   const state = SERVER_STATES[server.state]
-  const failed = server.state === 'unreachable' || server.state === 'sync_failed'
+  const failed =
+    server.state === 'unreachable' || server.state === 'sync_failed'
   const canExpand = files.length > 0
 
   return (

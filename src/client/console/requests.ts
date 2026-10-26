@@ -31,6 +31,7 @@ import {
   UpdateGroupRequest,
   UpdateStationPhotoRequest,
   UpdateStationRequest,
+  UpdateVariableRequest,
   Variable,
   VariableBatchRequest,
   VariableBatchResult,
@@ -46,8 +47,7 @@ import { readSSE } from '@/lib/sse'
 // someone saved the entity since it was loaded - nothing was written then.
 // null (from withErrorHandling) means it failed otherwise, already toasted.
 export type SaveOutcome<T> =
-  | { kind: 'saved'; data: T }
-  | { kind: 'conflict'; conflicts: VersionConflicts }
+  { kind: 'saved'; data: T } | { kind: 'conflict'; conflicts: VersionConflicts }
 
 // withErrorHandling, except that a version conflict comes back as an
 // outcome for the caller to resolve rather than as a toast.
@@ -211,9 +211,8 @@ export const updateStationPhoto = (
 // Bulk-fetches every station's and group's deployment status in one call.
 export const getDeploymentStatuses = (): Promise<DeploymentStatuses | null> =>
   withErrorHandling(async () => {
-    const { data } = await consoleClient.get<DeploymentStatuses>(
-      '/deployment-status',
-    )
+    const { data } =
+      await consoleClient.get<DeploymentStatuses>('/deployment-status')
     return data
   })
 
@@ -266,8 +265,7 @@ export const getChanges = (
 // What the change log can be filtered by: its users and stations.
 export const getChangeFilters = (): Promise<ChangeFilters | null> =>
   withErrorHandling(async () => {
-    const { data } =
-      await consoleClient.get<ChangeFilters>('/changes/filters')
+    const { data } = await consoleClient.get<ChangeFilters>('/changes/filters')
     return data
   })
 
@@ -516,6 +514,20 @@ export const createVariable = (
 ): Promise<Variable | null> =>
   withErrorHandling(async () => {
     const { data } = await consoleClient.post<Variable>('/variables', payload)
+    return data
+  })
+
+// Saves one variable (the edit dialog); the grid saves through
+// saveVariablesBatch instead.
+export const updateVariable = (
+  id: number,
+  payload: UpdateVariableRequest,
+): Promise<SaveOutcome<Variable> | null> =>
+  withVersionConflicts(async () => {
+    const { data } = await consoleClient.put<Variable>(
+      `/variables/${id}`,
+      payload,
+    )
     return data
   })
 

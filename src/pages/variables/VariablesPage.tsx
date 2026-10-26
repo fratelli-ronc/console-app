@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ArrowRightLeft, ChevronDown, Copy, Trash2 } from 'lucide-react'
+import { ArrowRightLeft, ChevronDown, Copy, Pencil, Trash2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -56,11 +56,12 @@ import {
   transferVariables,
 } from '@/client'
 import { describeConflictAuthor } from '@/lib/versionConflicts'
+import { VariableEditDialog } from './components/VariableEditDialog'
 
 // Flattened, grid-editable projection of a Variable — including the 1:1
 // history / memory-map / image sub-records (hist*/mm*/img* fields). The
 // remaining variable fields (graphGroup, k, exponent, note, presentations…)
-// are reserved for a future per-variable detail view.
+// are edited one variable at a time in VariableEditDialog.
 type VariableRow = {
   id: number | null
   // Not a column: sent back on update, null on rows not saved yet.
@@ -404,6 +405,8 @@ export const VariablesPage: React.FC = () => {
   const [cloneOpen, setCloneOpen] = useState(false)
   const [cloning, setCloning] = useState(false)
   const [cloneGroupId, setCloneGroupId] = useState('')
+  // Internal id of the variable open in the edit dialog.
+  const [editId, setEditId] = useState<number | null>(null)
   const [cloneTarget, setCloneTarget] = useState<CloneTarget>({
     ids: [],
     name: null,
@@ -607,22 +610,38 @@ export const VariablesPage: React.FC = () => {
     }
   }
 
-  // Unsaved new rows have no id yet, so they can't be cloned (they still get
-  // the table's delete entry).
+  // The dialog saves on its own and the grid reloads after, so pending grid
+  // edits are confirmed away first, as for the bulk actions.
+  const openEdit = async (id: number) => {
+    if (!(await guardDiscard())) return
+    setEditId(id)
+  }
+
+  const closeEdit = useCallback(() => setEditId(null), [])
+  const reloadGrid = useCallback(() => panelRef.current?.reload(), [])
+
+  // Unsaved new rows have no id yet, so they can't be edited in the dialog
+  // or cloned (they still get the table's delete entry).
   const rowContextMenu = (row: VariableRow) =>
     row.id == null ? null : (
-      <ContextMenuItem
-        onSelect={() =>
-          void openClone({
-            ids: [row.id as number],
-            name: row.name || `#${row.variableId ?? row.id}`,
-            fromSelection: false,
-          })
-        }
-      >
-        <Copy size={14} />
-        Clona
-      </ContextMenuItem>
+      <>
+        <ContextMenuItem onSelect={() => void openEdit(row.id as number)}>
+          <Pencil size={14} />
+          Modifica
+        </ContextMenuItem>
+        <ContextMenuItem
+          onSelect={() =>
+            void openClone({
+              ids: [row.id as number],
+              name: row.name || `#${row.variableId ?? row.id}`,
+              fromSelection: false,
+            })
+          }
+        >
+          <Copy size={14} />
+          Clona
+        </ContextMenuItem>
+      </>
     )
 
   // The grid is scoped to a station (or group) — no pagination, so we
@@ -1031,6 +1050,13 @@ export const VariablesPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <VariableEditDialog
+        variableId={editId}
+        groups={groups ?? []}
+        onClose={closeEdit}
+        onSaved={reloadGrid}
+      />
 
       {confirmDialog}
     </div>

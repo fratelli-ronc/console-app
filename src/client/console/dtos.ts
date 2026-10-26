@@ -218,15 +218,14 @@ export interface VariableImage {
   auth: VariableImageAuth | null
 }
 
-export interface VariablePresentation {
-  type: string | null
-  minPresetValue: number | null
-  maxPresetValue: number | null
-  step: number | null
-  text: string | null
-  condition: string | null
-  color: string | null
-}
+// One presentation entry, stored and deployed as free-form JSON: each type
+// (TEXT_STATUS, UP_DOWN_SLIDE, DUAL_COMMAND…) carries its own keys, some
+// nested and some spelled like "back-color". See
+// pages/variables/components/presentationTypes.ts for the known shapes.
+export type VariablePresentation = { type?: string | null } & Record<
+  string,
+  unknown
+>
 
 // Nested partial merges onto a Variable's 1:1 sub-records. Omitted/null
 // fields are left unchanged server-side; omit the whole object to leave the
