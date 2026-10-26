@@ -136,6 +136,11 @@ export const formatChangeValue = (
   return String(value)
 }
 
+// Participles agree with the entity: "gruppo modificato", "variabile
+// modificata".
+export const agree = (change: EntityChange, stem: string) =>
+  stem + (change.entityType === 'group' ? 'o' : 'a')
+
 // A change's entity by name, or by business id when it has none.
 export const entityLabel = (change: EntityChange) =>
   change.name || `ID ${change.businessId}`
@@ -182,6 +187,12 @@ export const formatDateTime = (iso: string) =>
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+export const formatTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString('it-IT', {
     hour: '2-digit',
     minute: '2-digit',
   })

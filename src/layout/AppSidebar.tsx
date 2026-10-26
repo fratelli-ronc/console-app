@@ -16,6 +16,7 @@ import {
   Radio,
   Boxes,
   Variable,
+  History,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { clearToken, clearRefreshToken } from '@/client/tokenStore'
@@ -48,6 +49,7 @@ const navSections: NavSection[] = [
       { label: 'Gruppi', href: '/groups', icon: <Boxes size={20} /> },
       { label: 'Variabili', href: '/variables', icon: <Variable size={20} /> },
       { label: 'Deploy', href: '/deploy', icon: <Rocket size={20} /> },
+      { label: 'Attività', href: '/activity', icon: <History size={20} /> },
     ],
   },
   {

@@ -433,6 +433,45 @@ export interface StationChanges {
   hasMore: boolean
 }
 
+// One page, newest first, of the whole change log as filtered (see
+// ChangesQuery). hasMore: older ones are left - ask for the page before the
+// last id listed.
+export interface ChangesPage {
+  changeSets: ChangeSet[]
+  hasMore: boolean
+}
+
+// Filters for the whole change log, all optional. stationId (internal id)
+// and entityType also narrow each change set's entries to the matching
+// ones; userId, from and to (ISO times, to exclusive) pick whole sets.
+export interface ChangesQuery {
+  userId?: number
+  stationId?: number
+  entityType?: ChangeEntityType
+  from?: string
+  to?: string
+  before?: number
+  limit?: number
+}
+
+// A station change entries can be on, by internal id: every station, plus
+// the ones deleted since the change log began (with their business id and
+// name as of the deletion).
+export interface ChangeLogStation {
+  id: number
+  stationId: number
+  name: string | null
+  deleted: boolean
+}
+
+// What the change log can be filtered by: everyone who made a change
+// (users: the ones the auth service could resolve) and every station.
+export interface ChangeFilters {
+  userIds: number[]
+  users: ConsoleUser[]
+  stations: ChangeLogStation[]
+}
+
 // One entity's net change since the station's last deploy. op is from the
 // station's point of view: "create" for an entity on it now but not when
 // deployed (created, or moved from stationIdBefore), "delete" the other

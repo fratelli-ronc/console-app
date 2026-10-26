@@ -66,6 +66,11 @@ const VariablesPage = lazy(() =>
 const DeployPage = lazy(() =>
   import('@/pages/deploy/DeployPage').then((m) => ({ default: m.DeployPage })),
 )
+const ActivityPage = lazy(() =>
+  import('@/pages/activity/ActivityPage').then((m) => ({
+    default: m.ActivityPage,
+  })),
+)
 
 // --- Infrastruttura ---
 const ServersPage = lazy(() =>
@@ -142,6 +147,7 @@ const router = createBrowserRouter(
           <Route path="/groups/group-tags" element={<GroupTagsPage />} />
           <Route path="/variables" element={<VariablesPage />} />
           <Route path="/deploy" element={<DeployPage />} />
+          <Route path="/activity" element={<ActivityPage />} />
 
           <Route path="/servers" element={<ServersPage />} />
           <Route path="/servers/:uuid/resources" element={<ResoucesPage />} />

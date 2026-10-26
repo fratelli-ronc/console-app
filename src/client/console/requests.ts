@@ -1,5 +1,8 @@
 import consoleClient, { refreshConsoleTokens } from './client'
 import {
+  ChangeFilters,
+  ChangesPage,
+  ChangesQuery,
   CloneStationRequest,
   CreateGroupRequest,
   CreateStationRequest,
@@ -246,6 +249,25 @@ export const getStationChanges = (
       `/stations/${id}/changes`,
       { params },
     )
+    return data
+  })
+
+// One page of the whole change log, newest first, filtered by query.
+export const getChanges = (
+  query: ChangesQuery = {},
+): Promise<ChangesPage | null> =>
+  withErrorHandling(async () => {
+    const { data } = await consoleClient.get<ChangesPage>('/changes', {
+      params: query,
+    })
+    return data
+  })
+
+// What the change log can be filtered by: its users and stations.
+export const getChangeFilters = (): Promise<ChangeFilters | null> =>
+  withErrorHandling(async () => {
+    const { data } =
+      await consoleClient.get<ChangeFilters>('/changes/filters')
     return data
   })
 

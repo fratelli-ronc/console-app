@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { History, Info, UploadCloud } from 'lucide-react'
+import { Info, UploadCloud } from 'lucide-react'
 import {
   getStationChanges,
   getStationPendingDiff,
@@ -11,6 +11,7 @@ import {
   type StationPendingDiff,
 } from '@/client'
 import {
+  ChangeSetCard,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,7 +26,7 @@ import {
 } from '@/components'
 import {
   ENTITY_NOUNS,
-  changeKindLabel,
+  agree,
   entityLabel,
   fieldLabel,
   formatChangeValue,
@@ -56,11 +57,6 @@ const OP_STYLES = {
     dot: 'bg-destructive',
   },
 }
-
-// Participles agree with the entity: "gruppo modificato", "variabile
-// modificata".
-const agree = (change: EntityChange, stem: string) =>
-  stem + (change.entityType === 'group' ? 'o' : 'a')
 
 interface StationChangesDialogProps {
   // The station shown; null keeps the dialog closed.
@@ -473,12 +469,6 @@ interface HistoryViewProps {
   currentUsername: string | undefined
 }
 
-const ENTRY_OPS: Record<EntityChange['op'], string> = {
-  create: 'creat',
-  update: 'modificat',
-  delete: 'eliminat',
-}
-
 const HistoryView: React.FC<HistoryViewProps> = ({
   sets,
   hasMore,
@@ -513,55 +503,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({
             {index === deployedFrom && (
               <DeployMarker lastDeployedAt={lastDeployedAt} />
             )}
-            <li className="rounded-lg border border-border">
-              <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5">
-                <History size={14} className="text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground">
-                  {changeKindLabel(set.kind)}
-                </span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {userLabel(set.user, set.userId, currentUsername)} ·{' '}
-                  {formatDateTime(set.createdAt)}
-                </span>
-              </div>
-              <ul className="divide-y divide-border/60 text-sm">
-                {set.entries.map((entry) => (
-                  <li key={entry.id} className="px-4 py-2">
-                    <span className="text-foreground">
-                      {ENTITY_NOUNS[entry.entityType]} {entityLabel(entry)}
-                    </span>{' '}
-                    <span className="text-muted-foreground">
-                      (ID {entry.businessId}){' '}
-                      {agree(entry, ENTRY_OPS[entry.op])}
-                    </span>
-                    {entry.op === 'update' && (
-                      <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                        {entry.changedFields.map((field) => (
-                          <li key={field} className="break-all">
-                            {fieldLabel(entry.entityType, field)}:{' '}
-                            {formatChangeValue(
-                              entry.entityType,
-                              field,
-                              entry.before?.[field],
-                              names,
-                            )}{' '}
-                            →{' '}
-                            <span className="text-foreground">
-                              {formatChangeValue(
-                                entry.entityType,
-                                field,
-                                entry.after?.[field],
-                                names,
-                              )}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </li>
+            <ChangeSetCard
+              set={set}
+              names={names}
+              currentUsername={currentUsername}
+            />
           </Fragment>
         ))}
       </ol>
