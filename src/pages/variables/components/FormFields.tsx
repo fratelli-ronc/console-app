@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 // fields than the app's single-column forms.
 
 const INPUT =
-  'h-9 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground placeholder:text-placeholder outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition disabled:opacity-50 disabled:cursor-not-allowed'
+  'h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground placeholder:text-placeholder outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition disabled:opacity-50 disabled:cursor-not-allowed'
 
 interface FieldShellProps {
   id: string
