@@ -360,6 +360,10 @@ export interface StationDeploymentStatus {
   stationId: number
   status: DeploymentStatusValue
   pending: boolean
+  // Servers that may still hold the station's files from its last deploy:
+  // a station with no groups left still has something to deploy while it
+  // lists any.
+  deployedServerIps: string[]
   lastDeployedAt: string | null
   lastDeployedByUserId: number | null
   // null whenever lastDeployedByUserId is, or the lookup failed.
@@ -498,11 +502,24 @@ export interface GroupDeploymentStatus {
   pending: boolean
 }
 
+// A deleted station whose last deploy left config files on serverIps.
+// Deploying its id clears them off. id is internal, stationId the business
+// id.
+export interface DeletedStationDeployment {
+  id: number
+  stationId: number
+  name: string | null
+  deletedAt: string
+  serverIps: string[]
+}
+
 // Every station and group is included, even ones with no deployment status
-// row yet (reported as "not_deployed" / pending: false).
+// row yet (reported as "not_deployed" / pending: false). deletedStations
+// are the deleted stations whose files may still be on some server.
 export interface DeploymentStatuses {
   stations: StationDeploymentStatus[]
   groups: GroupDeploymentStatus[]
+  deletedStations: DeletedStationDeployment[]
 }
 
 // One config file rendered by a deploy: `content` is the exact body to

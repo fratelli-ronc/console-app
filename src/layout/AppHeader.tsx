@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const ROUTE_LABELS: Record<string, string> = {
+  activity: 'Attività',
   deploy: 'Deploy',
   new: 'Nuovo',
   profilation: 'Profilazione',

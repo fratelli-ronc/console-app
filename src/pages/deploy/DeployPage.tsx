@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { History, ListChecks, Rocket, UploadCloud } from 'lucide-react'
+import { History, ListChecks, Rocket, Trash2, UploadCloud } from 'lucide-react'
 import {
   DataTable,
   type DataTableColumn,
@@ -17,6 +17,7 @@ import {
   getDeploymentStatuses,
   listGroups,
   listStations,
+  DeletedStationDeployment,
   DeploymentStatusValue,
   Group,
   GroupDeploymentStatus,
@@ -25,7 +26,6 @@ import {
 } from '@/client'
 import { listServers, type Server } from '@/client/coolify'
 import { formatDateTime, userLabel, type ChangeNames } from '@/lib/changeLog'
-import { cn } from '@/lib/utils'
 import { useUserStore } from '@/store'
 import {
   DeployResultDialog,
@@ -73,6 +73,9 @@ export const DeployPage: React.FC = () => {
   const [groupStatuses, setGroupStatuses] = useState<
     Record<number, GroupDeploymentStatus>
   >({})
+  const [deletedStations, setDeletedStations] = useState<
+    DeletedStationDeployment[]
+  >([])
   const [deployDialog, setDeployDialog] = useState<DeployDialogState | null>(
     null,
   )
@@ -101,8 +104,16 @@ export const DeployPage: React.FC = () => {
       setGroupStatuses(
         Object.fromEntries(statusesRes.groups.map((g) => [g.groupId, g])),
       )
+      setDeletedStations(statusesRes.deletedStations ?? [])
     }
     setSelectedKeys(new Set())
+  }
+
+  // A deleted station leaves the list once its files are cleared off every
+  // server; only the API knows whether that happened.
+  const refreshDeletedStations = async () => {
+    const statusesRes = await getDeploymentStatuses()
+    if (statusesRes) setDeletedStations(statusesRes.deletedStations ?? [])
   }
 
   const handleReload = async () => {
@@ -158,10 +169,12 @@ export const DeployPage: React.FC = () => {
   const stationStatusValue = (station: Station): DeploymentStatusValue =>
     stationStatuses[station.id]?.status ?? 'not_deployed'
 
-  // Disabled groups are skipped on deploy, so a station needs at least one
-  // enabled group to have anything to distribute.
+  // Disabled stations and groups are still deployed, carrying enabled: false.
+  // A station with no groups left can still be deployed while its last
+  // deploy left files on some server: the deploy clears them off.
   const canDeploy = (station: Station) =>
-    !!station.enabled && stationGroups(station).some((g) => g.enabled)
+    stationGroups(station).length > 0 ||
+    (stationStatuses[station.id]?.deployedServerIps?.length ?? 0) > 0
 
   const serverOptions = useMemo(
     () => [
@@ -180,6 +193,20 @@ export const DeployPage: React.FC = () => {
     { value: 'pending', label: 'Modifiche in sospeso' },
     { value: 'not_deployed', label: 'Non distribuito' },
   ]
+
+  // Deleted stations always have a removal to deploy, so only the
+  // "pending" status filter keeps them.
+  const filteredDeleted = deletedStations.filter((station) => {
+    if (serverIp && !station.serverIps.includes(serverIp)) return false
+    if (statusFilter && statusFilter !== 'pending') return false
+
+    const q = search.trim().toLowerCase()
+    if (!q) return true
+    return (
+      String(station.stationId).includes(q) ||
+      (station.name ?? '').toLowerCase().includes(q)
+    )
+  })
 
   const filtered = (stations ?? []).filter((station) => {
     const ownGroups = stationGroups(station)
@@ -268,6 +295,8 @@ export const DeployPage: React.FC = () => {
 
     // A partial deploy still reports the stations that went through.
     applyDeployResult(outcome.result.statuses)
+    if (deletedStations.some((s) => ids.includes(s.id)))
+      void refreshDeletedStations()
     setDeployDialog({ phase: 'done', stationCount, result: outcome.result })
     return !outcome.result.error
   }
@@ -294,6 +323,7 @@ export const DeployPage: React.FC = () => {
           </div>
           <div className="text-xs text-muted-foreground">
             ID {station.stationId}
+            {!station.enabled && ' · Disabilitata'}
           </div>
         </>
       ),
@@ -339,15 +369,6 @@ export const DeployPage: React.FC = () => {
       key: 'status',
       header: 'Stato',
       render: (station) => {
-        if (!station.enabled) {
-          return (
-            <StatusBadge
-              dot="bg-muted-foreground"
-              badge="border-border text-muted-foreground bg-muted/50"
-              label="Disabilitata"
-            />
-          )
-        }
         if (deployingIds.has(station.id)) {
           return (
             <StatusBadge
@@ -454,15 +475,76 @@ export const DeployPage: React.FC = () => {
     },
   ]
 
+  const deletedColumns: DataTableColumn<DeletedStationDeployment>[] = [
+    {
+      key: 'name',
+      header: 'Stazione',
+      render: (station) => (
+        <>
+          <div className="font-medium text-foreground">
+            {station.name || '—'}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            ID {station.stationId}
+          </div>
+        </>
+      ),
+    },
+    {
+      key: 'server',
+      header: 'Server',
+      cellClassName: 'text-muted-foreground',
+      render: (station) => (
+        <span>
+          {station.serverIps
+            .map((ip) => serversByIp.get(ip)?.name ?? ip)
+            .join(', ')}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Stato',
+      render: (station) =>
+        deployingIds.has(station.id) ? (
+          <StatusBadge
+            pending
+            dot=""
+            badge="border-secondary/30 text-secondary-foreground bg-secondary/10"
+            label="Rimozione…"
+          />
+        ) : (
+          <StatusBadge
+            dot="bg-destructive"
+            badge="border-destructive/30 text-destructive bg-destructive/10"
+            label={`Eliminata il ${formatDateTime(station.deletedAt)}`}
+          />
+        ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      cellClassName: 'text-right',
+      render: (station) => (
+        <OutlinedButton
+          type="button"
+          className="inline-flex items-center gap-2"
+          disabled={deployingIds.has(station.id)}
+          onClick={() => runDeploy([station.id])}
+        >
+          <Trash2 size={14} />
+          Rimuovi dai server
+        </OutlinedButton>
+      ),
+    },
+  ]
+
   const renderGroups = (station: Station) => (
     <ul className="divide-y divide-border/60 py-1 pl-24 pr-4">
       {stationGroups(station).map((group) => (
         <li
           key={group.id}
-          className={cn(
-            'grid grid-cols-[minmax(0,16rem)_minmax(0,16rem)_minmax(0,1fr)] items-center gap-6 py-2.5',
-            !group.enabled && 'opacity-60',
-          )}
+          className="grid grid-cols-[minmax(0,16rem)_minmax(0,16rem)_minmax(0,1fr)] items-center gap-6 py-2.5"
         >
           <div>
             <div className="text-foreground">{group.name || '—'}</div>
@@ -478,21 +560,20 @@ export const DeployPage: React.FC = () => {
           ) : (
             <span className="text-muted-foreground">—</span>
           )}
-          <div>
-            {!group.enabled ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {!group.enabled && (
               <StatusBadge
                 dot="bg-muted-foreground"
                 badge="border-border text-muted-foreground bg-muted/50"
                 label="Disabilitato"
               />
-            ) : (
-              groupStatuses[group.id]?.pending && (
-                <StatusBadge
-                  dot="bg-secondary"
-                  badge="border-secondary/30 text-secondary-foreground bg-secondary/10"
-                  label="Modifiche in sospeso"
-                />
-              )
+            )}
+            {groupStatuses[group.id]?.pending && (
+              <StatusBadge
+                dot="bg-secondary"
+                badge="border-secondary/30 text-secondary-foreground bg-secondary/10"
+                label="Modifiche in sospeso"
+              />
             )}
           </div>
         </li>
@@ -560,7 +641,6 @@ export const DeployPage: React.FC = () => {
         data={filtered}
         loading={loading}
         getRowKey={(station) => station.id}
-        rowClassName={(station) => (station.enabled ? '' : 'opacity-60')}
         selection={{
           selectedKeys,
           onSelectionChange: setSelectedKeys,
@@ -578,6 +658,38 @@ export const DeployPage: React.FC = () => {
           description: 'Prova a modificare la ricerca o i filtri.',
         }}
       />
+
+      {filteredDeleted.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">
+                Stazioni eliminate
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                La loro configurazione è ancora presente sui server.
+                Rimuovila per completare l'eliminazione.
+              </p>
+            </div>
+            {filteredDeleted.length > 1 && (
+              <OutlinedButton
+                type="button"
+                className="inline-flex items-center gap-2"
+                disabled={filteredDeleted.some((s) => deployingIds.has(s.id))}
+                onClick={() => runDeploy(filteredDeleted.map((s) => s.id))}
+              >
+                <Trash2 size={14} />
+                Rimuovi tutte
+              </OutlinedButton>
+            )}
+          </div>
+          <DataTable
+            columns={deletedColumns}
+            data={filteredDeleted}
+            getRowKey={(station) => station.id}
+          />
+        </div>
+      )}
 
       <StationChangesDialog
         station={reviewedStation}

@@ -142,7 +142,7 @@ export const DeployResultDialog: React.FC<Props> = ({
       onOpenChange={(open) => !open && !isDeploying && onClose()}
     >
       <DialogContent
-        className="max-w-2xl"
+        className="sm:max-w-2xl"
         showCloseButton={!isDeploying}
         // console-api carries the deploy through even if nobody is
         // listening — closing the dialog would only hide its outcome.
@@ -157,7 +157,9 @@ export const DeployResultDialog: React.FC<Props> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="h-80">
+        {/* min-w-0: as a grid item it would otherwise grow to fit its
+            longest line instead of letting the rows truncate. */}
+        <div className="h-80 min-w-0">
           {state?.phase === 'preparing' && (
             <div className="flex flex-col items-center justify-center h-full gap-3">
               <RunSpinner className="h-5 w-5" />
@@ -441,7 +443,7 @@ const ServerRow: React.FC<ServerRowProps> = ({
               : 'rimozione configurazioni precedenti'}
           </span>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto shrink-0">
           <StatusBadge
             dot={state.dot}
             badge={state.badge}
