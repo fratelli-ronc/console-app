@@ -521,7 +521,7 @@ export const DeployPage: React.FC = () => {
         <div className="inline-flex items-center gap-2">
           <TextButton
             type="button"
-            className="inline-flex items-center gap-2"
+            className="inline-flex h-8 items-center gap-2"
             onClick={() => setReviewedId(station.id)}
           >
             {stationStatuses[station.id]?.status === 'pending' ? (
@@ -538,7 +538,7 @@ export const DeployPage: React.FC = () => {
           </TextButton>
           <OutlinedButton
             type="button"
-            className="inline-flex items-center gap-2"
+            className="inline-flex h-8 items-center gap-2 px-3"
             disabled={!canDeploy(station) || deployingIds.has(station.id)}
             onClick={() => runDeploy([station.id])}
           >
@@ -603,7 +603,7 @@ export const DeployPage: React.FC = () => {
       render: (station) => (
         <OutlinedButton
           type="button"
-          className="inline-flex items-center gap-2"
+          className="inline-flex h-8 items-center gap-2 px-3"
           disabled={deployingIds.has(station.id)}
           onClick={() => runDeploy([station.id])}
         >

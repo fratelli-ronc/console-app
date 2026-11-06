@@ -57,7 +57,7 @@ export const SearchableCellSelect: React.FC<SearchableCellSelectProps> = ({
   return (
     <Popover open onOpenChange={(next) => !next && onCancel()}>
       <PopoverAnchor asChild>
-        <div className="flex items-center justify-between gap-2 text-foreground text-sm select-none">
+        <div className="flex h-5 items-center justify-between gap-2 text-foreground text-sm select-none">
           <span className="truncate">{currentLabel}</span>
           <ChevronDown size={13} className="shrink-0 text-muted-foreground" />
         </div>
@@ -66,7 +66,7 @@ export const SearchableCellSelect: React.FC<SearchableCellSelectProps> = ({
       <PopoverContent
         align="start"
         alignOffset={-16}
-        sideOffset={16}
+        sideOffset={10}
         onOpenAutoFocus={(e) => {
           e.preventDefault()
           inputRef.current?.focus()

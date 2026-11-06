@@ -71,7 +71,7 @@ export const CellSelect: React.FC<CellSelectProps> = ({
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex items-center justify-between gap-2 text-foreground text-sm select-none">
+      <div className="flex h-5 items-center justify-between gap-2 text-foreground text-sm select-none">
         <span>{currentLabel}</span>
         <ChevronDown size={13} className="shrink-0 text-muted-foreground" />
       </div>
@@ -80,7 +80,7 @@ export const CellSelect: React.FC<CellSelectProps> = ({
         ref={listRef}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="absolute -left-4 top-[calc(100%+12px)] mt-1 z-50 w-[calc(100%+32px)] min-w-50 bg-popover text-popover-foreground border rounded-md shadow-md p-1 outline-none"
+        className="absolute -left-4 top-[calc(100%+6px)] mt-1 z-50 w-[calc(100%+32px)] min-w-50 bg-popover text-popover-foreground border rounded-md shadow-md p-1 outline-none"
       >
         {options.map((option, i) => (
           <li

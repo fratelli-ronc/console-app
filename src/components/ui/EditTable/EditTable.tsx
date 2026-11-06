@@ -150,7 +150,7 @@ const BooleanCell: React.FC<{ checked: boolean }> = ({ checked }) => (
 )
 
 const headerCellClass =
-  'text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap'
+  'text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap'
 
 // The header drag ghost only slides sideways — columns reorder on one axis.
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({
@@ -510,7 +510,7 @@ function EditTableInner<
           <thead>
             <tr className="sticky top-0 bg-muted z-10">
               {selection && (
-                <th className="w-10 px-4 py-3 border-b border-r border-border">
+                <th className="w-10 px-4 py-2.5 border-b border-r border-border">
                   <Checkbox
                     checked={
                       selectableKeys.length > 0 &&
@@ -587,7 +587,7 @@ function EditTableInner<
                   {selection && (
                     <td
                       className={cn(
-                        'px-4 py-3.5 text-center align-middle border-r border-border',
+                        'px-4 py-2 text-center align-middle border-r border-border',
                         rowIndex < currentData.length - 1 &&
                           'border-b border-border',
                       )}
@@ -629,7 +629,7 @@ function EditTableInner<
                         return (
                           <td
                             key={key}
-                            className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
+                            className="px-4 py-2 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
                           >
                             <SelectEditor
                               value={inputValue}
@@ -652,7 +652,7 @@ function EditTableInner<
                       return (
                         <td
                           key={key}
-                          className="px-4 py-3.5 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
+                          className="px-4 py-2 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
                         >
                           <input
                             ref={inputRef}
@@ -726,7 +726,7 @@ function EditTableInner<
                                   break
                               }
                             }}
-                            className="w-full bg-transparent outline-none text-foreground text-sm"
+                            className="block h-5 w-full bg-transparent outline-none text-foreground text-sm"
                           />
                         </td>
                       )
@@ -834,7 +834,7 @@ function EditTableInner<
                           }
                         }}
                         className={cn(
-                          'px-4 py-3.5 text-muted-foreground focus:outline-none border-r border-border last:border-r-0 whitespace-nowrap',
+                          'px-4 py-2 text-muted-foreground focus:outline-none border-r border-border last:border-r-0 whitespace-nowrap',
                           col.type === 'boolean' && 'text-center',
                           modified && 'bg-yellow-500/10',
                           conflicted && 'bg-destructive/15',

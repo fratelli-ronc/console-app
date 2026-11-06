@@ -32,7 +32,7 @@ const DataTableSkeleton: React.FC<DataTableSkeletonProps> = ({
     {Array.from({ length: rows }).map((_, i) => (
       <tr key={i} className="border-b border-border last:border-0">
         {Array.from({ length: columns }).map((_, j) => (
-          <td key={j} className="px-4 py-7">
+          <td key={j} className="px-4 py-4">
             <div
               className="h-4 bg-muted rounded animate-pulse"
               style={{ width: SKELETON_WIDTHS[j % SKELETON_WIDTHS.length] }}
@@ -131,9 +131,9 @@ export function DataTable<T>({
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-muted/50 border-b border-border">
-            {expansion && <th className="w-10 pl-4 pr-0 py-3" />}
+            {expansion && <th className="w-10 pl-4 pr-0 py-2.5" />}
             {selection && (
-              <th className="w-10 px-4 py-3">
+              <th className="w-10 px-4 py-2.5">
                 <Checkbox
                   checked={
                     selectableKeys.length > 0 &&
@@ -157,7 +157,7 @@ export function DataTable<T>({
               <th
                 key={col.key}
                 className={cn(
-                  'text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap',
+                  'text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap',
                   col.headerClassName,
                 )}
               >
@@ -192,7 +192,7 @@ export function DataTable<T>({
                     )}
                   >
                     {expansion && (
-                      <td className="pl-4 pr-0 py-3.5">
+                      <td className="pl-4 pr-0 py-2">
                         {expandable && (
                           <button
                             type="button"
@@ -213,7 +213,7 @@ export function DataTable<T>({
                       </td>
                     )}
                     {selection && (
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-2">
                         <Checkbox
                           checked={selected}
                           disabled={!selectable}
@@ -231,7 +231,7 @@ export function DataTable<T>({
                       <td
                         key={col.key}
                         className={cn(
-                          'px-4 py-3.5 whitespace-nowrap',
+                          'px-4 py-2 whitespace-nowrap',
                           col.cellClassName,
                         )}
                       >

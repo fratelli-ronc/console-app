@@ -118,14 +118,14 @@ export const StationTagsPage: React.FC = () => {
               setFormTag(tag)
               setFormOpen(true)
             }}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
+            className="inline-flex h-8 items-center gap-1.5 px-2.5 rounded-md text-xs text-muted-foreground hover:bg-accent hover:text-foreground border border-border transition-colors cursor-pointer"
           >
             <Pencil size={12} />
             Rinomina
           </button>
           <button
             onClick={() => setTagToDelete(tag)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border transition-colors cursor-pointer"
+            className="inline-flex h-8 items-center gap-1.5 px-2.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-border transition-colors cursor-pointer"
           >
             <Trash2 size={12} />
             Elimina
