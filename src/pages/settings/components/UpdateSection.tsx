@@ -7,7 +7,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FilledButton, OutlinedButton } from '@/components'
+import { FilledButton, OutlinedButton, ReleaseNotes } from '@/components'
 import { useUpdater } from '@/hooks'
 
 /** Best-effort format for the updater's `date` field (`2024-01-01 12:00:00.0 +00:00:00`). */
@@ -105,9 +105,10 @@ export const UpdateSection: React.FC = () => {
           </div>
 
           {update.body && (
-            <p className="text-xs text-muted-foreground whitespace-pre-line max-h-40 overflow-y-auto">
-              {update.body}
-            </p>
+            <ReleaseNotes
+              markdown={update.body}
+              className="max-h-72 overflow-y-auto pr-1 text-xs"
+            />
           )}
 
           {installing && (

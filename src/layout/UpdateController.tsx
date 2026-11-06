@@ -9,6 +9,7 @@ import {
   DialogTitle,
   FilledButton,
   OutlinedButton,
+  ReleaseNotes,
 } from '@/components'
 import { useUpdater } from '@/hooks'
 
@@ -33,17 +34,24 @@ export const UpdateController: React.FC = () => {
       open={open}
       onOpenChange={(next) => !next && !installing && setDismissed(true)}
     >
-      <DialogContent showCloseButton={!installing}>
+      <DialogContent
+        showCloseButton={!installing}
+        className="flex max-h-[85vh] flex-col sm:max-w-2xl"
+      >
         <DialogHeader>
           <DialogTitle>Aggiornamento disponibile</DialogTitle>
           <DialogDescription>
             {update
-              ? `La versione ${update.version} è pronta per l'installazione.${
-                  update.body ? ` ${update.body}` : ''
-                }`
+              ? `La versione ${update.version} è pronta per l'installazione.`
               : ''}
           </DialogDescription>
         </DialogHeader>
+        {update?.body && (
+          <ReleaseNotes
+            markdown={update.body}
+            className="-mx-6 min-h-0 flex-1 overflow-y-auto border-y border-border px-6 py-4"
+          />
+        )}
         <DialogFooter>
           {!installing && (
             <OutlinedButton type="button" onClick={() => setDismissed(true)}>
