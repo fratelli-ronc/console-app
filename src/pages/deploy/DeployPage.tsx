@@ -17,6 +17,8 @@ import {
   getDeploymentStatuses,
   listGroups,
   listStations,
+  revertStation,
+  ConfigVersion,
   DeletedStationDeployment,
   DeploymentStatusValue,
   Group,
@@ -26,12 +28,14 @@ import {
 } from '@/client'
 import { listServers, type Server } from '@/client/coolify'
 import { formatDateTime, userLabel, type ChangeNames } from '@/lib/changeLog'
+import { revertedDeployError } from '@/lib/configVersions'
 import { useUserStore } from '@/store'
 import {
   DeployResultDialog,
   type DeployDialogState,
 } from './components/DeployResultDialog'
 import { StationChangesDialog } from './components/StationChangesDialog'
+import { versionLabel } from './components/ConfigVersionsView'
 
 const distinctServerIps = (groups: Group[]) =>
   Array.from(
@@ -54,9 +58,7 @@ export const DeployPage: React.FC = () => {
   const currentUser = useUserStore((state) => state.user)
   const [stations, setStations] = useState<Station[] | null>(null)
   const [groups, setGroups] = useState<Group[]>([])
-  const [serversByIp, setServersByIp] = useState<Map<string, Server>>(
-    new Map(),
-  )
+  const [serversByIp, setServersByIp] = useState<Map<string, Server>>(new Map())
   const [reloading, setReloading] = useState(false)
   const [search, setSearch] = useState('')
   const [serverIp, setServerIp] = useState('')
@@ -82,13 +84,9 @@ export const DeployPage: React.FC = () => {
   const [reviewedId, setReviewedId] = useState<number | null>(null)
 
   const fetchData = async () => {
-    const [stationsRes, groupsRes, serversRes, statusesRes] =
-      await Promise.all([
-        listStations(),
-        listGroups(),
-        listServers(),
-        getDeploymentStatuses(),
-      ])
+    const [stationsRes, groupsRes, serversRes, statusesRes] = await Promise.all(
+      [listStations(), listGroups(), listServers(), getDeploymentStatuses()],
+    )
     if (groupsRes) setGroups(groupsRes)
     if (serversRes) setServersByIp(new Map(serversRes.map((s) => [s.ip, s])))
 
@@ -299,6 +297,83 @@ export const DeployPage: React.FC = () => {
       void refreshDeletedStations()
     setDeployDialog({ phase: 'done', stationCount, result: outcome.result })
     return !outcome.result.error
+  }
+
+  // Reverts the station to version and deploys it, followed in the same
+  // dialog as a deploy. The station's groups and fields change with it, so
+  // everything is reloaded once it has been written.
+  const runRevert = async (
+    stationId: number,
+    version: ConfigVersion,
+    force: boolean,
+  ) => {
+    const revert = {
+      versionLabel: versionLabel(version, currentUser?.username),
+    }
+    setDeployingIds((prev) => new Set([...prev, stationId]))
+    setDeployDialog({ phase: 'preparing', stationCount: 1, revert })
+    const outcome = await revertStation(stationId, version.id, force, {
+      onServers: (servers) =>
+        setDeployDialog({ phase: 'running', stationCount: 1, servers, revert }),
+      onServer: (server) =>
+        setDeployDialog((prev) =>
+          prev?.phase === 'running'
+            ? {
+                ...prev,
+                servers: prev.servers.map((s) =>
+                  s.serverIp === server.serverIp ? server : s,
+                ),
+              }
+            : prev,
+        ),
+    })
+    setDeployingIds((prev) => {
+      const next = new Set(prev)
+      next.delete(stationId)
+      return next
+    })
+
+    if (!outcome) {
+      setDeployDialog(null)
+      return
+    }
+    switch (outcome.kind) {
+      case 'warnings':
+        setDeployDialog({
+          phase: 'rejected',
+          message:
+            "La stazione è cambiata dopo l'anteprima. Riapri l'anteprima del ripristino e conferma di nuovo.",
+          groups: [],
+          revert,
+        })
+        return
+      case 'refused':
+        setDeployDialog({
+          phase: 'rejected',
+          message: outcome.refusal.message,
+          groups: outcome.refusal.groups,
+          reasons: outcome.refusal.reasons,
+          revert,
+        })
+        return
+      case 'reverted':
+        setDeployDialog({
+          phase: 'rejected',
+          message: revertedDeployError(outcome.message),
+          groups: [],
+          revert: { ...revert, changes: outcome.changes, written: true },
+        })
+        break
+      case 'ran':
+        setDeployDialog({
+          phase: 'done',
+          stationCount: 1,
+          result: outcome.result,
+          revert: { ...revert, changes: outcome.changes },
+        })
+        break
+    }
+    await fetchData()
   }
 
   const handleBulkDeploy = async () => {
@@ -667,8 +742,8 @@ export const DeployPage: React.FC = () => {
                 Stazioni eliminate
               </h2>
               <p className="text-sm text-muted-foreground">
-                La loro configurazione è ancora presente sui server.
-                Rimuovila per completare l'eliminazione.
+                La loro configurazione è ancora presente sui server. Rimuovila
+                per completare l'eliminazione.
               </p>
             </div>
             {filteredDeleted.length > 1 && (
@@ -701,10 +776,16 @@ export const DeployPage: React.FC = () => {
           canDeploy(reviewedStation) &&
           !deployingIds.has(reviewedStation.id)
         }
+        busy={reviewedId != null && deployingIds.has(reviewedId)}
         onDeploy={() => {
           if (reviewedId == null) return
           setReviewedId(null)
           void runDeploy([reviewedId])
+        }}
+        onRevert={(version, force) => {
+          if (reviewedId == null) return
+          setReviewedId(null)
+          void runRevert(reviewedId, version, force)
         }}
         onClose={() => setReviewedId(null)}
       />

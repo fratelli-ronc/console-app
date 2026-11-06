@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Download,
   FileJson,
+  RotateCcw,
   Server,
 } from 'lucide-react'
 import type {
@@ -15,8 +16,14 @@ import type {
   DeployServer,
   DeployServerState,
   DeployStationsResponse,
+  RevertChanges,
+  RevertCounts,
 } from '@/client'
 import { saveConfigFile, saveConfigFiles } from '@/lib/configFiles'
+import {
+  translateRevertMessage,
+  translateRevertReason,
+} from '@/lib/configVersions'
 import { cn } from '@/lib/utils'
 import {
   Dialog,
@@ -35,12 +42,29 @@ import {
 // - running: the plan arrived, each server is followed as it is pinged and
 //   synced.
 // - done: the deploy ran to the end, fully or not (see result.error).
-// - rejected: refused before any server was called — nothing changed.
-export type DeployDialogState =
+// - rejected: refused before any server was called — nothing changed,
+//   unless revert.written says the station was reverted all the same.
+// revert is set on all of them when the deploy follows a revert.
+export type DeployDialogState = (
   | { phase: 'preparing'; stationCount: number }
   | { phase: 'running'; stationCount: number; servers: DeployServer[] }
   | { phase: 'done'; stationCount: number; result: DeployStationsResponse }
-  | { phase: 'rejected'; message: string; groups: DeployConfigIssue[] }
+  | {
+      phase: 'rejected'
+      message: string
+      groups: DeployConfigIssue[]
+      reasons?: string[]
+    }
+) & { revert?: RevertContext }
+
+// The revert a deploy follows: which version ("04/11/2026 10:12 di Mario"),
+// what it changed once known, and whether the station was already written
+// back when the deploy could not start.
+export interface RevertContext {
+  versionLabel: string
+  changes?: RevertChanges | null
+  written?: boolean
+}
 
 // Messages console-api sends verbatim. Anything unrecognised is shown as
 // it came. Unreachable / failed servers aren't here: their summary is
@@ -150,11 +174,7 @@ export const DeployResultDialog: React.FC<Props> = ({
         onPointerDownOutside={(e) => isDeploying && e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>
-            {state?.phase === 'rejected'
-              ? 'Distribuzione non riuscita'
-              : 'Distribuzione'}
-          </DialogTitle>
+          <DialogTitle>{dialogTitle(state)}</DialogTitle>
         </DialogHeader>
 
         {/* min-w-0: as a grid item it would otherwise grow to fit its
@@ -164,11 +184,23 @@ export const DeployResultDialog: React.FC<Props> = ({
             <div className="flex flex-col items-center justify-center h-full gap-3">
               <RunSpinner className="h-5 w-5" />
               <p className="text-sm text-muted-foreground">
-                Generazione della configurazione per{' '}
-                <span className="text-foreground font-medium">
-                  {stationsLabel(state.stationCount)}
-                </span>
-                …
+                {state.revert ? (
+                  <>
+                    Ripristino della versione del{' '}
+                    <span className="text-foreground font-medium">
+                      {state.revert.versionLabel}
+                    </span>
+                    …
+                  </>
+                ) : (
+                  <>
+                    Generazione della configurazione per{' '}
+                    <span className="text-foreground font-medium">
+                      {stationsLabel(state.stationCount)}
+                    </span>
+                    …
+                  </>
+                )}
               </p>
             </div>
           )}
@@ -187,10 +219,18 @@ export const DeployResultDialog: React.FC<Props> = ({
           {state?.phase === 'done' && (
             <ServerList
               summary={
-                <DoneSummary
-                  stationCount={state.stationCount}
-                  result={state.result}
-                />
+                <>
+                  {state.revert && (
+                    <RevertNote
+                      revert={state.revert}
+                      deployFailed={!!state.result.error}
+                    />
+                  )}
+                  <DoneSummary
+                    stationCount={state.stationCount}
+                    result={state.result}
+                  />
+                </>
               }
               servers={state.result.servers}
               files={state.result.files}
@@ -200,9 +240,17 @@ export const DeployResultDialog: React.FC<Props> = ({
             />
           )}
 
-          {state?.phase === 'rejected' && (
-            <IssueList message={state.message} groups={state.groups} />
-          )}
+          {state?.phase === 'rejected' &&
+            (state.revert ? (
+              <RevertIssue
+                revert={state.revert}
+                message={state.message}
+                reasons={state.reasons ?? []}
+                groups={state.groups}
+              />
+            ) : (
+              <IssueList message={state.message} groups={state.groups} />
+            ))}
         </div>
 
         <DialogFooter>
@@ -225,6 +273,115 @@ export const DeployResultDialog: React.FC<Props> = ({
     </Dialog>
   )
 }
+
+const dialogTitle = (state: DeployDialogState | null) => {
+  if (state?.revert) {
+    if (state.phase !== 'rejected') return 'Ripristino versione'
+    return state.revert.written
+      ? 'Distribuzione non partita'
+      : 'Ripristino non riuscito'
+  }
+  return state?.phase === 'rejected'
+    ? 'Distribuzione non riuscita'
+    : 'Distribuzione'
+}
+
+// "2 modificati, 1 nuovo" for one kind of entity, empty when untouched.
+const countsLabel = (counts: RevertCounts, noun: [string, string]) => {
+  const parts = [
+    counts.created > 0 &&
+      `${counts.created} nuov${counts.created === 1 ? noun[0] : noun[1]}`,
+    counts.updated > 0 &&
+      `${counts.updated} modificat${counts.updated === 1 ? noun[0] : noun[1]}`,
+    counts.deleted > 0 &&
+      `${counts.deleted} eliminat${counts.deleted === 1 ? noun[0] : noun[1]}`,
+  ].filter(Boolean)
+  return parts.join(', ')
+}
+
+const revertChangesLabel = (changes: RevertChanges) => {
+  const parts = [
+    changes.station.updated > 0 && 'stazione modificata',
+    countsLabel(changes.groups, ['o', 'i']) &&
+      `gruppi: ${countsLabel(changes.groups, ['o', 'i'])}`,
+    countsLabel(changes.variables, ['a', 'e']) &&
+      `variabili: ${countsLabel(changes.variables, ['a', 'e'])}`,
+  ].filter(Boolean)
+  return parts.length > 0
+    ? `${parts.join(' · ')}.`
+    : 'La stazione corrispondeva già alla versione.'
+}
+
+// What the revert did, above the deploy's own summary. deployFailed: the
+// deploy after it did not fully go through, so the station is left
+// reverted and pending.
+const RevertNote: React.FC<{
+  revert: RevertContext
+  deployFailed?: boolean
+}> = ({ revert, deployFailed }) => (
+  <div className="flex items-start gap-3 px-3 py-2.5 mb-2 rounded-lg border bg-muted/40 border-border">
+    <RotateCcw size={16} className="mt-0.5 shrink-0 text-muted-foreground" />
+    <div className="min-w-0">
+      <p className="text-sm font-medium text-foreground">
+        Stazione riportata alla versione del {revert.versionLabel}
+      </p>
+      {revert.changes && (
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {revertChangesLabel(revert.changes)}
+        </p>
+      )}
+      {deployFailed && (
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Il ripristino resta salvato ma la stazione è in sospeso:
+          distribuiscila di nuovo quando il problema è risolto.
+        </p>
+      )}
+    </div>
+  </div>
+)
+
+interface RevertIssueProps {
+  revert: RevertContext
+  message: string
+  reasons: string[]
+  groups: DeployConfigIssue[]
+}
+
+// A revert that did not get through: refused before anything was written,
+// or written but not deployed.
+const RevertIssue: React.FC<RevertIssueProps> = ({
+  revert,
+  message,
+  reasons,
+  groups,
+}) => (
+  <div className="flex flex-col h-full gap-3">
+    {revert.written && <RevertNote revert={revert} />}
+    <div className="flex items-start gap-2">
+      <AlertCircle size={16} className="text-destructive shrink-0 mt-0.5" />
+      <div className="min-w-0 text-sm">
+        <p className="text-destructive">{translateRevertMessage(message)}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {revert.written
+            ? 'La stazione è stata ripristinata ma non distribuita: resta in sospeso. Distribuiscila di nuovo quando il problema è risolto.'
+            : 'Nessuna modifica è stata applicata.'}
+        </p>
+      </div>
+    </div>
+    {(reasons.length > 0 || groups.length > 0) && (
+      <ul className="overflow-y-auto flex-1 list-disc space-y-1 pl-10 text-sm text-muted-foreground">
+        {reasons.map((reason) => (
+          <li key={reason}>{translateRevertReason(reason)}</li>
+        ))}
+        {groups.map((issue) => (
+          <li key={issue.groupId}>
+            Gruppo {issue.groupId}: {translateRevertMessage(issue.reason)}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+)
 
 type Tone = 'progress' | 'success' | 'warning' | 'failure'
 

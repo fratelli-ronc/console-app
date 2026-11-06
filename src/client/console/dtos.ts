@@ -577,6 +577,78 @@ export interface DeployStationsResponse {
   servers: DeployServer[]
 }
 
+// One successful deploy's config, kept to revert to: the central server's
+// file, which carries the whole station. deployedStationId is the business
+// id in the file, which may differ from the station's current one.
+// revertedFromId is the version the deploy restored, when it followed a
+// revert. live marks the newest version: what the last successful deploy
+// wrote. Two versions with the same sha256 are the same config.
+export interface ConfigVersion {
+  id: number
+  deployedStationId: number
+  deployedAt: string
+  deployedByUserId: number
+  deployedBy: ConsoleUser | null
+  throughChangeSetId: number
+  revertedFromId: number | null
+  live: boolean
+  fileName: string
+  sha256: string
+  groupCount: number
+  variableCount: number
+}
+
+// A station's config versions, newest first (the last 100 deploys).
+// stationId is the internal id.
+export interface ConfigVersions {
+  stationId: number
+  versions: ConfigVersion[]
+}
+
+// The station has changes not yet deployed, which the revert discards.
+export interface RevertPendingChangesWarning extends PendingChangesSummary {
+  code: 'pending_changes'
+  message: string
+}
+
+// The version relayed a group through a different chain than the server
+// tree does now. The tree is kept: the deploy follows treeChain.
+export interface RevertServerTreeMismatchWarning {
+  code: 'server_tree_mismatch'
+  message: string
+  groupId: number
+  groupName: string | null
+  serverIp: string
+  fileChain: string[]
+  treeChain: string[]
+}
+
+export type RevertWarning =
+  RevertPendingChangesWarning | RevertServerTreeMismatchWarning
+
+// What reverting to a version would do: the warnings it needs confirmed,
+// and every change, from the station as stored now (before) to the
+// version (after). Entities it would create carry ids that exist only in
+// this preview; a variable created in a new group points at that group's.
+export interface RevertPreview {
+  stationId: number
+  versionId: number
+  warnings: RevertWarning[]
+  changes: EntityChange[]
+}
+
+export interface RevertCounts {
+  created: number
+  updated: number
+  deleted: number
+}
+
+export interface RevertChanges {
+  station: RevertCounts
+  groups: RevertCounts
+  variables: RevertCounts
+}
+
 // version is the group's version as loaded: the update is refused with a
 // 409 (see VersionConflicts) if the group was saved since.
 export interface UpdateGroupRequest {

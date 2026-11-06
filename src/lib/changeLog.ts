@@ -167,6 +167,8 @@ const KIND_LABELS: Record<string, string> = {
   station_clone: 'Copia stazione',
   station_tag_update: 'Modifica tag stazione',
   station_tag_delete: 'Eliminazione tag stazione',
+  station_import: 'Importazione stazione',
+  station_revert: 'Ripristino versione',
 }
 
 export const changeKindLabel = (kind: string) => KIND_LABELS[kind] ?? kind

@@ -37,7 +37,7 @@ export const saveConfigFiles = async (
 // Prompts for a path (pre-filled with the config's own name) and writes
 // that one config to it.
 export const saveConfigFile = async (
-  file: DeployConfigFile,
+  file: Pick<DeployConfigFile, 'fileName' | 'content'>,
 ): Promise<boolean> => {
   const path = await save({
     defaultPath: file.fileName,

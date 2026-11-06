@@ -1,11 +1,13 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { Info, UploadCloud } from 'lucide-react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { RotateCcw, UploadCloud } from 'lucide-react'
 import {
+  getRevertPreview,
   getStationChanges,
   getStationPendingDiff,
   type ChangeSet,
-  type EntityChange,
+  type ConfigVersion,
   type PendingEntityChange,
+  type RevertPreviewOutcome,
   type Station,
   type StationDeploymentStatus,
   type StationPendingDiff,
@@ -21,41 +23,18 @@ import {
   FilledButton,
   FilterPills,
   OutlinedButton,
-  StatusBadge,
   TextButton,
 } from '@/components'
-import {
-  ENTITY_NOUNS,
-  agree,
-  entityLabel,
-  fieldLabel,
-  formatChangeValue,
-  formatDateTime,
-  userLabel,
-  type ChangeNames,
-} from '@/lib/changeLog'
-import { cn } from '@/lib/utils'
+import { formatDateTime, userLabel, type ChangeNames } from '@/lib/changeLog'
+import { ChangeList, Loading, Notice } from './ChangeDiff'
+import { RevertPreviewView, VersionsView } from './ConfigVersionsView'
 
-type View = 'diff' | 'history'
+type View = 'diff' | 'history' | 'versions'
 
-const VIEW_OPTIONS: { label: string; value: View }[] = [
-  { label: 'Differenze', value: 'diff' },
-  { label: 'Cronologia', value: 'history' },
-]
-
-const OP_STYLES = {
-  create: {
-    badge: 'border-primary/30 text-primary bg-primary/10',
-    dot: 'bg-primary',
-  },
-  update: {
-    badge: 'border-secondary/30 text-secondary-foreground bg-secondary/10',
-    dot: 'bg-secondary',
-  },
-  delete: {
-    badge: 'border-destructive/30 text-destructive bg-destructive/10',
-    dot: 'bg-destructive',
-  },
+const VIEW_TITLES: Record<View, string> = {
+  diff: 'Modifiche da distribuire',
+  history: 'Cronologia modifiche',
+  versions: 'Versioni distribuite',
 }
 
 interface StationChangesDialogProps {
@@ -65,22 +44,30 @@ interface StationChangesDialogProps {
   names: ChangeNames
   currentUsername: string | undefined
   canDeploy: boolean
+  // A deploy of the station is running.
+  busy: boolean
   onDeploy: () => void
+  // Reverts the station to version and deploys it; force confirms the
+  // warnings the preview showed.
+  onRevert: (version: ConfigVersion, force: boolean) => void
   onClose: () => void
 }
 
 // A station's changes. For one with changes pending, it reviews what
 // deploying it would ship - the net difference from its last deploy,
-// entity by entity - next to its history; otherwise it shows just the
+// entity by entity - next to its history; otherwise it opens on the
 // history: every change set, newest first, the last deploy marked among
-// them.
+// them. The versions tab lists the configs its deploys shipped, to
+// download or to revert to, after previewing what the revert would do.
 export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
   station,
   status,
   names,
   currentUsername,
   canDeploy,
+  busy,
   onDeploy,
+  onRevert,
   onClose,
 }) => {
   const [view, setView] = useState<View>('diff')
@@ -88,6 +75,9 @@ export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
   const [sets, setSets] = useState<ChangeSet[] | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  // The version being previewed for a revert, and the preview once loaded.
+  const [reviewed, setReviewed] = useState<ConfigVersion | null>(null)
+  const [preview, setPreview] = useState<RevertPreviewOutcome | null>(null)
 
   // Keeps showing the last station while the dialog animates closed.
   const last = useRef({ station, status })
@@ -105,6 +95,7 @@ export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
     setDiff(null)
     setSets(null)
     setHasMore(false)
+    setReviewed(null)
     if (!pending) return
 
     let active = true
@@ -134,6 +125,22 @@ export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
     }
   }, [view, stationId, sets])
 
+  const reviewedId = reviewed?.id
+  useEffect(() => {
+    setPreview(null)
+    if (stationId == null || reviewedId == null) return
+    let active = true
+    getRevertPreview(stationId, reviewedId).then((res) => {
+      if (!active) return
+      if (res) setPreview(res)
+      // Any other failure was toasted: back to the list.
+      else setReviewed(null)
+    })
+    return () => {
+      active = false
+    }
+  }, [stationId, reviewedId])
+
   const loadMore = async () => {
     if (stationId == null || !sets?.length) return
     setLoadingMore(true)
@@ -146,6 +153,17 @@ export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
     setHasMore(res.hasMore)
   }
 
+  const viewOptions: { label: string; value: View }[] = [
+    ...(reviewing ? [{ label: 'Differenze', value: 'diff' as const }] : []),
+    { label: 'Cronologia', value: 'history' },
+    { label: 'Versioni', value: 'versions' },
+  ]
+
+  const changeView = (next: View) => {
+    setView(next)
+    setReviewed(null)
+  }
+
   const lastDeploy =
     shownStatus?.lastDeployedAt &&
     `${reviewing ? 'Rispetto alla' : 'Ultima'} distribuzione del ${formatDateTime(shownStatus.lastDeployedAt)}${
@@ -154,37 +172,37 @@ export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
         : ''
     }.`
 
+  const previewing = view === 'versions' && reviewed !== null
+
   return (
     <Dialog open={station !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {reviewing ? 'Modifiche da distribuire' : 'Cronologia modifiche'} —{' '}
-            {shown?.name || `ID ${shown?.stationId}`}
+            {VIEW_TITLES[view]} — {shown?.name || `ID ${shown?.stationId}`}
           </DialogTitle>
           <DialogDescription>
             {lastDeploy || 'La stazione non è mai stata distribuita.'}
           </DialogDescription>
         </DialogHeader>
 
-        {reviewing && (
-          <div className="flex">
-            <FilterPills
-              options={VIEW_OPTIONS}
-              value={view}
-              onChange={setView}
-            />
-          </div>
-        )}
+        <div className="flex">
+          <FilterPills
+            options={viewOptions}
+            value={view}
+            onChange={changeView}
+          />
+        </div>
 
         <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6">
-          {view === 'diff' ? (
+          {view === 'diff' && (
             <DiffView
               diff={diff}
               names={names}
               currentUsername={currentUsername}
             />
-          ) : (
+          )}
+          {view === 'history' && (
             <HistoryView
               sets={sets}
               hasMore={hasMore}
@@ -196,37 +214,68 @@ export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
               currentUsername={currentUsername}
             />
           )}
+          {view === 'versions' &&
+            shown &&
+            (reviewed ? (
+              <RevertPreviewView
+                version={reviewed}
+                outcome={preview}
+                names={names}
+                currentUsername={currentUsername}
+                onBack={() => setReviewed(null)}
+              />
+            ) : (
+              <VersionsView
+                stationId={shown.id}
+                businessId={shown.stationId}
+                pending={reviewing}
+                busy={busy}
+                currentUsername={currentUsername}
+                onReview={setReviewed}
+              />
+            ))}
         </div>
 
         <DialogFooter>
-          <TextButton type="button" onClick={onClose}>
-            Chiudi
-          </TextButton>
-          <FilledButton
-            type="button"
-            className="inline-flex items-center gap-2"
-            disabled={!canDeploy}
-            onClick={onDeploy}
-          >
-            <UploadCloud size={16} />
-            Distribuisci
-          </FilledButton>
+          {previewing ? (
+            <>
+              <TextButton type="button" onClick={() => setReviewed(null)}>
+                Indietro
+              </TextButton>
+              <FilledButton
+                type="button"
+                className="inline-flex items-center gap-2"
+                disabled={preview?.kind !== 'preview' || busy}
+                onClick={() => {
+                  if (preview?.kind !== 'preview') return
+                  onRevert(reviewed, preview.preview.warnings.length > 0)
+                }}
+              >
+                <RotateCcw size={16} />
+                Ripristina e distribuisci
+              </FilledButton>
+            </>
+          ) : (
+            <>
+              <TextButton type="button" onClick={onClose}>
+                Chiudi
+              </TextButton>
+              <FilledButton
+                type="button"
+                className="inline-flex items-center gap-2"
+                disabled={!canDeploy}
+                onClick={onDeploy}
+              >
+                <UploadCloud size={16} />
+                Distribuisci
+              </FilledButton>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-
-const Notice: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-    <Info size={16} className="mt-0.5 shrink-0" />
-    <p>{children}</p>
-  </div>
-)
-
-const Loading = () => (
-  <p className="py-6 text-center text-sm text-muted-foreground">Caricamento…</p>
-)
 
 interface DiffViewProps {
   diff: StationPendingDiff | null
@@ -239,25 +288,6 @@ const DiffView: React.FC<DiffViewProps> = ({
   names,
   currentUsername,
 }) => {
-  // Variables are shown under their group: where they are now, or where
-  // they were for the ones leaving.
-  const sections = useMemo(() => {
-    const changes = diff?.changes ?? []
-    const variablesByGroup = new Map<number | null, PendingEntityChange[]>()
-    for (const change of changes) {
-      if (change.entityType !== 'variable') continue
-      const groupId = change.groupIdAfter ?? change.groupIdBefore
-      const list = variablesByGroup.get(groupId)
-      if (list) list.push(change)
-      else variablesByGroup.set(groupId, [change])
-    }
-    return {
-      station: changes.filter((c) => c.entityType === 'station'),
-      groups: changes.filter((c) => c.entityType === 'group'),
-      variablesByGroup: [...variablesByGroup.entries()],
-    }
-  }, [diff])
-
   if (!diff) return <Loading />
   if (!diff.complete) {
     return (
@@ -277,183 +307,24 @@ const DiffView: React.FC<DiffViewProps> = ({
     )
   }
 
-  const renderChange = (change: PendingEntityChange) => (
-    <DiffCard
-      key={`${change.entityType}-${change.entityId}`}
-      change={change}
+  const authors = (change: PendingEntityChange) =>
+    `${change.userIds
+      .map((id) =>
+        userLabel(
+          change.users.find((u) => u.id === id) ?? null,
+          id,
+          currentUsername,
+        ),
+      )
+      .join(', ')} · ${formatDateTime(change.lastChangedAt)}`
+
+  return (
+    <ChangeList
+      changes={diff.changes}
       names={names}
-      currentUsername={currentUsername}
+      labels={{ before: 'Distribuito', after: 'Attuale' }}
+      meta={authors}
     />
-  )
-
-  return (
-    <div className="space-y-5 pb-1">
-      {sections.station.length > 0 && (
-        <Section title="Stazione">{sections.station.map(renderChange)}</Section>
-      )}
-      {sections.groups.length > 0 && (
-        <Section title="Gruppi">{sections.groups.map(renderChange)}</Section>
-      )}
-      {sections.variablesByGroup.map(([groupId, changes]) => (
-        <Section
-          key={`variables-${groupId}`}
-          title={`Variabili — ${groupId == null ? 'nessun gruppo' : names.groupName(groupId)}`}
-        >
-          {changes.map(renderChange)}
-        </Section>
-      ))}
-    </div>
-  )
-}
-
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
-  title,
-  children,
-}) => (
-  <section className="space-y-2">
-    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      {title}
-    </h3>
-    {children}
-  </section>
-)
-
-// How a change reads from the station's point of view.
-const describeOp = (
-  change: EntityChange,
-  names: ChangeNames,
-): { label: string; detail?: string } => {
-  switch (change.op) {
-    case 'create':
-      return change.stationIdBefore != null
-        ? {
-            label: `${agree(change, 'Spostat')} qui`,
-            detail: `da ${names.stationName(change.stationIdBefore)}`,
-          }
-        : { label: agree(change, 'Nuov') }
-    case 'delete':
-      return change.stationIdAfter != null
-        ? {
-            label: `${agree(change, 'Spostat')} via`,
-            detail: `su ${names.stationName(change.stationIdAfter)}`,
-          }
-        : { label: agree(change, 'Eliminat') }
-    default:
-      return { label: agree(change, 'Modificat') }
-  }
-}
-
-interface DiffCardProps {
-  change: PendingEntityChange
-  names: ChangeNames
-  currentUsername: string | undefined
-}
-
-const DiffCard: React.FC<DiffCardProps> = ({
-  change,
-  names,
-  currentUsername,
-}) => {
-  const op = describeOp(change, names)
-  const authors = change.userIds
-    .map((id) =>
-      userLabel(
-        change.users.find((u) => u.id === id) ?? null,
-        id,
-        currentUsername,
-      ),
-    )
-    .join(', ')
-
-  return (
-    <div className="rounded-lg border border-border">
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-        <StatusBadge {...OP_STYLES[change.op]} label={op.label} />
-        <div className="min-w-0">
-          <span className="font-medium text-foreground">
-            {entityLabel(change)}
-          </span>
-          <span className="ml-2 text-xs text-muted-foreground">
-            {ENTITY_NOUNS[change.entityType]} · ID {change.businessId}
-            {op.detail && ` · ${op.detail}`}
-          </span>
-        </div>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {authors} · {formatDateTime(change.lastChangedAt)}
-        </span>
-      </div>
-
-      {change.op === 'update' ? (
-        <FieldTable change={change} names={names} />
-      ) : (
-        <details className="border-t border-border px-4 py-2 text-sm">
-          <summary className="cursor-pointer text-xs text-muted-foreground">
-            Mostra campi
-          </summary>
-          <FieldTable change={change} names={names} bare />
-        </details>
-      )}
-    </div>
-  )
-}
-
-interface FieldTableProps {
-  change: EntityChange
-  names: ChangeNames
-  // Inside a details element: no own border, and only the side that exists.
-  bare?: boolean
-}
-
-// Each changed field as deployed and as it is now (or just the one side,
-// for an entity that comes or goes).
-const FieldTable: React.FC<FieldTableProps> = ({ change, names, bare }) => {
-  const both = change.before !== null && change.after !== null
-  const format = (field: string, value: unknown) =>
-    formatChangeValue(change.entityType, field, value, names)
-
-  return (
-    <table
-      className={cn(
-        'w-full table-fixed text-sm',
-        !bare && 'border-t border-border',
-      )}
-    >
-      {both && (
-        <thead>
-          <tr className="text-left text-xs text-muted-foreground">
-            <th className="w-1/4 px-4 py-2 font-medium">Campo</th>
-            <th className="px-4 py-2 font-medium">Distribuito</th>
-            <th className="px-4 py-2 font-medium">Attuale</th>
-          </tr>
-        </thead>
-      )}
-      <tbody>
-        {change.changedFields.map((field) => (
-          <tr
-            key={field}
-            className="border-t border-border/60 first:border-t-0"
-          >
-            <td className="w-1/4 px-4 py-1.5 text-muted-foreground">
-              {fieldLabel(change.entityType, field)}
-            </td>
-            {both ? (
-              <>
-                <td className="px-4 py-1.5 break-all text-muted-foreground line-through decoration-muted-foreground/50">
-                  {format(field, change.before?.[field])}
-                </td>
-                <td className="px-4 py-1.5 break-all text-foreground">
-                  {format(field, change.after?.[field])}
-                </td>
-              </>
-            ) : (
-              <td className="px-4 py-1.5 break-all text-foreground">
-                {format(field, (change.after ?? change.before)?.[field])}
-              </td>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
   )
 }
 
