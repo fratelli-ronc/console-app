@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { RotateCcw, UploadCloud } from 'lucide-react'
+import { RotateCcw, Undo2, UploadCloud } from 'lucide-react'
 import {
   getRevertPreview,
   getStationChanges,
@@ -44,9 +44,14 @@ interface StationChangesDialogProps {
   names: ChangeNames
   currentUsername: string | undefined
   canDeploy: boolean
-  // A deploy of the station is running.
+  // The station's pending changes can be discarded: it has some, and its
+  // last deploy is known.
+  canDiscard: boolean
+  // A deploy or a discard of the station is running.
   busy: boolean
   onDeploy: () => void
+  // Brings the station back to its last deploy, once confirmed.
+  onDiscard: () => void
   // Reverts the station to version and deploys it; force confirms the
   // warnings the preview showed.
   onRevert: (version: ConfigVersion, force: boolean) => void
@@ -65,8 +70,10 @@ export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
   names,
   currentUsername,
   canDeploy,
+  canDiscard,
   busy,
   onDeploy,
+  onDiscard,
   onRevert,
   onClose,
 }) => {
@@ -260,6 +267,17 @@ export const StationChangesDialog: React.FC<StationChangesDialogProps> = ({
               <TextButton type="button" onClick={onClose}>
                 Chiudi
               </TextButton>
+              {reviewing && (
+                <OutlinedButton
+                  type="button"
+                  className="inline-flex items-center gap-2"
+                  disabled={!canDiscard || busy}
+                  onClick={onDiscard}
+                >
+                  <Undo2 size={16} />
+                  Scarta modifiche
+                </OutlinedButton>
+              )}
               <FilledButton
                 type="button"
                 className="inline-flex items-center gap-2"

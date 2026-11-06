@@ -12,6 +12,7 @@ import {
   DeployServer,
   DeployStationsResponse,
   DeploymentStatuses,
+  DiscardStationResult,
   Group,
   GroupDeploymentStatus,
   GroupTag,
@@ -444,6 +445,31 @@ const revertRefusal = (body: any, status: number): RevertRefusal => ({
   reasons: Array.isArray(body?.reasons) ? (body.reasons as string[]) : [],
   groups: issueGroups(body),
 })
+
+export type DiscardOutcome =
+  | { kind: 'discarded'; result: DiscardStationResult }
+  | { kind: 'refused'; refusal: RevertRefusal }
+
+// Brings the station back to how its last deploy left it, without
+// deploying. A refusal (409: a deploy running, no known deploy, or changes
+// reaching into another station) comes back as an outcome for the caller
+// to show; any other failure is toasted (null).
+export const discardStationChanges = (
+  stationId: number,
+): Promise<DiscardOutcome | null> =>
+  withErrorHandling(async () => {
+    try {
+      const { data } = await consoleClient.post<DiscardStationResult>(
+        `/stations/${stationId}/discard-changes`,
+      )
+      return { kind: 'discarded', result: data }
+    } catch (error) {
+      if (!isAxiosError(error) || !error.response) throw error
+      const { status, data } = error.response
+      if (status !== 409) throw error
+      return { kind: 'refused', refusal: revertRefusal(data, status) }
+    }
+  })
 
 export type RevertPreviewOutcome =
   | { kind: 'preview'; preview: RevertPreview }

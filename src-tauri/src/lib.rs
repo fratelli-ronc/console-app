@@ -1,3 +1,5 @@
+mod modbus;
+
 use keyring::Entry;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -139,6 +141,7 @@ pub fn run() {
             clear_refresh_token,
             write_config_files,
             write_config_file,
+            modbus::modbus_read,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

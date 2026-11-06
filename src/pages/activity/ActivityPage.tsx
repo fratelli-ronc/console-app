@@ -407,6 +407,11 @@ const BADGES = {
     dot: 'bg-primary',
     badge: 'border-primary/30 text-primary bg-primary/10',
   },
+  discarded: {
+    label: 'Scartata',
+    dot: 'bg-muted-foreground',
+    badge: 'border-border text-muted-foreground bg-muted/50',
+  },
   pending: {
     label: 'In sospeso',
     dot: 'bg-secondary',
@@ -433,7 +438,8 @@ interface SetStationProps {
 }
 
 // A station a change set is on, and whether the set has been deployed to
-// it: it has if the station's last deploy shipped it or a later set.
+// it: it has if the station's last deploy shipped it or a later set. A set
+// after that deploy but undone by a later discard never went live.
 const SetStation: React.FC<SetStationProps> = ({
   setId,
   stationId,
@@ -442,15 +448,18 @@ const SetStation: React.FC<SetStationProps> = ({
   names,
 }) => {
   const watermark = status?.deployedThroughChangeSetId ?? null
+  const discardedThrough = status?.discardedThroughChangeSetId ?? null
   const badge = station?.deleted
     ? BADGES.deleted
     : !status
       ? null
       : watermark != null && setId <= watermark
         ? BADGES.deployed
-        : status.status === 'not_deployed'
-          ? BADGES.notDeployed
-          : BADGES.pending
+        : discardedThrough != null && setId <= discardedThrough
+          ? BADGES.discarded
+          : status.status === 'not_deployed'
+            ? BADGES.notDeployed
+            : BADGES.pending
 
   return (
     <span className="inline-flex items-center gap-2 text-xs">

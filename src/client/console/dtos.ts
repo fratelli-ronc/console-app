@@ -371,6 +371,10 @@ export interface StationDeploymentStatus {
   // The newest change set the last deploy shipped; null if the station has
   // not been deployed since the change log was introduced.
   deployedThroughChangeSetId: number | null
+  // When past deployedThroughChangeSetId: the newest change set as of which
+  // a discard brought the station back to its last deploy. The change sets
+  // in between were undone and never went live.
+  discardedThroughChangeSetId: number | null
   // null only if console-api could not work it out.
   pendingChanges: PendingChangesSummary | null
 }
@@ -647,6 +651,15 @@ export interface RevertChanges {
   station: RevertCounts
   groups: RevertCounts
   variables: RevertCounts
+}
+
+// What discarding a station's pending changes did. remaining: how many
+// entities still differ from the last deploy (0 once it is back to it),
+// such as a tag renamed for every station.
+export interface DiscardStationResult {
+  changes: RevertChanges
+  remaining: number
+  status: StationDeploymentStatus
 }
 
 // version is the group's version as loaded: the update is refused with a

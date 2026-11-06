@@ -1,6 +1,10 @@
-// Messages console-api sends verbatim when it refuses a revert. Anything
-// unrecognised is shown as it came.
+// Messages console-api sends verbatim when it refuses a revert or a
+// discard. Anything unrecognised is shown as it came.
 const MESSAGES: Record<string, string> = {
+  'the pending changes cannot be discarded':
+    'Le modifiche in sospeso non si possono scartare.',
+  'the station has not been deployed since the change log was introduced':
+    "La stazione non è stata distribuita da quando è attivo il registro delle modifiche: non si sa com'era all'ultima distribuzione.",
   'the version uses ids held elsewhere now':
     'La versione usa ID che ora appartengono ad altro.',
   'some groups of this version cannot be deployed':
@@ -15,8 +19,32 @@ const MESSAGES: Record<string, string> = {
     'telecamera con più di una variabile',
 }
 
-// Why a revert cannot go ahead, one reason per id held elsewhere.
+const ENTITY_LABELS: Record<string, string> = {
+  group: 'Il gruppo',
+  variable: 'La variabile',
+  station: 'La stazione',
+}
+
+// Why a revert or a discard cannot go ahead.
 const REASONS: [RegExp, (...ids: string[]) => string][] = [
+  [
+    /^(group|variable|station) (\d+) was moved to station (\d+)$/,
+    (entity, id, station) =>
+      `${ENTITY_LABELS[entity]} ${id} è stat${entity === 'group' ? 'o' : 'a'} spostat${entity === 'group' ? 'o' : 'a'} nella stazione ${station}.`,
+  ],
+  [
+    /^(group|variable|station) (\d+) was moved here from station (\d+)$/,
+    (entity, id, station) =>
+      `${ENTITY_LABELS[entity]} ${id} è stat${entity === 'group' ? 'o' : 'a'} spostat${entity === 'group' ? 'o' : 'a'} qui dalla stazione ${station}.`,
+  ],
+  [
+    /^group id (\d+) is now held by another group$/,
+    (id) => `L'ID gruppo ${id} ora appartiene a un altro gruppo.`,
+  ],
+  [
+    /^the deployed photo is no longer stored$/,
+    () => 'La foto distribuita non è più disponibile.',
+  ],
   [
     /^station id (\d+) is still held by a deleted station$/,
     (id) => `L'ID stazione ${id} è ancora usato da una stazione eliminata.`,

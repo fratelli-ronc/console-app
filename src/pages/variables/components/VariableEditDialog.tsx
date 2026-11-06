@@ -38,6 +38,7 @@ import {
   TextAreaField,
   TextField,
 } from './FormFields'
+import { ModbusTestPanel } from './ModbusTestPanel'
 import { PresentationsEditor } from './PresentationsEditor'
 import {
   FIELD_LABELS,
@@ -215,7 +216,7 @@ export const VariableEditDialog: React.FC<VariableEditDialogProps> = ({
               errors={errors}
               variableId={initial.variableId}
               groupOptions={groupOptions}
-              groupProtocol={groupsById.get(form.groupId)?.protocol}
+              group={groupsById.get(form.groupId)}
             />
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">
@@ -253,7 +254,9 @@ interface VariableFormBodyProps {
   errors: Partial<Record<keyof VariableForm, string>>
   variableId: number
   groupOptions: { value: string; label: string }[]
-  groupProtocol: string | undefined
+  // The group picked in the form: its protocol tells a camera apart, and
+  // the Modbus test reads from its device.
+  group: Group | undefined
 }
 
 const VariableFormBody: React.FC<VariableFormBodyProps> = ({
@@ -262,7 +265,7 @@ const VariableFormBody: React.FC<VariableFormBodyProps> = ({
   errors,
   variableId,
   groupOptions,
-  groupProtocol,
+  group,
 }) => {
   const set = <K extends keyof VariableForm>(key: K, value: VariableForm[K]) =>
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev))
@@ -280,7 +283,7 @@ const VariableFormBody: React.FC<VariableFormBodyProps> = ({
     onChange: (value: boolean) => set(key, value as never),
   })
 
-  const kind = variableKind(form.driver, groupProtocol)
+  const kind = variableKind(form.driver, group?.protocol)
   const camera = isCamera(kind)
   const modbus = isModbus(kind)
   const isCommand = form.classType === 'command'
@@ -391,6 +394,10 @@ const VariableFormBody: React.FC<VariableFormBodyProps> = ({
             <CheckField {...check('isFastUpdate')} />
           </FieldGrid>
         </Section>
+      )}
+
+      {modbus && (
+        <ModbusTestPanel form={form} group={group} decode={kind === 'modbus'} />
       )}
 
       {hasRawValue && (

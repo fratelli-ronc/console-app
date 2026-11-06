@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { History, ListChecks, Rocket, Trash2, UploadCloud } from 'lucide-react'
+import toast from 'react-hot-toast'
+import {
+  History,
+  ListChecks,
+  Rocket,
+  Trash2,
+  Undo2,
+  UploadCloud,
+} from 'lucide-react'
 import {
   DataTable,
   type DataTableColumn,
@@ -11,9 +19,11 @@ import {
   SearchableSelect,
   StatusBadge,
   TextButton,
+  useConfirm,
 } from '@/components'
 import {
   deployStations,
+  discardStationChanges,
   getDeploymentStatuses,
   listGroups,
   listStations,
@@ -28,7 +38,11 @@ import {
 } from '@/client'
 import { listServers, type Server } from '@/client/coolify'
 import { formatDateTime, userLabel, type ChangeNames } from '@/lib/changeLog'
-import { revertedDeployError } from '@/lib/configVersions'
+import {
+  revertedDeployError,
+  translateRevertMessage,
+  translateRevertReason,
+} from '@/lib/configVersions'
 import { useUserStore } from '@/store'
 import {
   DeployResultDialog,
@@ -69,6 +83,8 @@ export const DeployPage: React.FC = () => {
   const [expandedKeys, setExpandedKeys] = useState<Set<React.Key>>(new Set())
   const [bulkDeploying, setBulkDeploying] = useState(false)
   const [deployingIds, setDeployingIds] = useState<Set<number>>(new Set())
+  const [discardingIds, setDiscardingIds] = useState<Set<number>>(new Set())
+  const { confirm, confirmDialog } = useConfirm()
   const [stationStatuses, setStationStatuses] = useState<
     Record<number, StationDeploymentStatus>
   >({})
@@ -173,6 +189,18 @@ export const DeployPage: React.FC = () => {
   const canDeploy = (station: Station) =>
     stationGroups(station).length > 0 ||
     (stationStatuses[station.id]?.deployedServerIps?.length ?? 0) > 0
+
+  // A deploy or a discard of the station is running.
+  const isBusy = (station: Station) =>
+    deployingIds.has(station.id) || discardingIds.has(station.id)
+
+  // Discarding needs pending changes and a known last deploy to go back to.
+  const canDiscard = (station: Station) => {
+    const status = stationStatuses[station.id]
+    return (
+      status?.status === 'pending' && status.deployedThroughChangeSetId != null
+    )
+  }
 
   const serverOptions = useMemo(
     () => [
@@ -376,6 +404,76 @@ export const DeployPage: React.FC = () => {
     await fetchData()
   }
 
+  // Brings the station back to its last deploy, once confirmed: every
+  // change made since is undone, and nothing is deployed. Its groups and
+  // fields change with it, so everything is reloaded afterwards.
+  const runDiscard = async (station: Station) => {
+    const status = stationStatuses[station.id]
+    const changeSets = status?.pendingChanges?.changeSets ?? 0
+    const ok = await confirm({
+      title: 'Scartare le modifiche in sospeso?',
+      description: (
+        <>
+          {changeSets === 1
+            ? '1 modifica fatta'
+            : changeSets > 1
+              ? `${changeSets} modifiche fatte`
+              : 'Le modifiche fatte'}{' '}
+          su <strong>{station.name || `ID ${station.stationId}`}</strong> dopo
+          la distribuzione del{' '}
+          {status?.lastDeployedAt
+            ? formatDateTime(status.lastDeployedAt)
+            : 'ultima distribuzione'}{' '}
+          verranno annullate: stazione, gruppi e variabili tornano come sono sui
+          server. Non viene distribuito nulla.
+        </>
+      ),
+      confirmLabel: 'Scarta modifiche',
+      destructive: true,
+    })
+    if (!ok) return
+
+    setDiscardingIds((prev) => new Set([...prev, station.id]))
+    const outcome = await discardStationChanges(station.id)
+    setDiscardingIds((prev) => {
+      const next = new Set(prev)
+      next.delete(station.id)
+      return next
+    })
+    if (!outcome) return
+
+    if (outcome.kind === 'refused') {
+      const { message, reasons } = outcome.refusal
+      toast.error(
+        <div className="text-sm">
+          <p>{translateRevertMessage(message)}</p>
+          {reasons.length > 0 && (
+            <ul className="mt-1 list-disc pl-4">
+              {reasons.map((reason) => (
+                <li key={reason}>{translateRevertReason(reason)}</li>
+              ))}
+            </ul>
+          )}
+        </div>,
+        { duration: 8000 },
+      )
+      return
+    }
+
+    const { remaining } = outcome.result
+    if (remaining > 0) {
+      toast.error(
+        `Modifiche scartate, ma ${remaining === 1 ? '1 differenza resta' : `${remaining} differenze restano`} rispetto all'ultima distribuzione (ad esempio un tag rinominato per tutte le stazioni). Rivedile prima di distribuire.`,
+        { duration: 8000 },
+      )
+    } else {
+      toast.success(
+        "Modifiche scartate: la stazione è tornata all'ultima distribuzione.",
+      )
+    }
+    await fetchData()
+  }
+
   const handleBulkDeploy = async () => {
     const targets = filtered.filter(
       (s) => selectedKeys.has(s.id) && canDeploy(s),
@@ -444,13 +542,15 @@ export const DeployPage: React.FC = () => {
       key: 'status',
       header: 'Stato',
       render: (station) => {
-        if (deployingIds.has(station.id)) {
+        if (deployingIds.has(station.id) || discardingIds.has(station.id)) {
           return (
             <StatusBadge
               pending
               dot=""
               badge="border-secondary/30 text-secondary-foreground bg-secondary/10"
-              label="Distribuzione…"
+              label={
+                deployingIds.has(station.id) ? 'Distribuzione…' : 'Scarto…'
+              }
             />
           )
         }
@@ -536,10 +636,21 @@ export const DeployPage: React.FC = () => {
               </>
             )}
           </TextButton>
+          {canDiscard(station) && (
+            <TextButton
+              type="button"
+              className="inline-flex h-8 items-center gap-2"
+              disabled={isBusy(station)}
+              onClick={() => runDiscard(station)}
+            >
+              <Undo2 size={14} />
+              Scarta
+            </TextButton>
+          )}
           <OutlinedButton
             type="button"
             className="inline-flex h-8 items-center gap-2 px-3"
-            disabled={!canDeploy(station) || deployingIds.has(station.id)}
+            disabled={!canDeploy(station) || isBusy(station)}
             onClick={() => runDeploy([station.id])}
           >
             <UploadCloud size={14} />
@@ -774,13 +885,19 @@ export const DeployPage: React.FC = () => {
         canDeploy={
           reviewedStation != null &&
           canDeploy(reviewedStation) &&
-          !deployingIds.has(reviewedStation.id)
+          !isBusy(reviewedStation)
         }
-        busy={reviewedId != null && deployingIds.has(reviewedId)}
+        canDiscard={reviewedStation != null && canDiscard(reviewedStation)}
+        busy={reviewedStation != null && isBusy(reviewedStation)}
         onDeploy={() => {
           if (reviewedId == null) return
           setReviewedId(null)
           void runDeploy([reviewedId])
+        }}
+        onDiscard={() => {
+          if (reviewedStation == null) return
+          setReviewedId(null)
+          void runDiscard(reviewedStation)
         }}
         onRevert={(version, force) => {
           if (reviewedId == null) return
@@ -795,6 +912,8 @@ export const DeployPage: React.FC = () => {
         onClose={() => setDeployDialog(null)}
         serverName={(ip) => serversByIp.get(ip)?.name}
       />
+
+      {confirmDialog}
     </div>
   )
 }
