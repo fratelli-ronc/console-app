@@ -4,12 +4,19 @@ import { useUserStore } from '@/store'
 // Bump when the stored shape changes; old entries are then ignored.
 const STORAGE_VERSION = 'v1'
 
-const storageKeyFor = (userId: string, tableKey: string) =>
-  `ronc.${userId}.table.${tableKey}.columnOrder.${STORAGE_VERSION}`
+const storageKeysFor = (userId: string, tableKey: string) => {
+  const base = `ronc.${userId}.table.${tableKey}`
+  return {
+    order: `${base}.columnOrder.${STORAGE_VERSION}`,
+    pins: `${base}.columnPins.${STORAGE_VERSION}`,
+  }
+}
+
+type StorageKeys = ReturnType<typeof storageKeysFor>
 
 // localStorage can throw (quota, disabled storage) — a missing preference
-// just falls back to the default order.
-function readOrder(key: string | null): string[] | null {
+// just falls back to the default.
+function readKeys(key: string | undefined): string[] | null {
   if (!key) return null
   try {
     const raw = localStorage.getItem(key)
@@ -24,10 +31,10 @@ function readOrder(key: string | null): string[] | null {
   }
 }
 
-function writeOrder(key: string | null, order: string[] | null) {
+function writeKeys(key: string | undefined, keys: string[] | null) {
   if (!key) return
   try {
-    if (order) localStorage.setItem(key, JSON.stringify(order))
+    if (keys?.length) localStorage.setItem(key, JSON.stringify(keys))
     else localStorage.removeItem(key)
   } catch {
     // Non-critical UI preference — ignore.
@@ -62,56 +69,127 @@ function applyOrder<C extends { key: string }>(
   return result
 }
 
-// Per-user, locally persisted column order for a table. Without a tableKey
-// it's a no-op that returns the columns in their default order.
+// Moves activeKey into overKey's slot (sortable-list semantics).
+function moveKey(keys: string[], activeKey: string, overKey: string) {
+  const next = [...keys]
+  const from = next.indexOf(activeKey)
+  const to = next.indexOf(overKey)
+  if (from === -1 || to === -1) return null
+  next.splice(to, 0, ...next.splice(from, 1))
+  return next
+}
+
+const load = (keys: StorageKeys | null) => ({
+  keys,
+  order: readKeys(keys?.order),
+  pins: readKeys(keys?.pins),
+})
+
+// Per-user, locally persisted column order and pins for a table. Pinned
+// columns come first, in the order they were pinned; the rest follow the
+// saved order, which pinning never touches — so unpinning a column puts it
+// back where it was. Without a tableKey it's a no-op that returns the
+// columns in their default order.
 export function useColumnOrder<C extends { key: string }>(
   columns: C[],
   tableKey?: string,
 ) {
   const userId = useUserStore((s) => s.user?.id)
-  const storageKey =
-    tableKey && userId ? storageKeyFor(userId, tableKey) : null
+  const storageKeys = useMemo(
+    () => (tableKey && userId ? storageKeysFor(userId, tableKey) : null),
+    [tableKey, userId],
+  )
 
-  // Track which storage key the in-memory order was loaded for, so a user
-  // or table switch re-reads storage instead of reusing a stale order.
-  const [state, setState] = useState(() => ({
-    storageKey,
-    order: readOrder(storageKey),
-  }))
-  const savedOrder =
-    state.storageKey === storageKey ? state.order : readOrder(storageKey)
-  if (state.storageKey !== storageKey) {
-    setState({ storageKey, order: savedOrder })
-  }
+  // Track which storage keys the in-memory state was loaded for, so a user
+  // or table switch re-reads storage instead of reusing stale preferences.
+  const [state, setState] = useState(() => load(storageKeys))
+  const current = state.keys === storageKeys ? state : load(storageKeys)
+  if (state.keys !== storageKeys) setState(current)
+  const { order: savedOrder, pins: savedPins } = current
 
-  const orderedColumns = useMemo(
+  // The column order ignoring pins.
+  const baseColumns = useMemo(
     () => applyOrder(columns, savedOrder),
     [columns, savedOrder],
   )
 
-  const isCustomized = orderedColumns.some(
-    (col, i) => col.key !== columns[i]?.key,
+  const pinnedKeys = useMemo(() => {
+    const existing = new Set(columns.map((c) => c.key))
+    return [...new Set(savedPins ?? [])].filter((k) => existing.has(k))
+  }, [columns, savedPins])
+
+  const orderedColumns = useMemo(() => {
+    const byKey = new Map(columns.map((c) => [c.key, c]))
+    const pinned = new Set(pinnedKeys)
+    return [
+      ...pinnedKeys.map((k) => byKey.get(k)!),
+      ...baseColumns.filter((c) => !pinned.has(c.key)),
+    ]
+  }, [columns, baseColumns, pinnedKeys])
+
+  const isCustomized =
+    pinnedKeys.length > 0 ||
+    baseColumns.some((col, i) => col.key !== columns[i]?.key)
+
+  const update = useCallback(
+    (patch: { order?: string[]; pins?: string[] }) => {
+      if (patch.order) writeKeys(storageKeys?.order, patch.order)
+      if (patch.pins) writeKeys(storageKeys?.pins, patch.pins)
+      setState({
+        keys: storageKeys,
+        order: patch.order ?? savedOrder,
+        pins: patch.pins ?? savedPins,
+      })
+    },
+    [storageKeys, savedOrder, savedPins],
   )
 
-  // Moves activeKey into overKey's slot (sortable-list semantics).
+  // Columns only move within their own zone: pinned among pinned, unpinned
+  // among unpinned. A drop across the boundary is ignored.
   const reorder = useCallback(
     (activeKey: string, overKey: string) => {
       if (activeKey === overKey) return
-      const keys = orderedColumns.map((c) => c.key)
-      const from = keys.indexOf(activeKey)
-      const to = keys.indexOf(overKey)
-      if (from === -1 || to === -1) return
-      keys.splice(to, 0, ...keys.splice(from, 1))
-      writeOrder(storageKey, keys)
-      setState({ storageKey, order: keys })
+      const activePinned = pinnedKeys.includes(activeKey)
+      if (activePinned !== pinnedKeys.includes(overKey)) return
+
+      if (activePinned) {
+        const pins = moveKey(pinnedKeys, activeKey, overKey)
+        if (pins) update({ pins })
+      } else {
+        const order = moveKey(
+          baseColumns.map((c) => c.key),
+          activeKey,
+          overKey,
+        )
+        if (order) update({ order })
+      }
     },
-    [orderedColumns, storageKey],
+    [pinnedKeys, baseColumns, update],
+  )
+
+  const togglePin = useCallback(
+    (key: string) => {
+      update({
+        pins: pinnedKeys.includes(key)
+          ? pinnedKeys.filter((k) => k !== key)
+          : [...pinnedKeys, key],
+      })
+    },
+    [pinnedKeys, update],
   )
 
   const reset = useCallback(() => {
-    writeOrder(storageKey, null)
-    setState({ storageKey, order: null })
-  }, [storageKey])
+    writeKeys(storageKeys?.order, null)
+    writeKeys(storageKeys?.pins, null)
+    setState({ keys: storageKeys, order: null, pins: null })
+  }, [storageKeys])
 
-  return { orderedColumns, reorder, reset, isCustomized }
+  return {
+    orderedColumns,
+    pinnedKeys,
+    reorder,
+    togglePin,
+    reset,
+    isCustomized,
+  }
 }

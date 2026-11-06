@@ -1,4 +1,10 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { createPortal } from 'react-dom'
 import {
   DndContext,
@@ -16,7 +22,7 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
 } from '@dnd-kit/sortable'
-import { Check, GripVertical, RotateCcw, Trash2 } from 'lucide-react'
+import { Check, GripVertical, Pin, RotateCcw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Checkbox } from '../Checkbox'
 import {
@@ -152,6 +158,41 @@ const BooleanCell: React.FC<{ checked: boolean }> = ({ checked }) => (
 const headerCellClass =
   'text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap'
 
+// Each header cell sticks to the top on its own (rather than the <tr>) so
+// pinned header cells can also stick to the left. Keep it last in cn():
+// it must win over the `relative` from columnDragClass.
+const headerStickyClass = 'sticky top-0 z-10 bg-muted'
+
+// Cell backgrounds are pre-mixed with the surface color instead of using
+// alpha (bg-x/10), so every cell is opaque: pinned cells must hide the
+// columns scrolling underneath them.
+const cellBg = {
+  base: 'bg-card',
+  rowMenu: 'bg-[color-mix(in_srgb,var(--color-muted)_60%,var(--color-card))]',
+  modified:
+    'bg-[color-mix(in_srgb,var(--color-yellow-500)_10%,var(--color-card))]',
+  conflicted:
+    'bg-[color-mix(in_srgb,var(--color-destructive)_15%,var(--color-card))]',
+  selected:
+    'bg-[color-mix(in_srgb,var(--color-primary)_5%,var(--color-card))]',
+  hover:
+    'hover:bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-card))]',
+  dropTarget:
+    'bg-[color-mix(in_srgb,var(--color-primary)_10%,var(--color-card))]',
+  headerDropTarget:
+    'bg-[color-mix(in_srgb,var(--color-primary)_10%,var(--color-muted))]',
+}
+
+// Sticky key of the selection checkbox column, which is always fixed first.
+const SELECT_COL = '__select'
+
+// Soft edge on the last fixed column while the body is scrolled sideways
+// beneath it.
+const stickyEdgeClass =
+  'shadow-[6px_0_6px_-4px_color-mix(in_srgb,var(--color-foreground)_15%,transparent)]'
+
+type StickyCell = { className?: string; style?: React.CSSProperties }
+
 // The header drag ghost only slides sideways — columns reorder on one axis.
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({
   ...transform,
@@ -159,7 +200,7 @@ const restrictToHorizontalAxis: Modifier = ({ transform }) => ({
 })
 
 // An in-flight header drag: the column being moved and the one under the
-// pointer (null when it's outside every header).
+// pointer (null when it's outside every header, or in the other pin zone).
 type ColumnDrag = { activeKey: string; overKey: string | null }
 
 // Drag feedback for any cell (header or body) of column `key`: the dragged
@@ -170,6 +211,7 @@ function columnDragClass(
   drag: ColumnDrag | null,
   columns: { key: string }[],
   key: string,
+  surface: 'header' | 'body',
 ): string | false {
   if (!drag) return false
   if (key === drag.activeKey) return 'opacity-40'
@@ -178,7 +220,8 @@ function columnDragClass(
   const side =
     indexOf(drag.overKey) > indexOf(drag.activeKey) ? 'right' : 'left'
   return cn(
-    'relative bg-primary/10 before:pointer-events-none before:absolute before:inset-y-0 before:w-[3px] before:bg-primary',
+    'relative before:pointer-events-none before:absolute before:inset-y-0 before:w-[3px] before:bg-primary',
+    surface === 'header' ? cellBg.headerDropTarget : cellBg.dropTarget,
     side === 'left' ? 'before:-left-px' : 'before:-right-px',
   )
 }
@@ -190,22 +233,31 @@ const SortableHeaderCell: React.FC<{
   id: string
   label: string
   className?: string | false
-}> = ({ id, label, className }) => {
+  pinned: boolean
+  sticky: StickyCell
+  onTogglePin: () => void
+}> = ({ id, label, className, pinned, sticky, onTogglePin }) => {
   const { attributes, listeners, setNodeRef } = useSortable({
     id,
     // Keep table semantics; useSortable would otherwise stamp role="button".
     attributes: { role: 'columnheader' },
   })
 
+  const pinLabel = pinned ? 'Sblocca colonna' : 'Fissa colonna'
+
   return (
     <th
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      data-sticky-col={pinned ? id : undefined}
+      style={sticky.style}
       className={cn(
         headerCellClass,
-        'group relative border-b border-r border-border last:border-r-0 cursor-grab select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60',
+        'group pr-9 border-b border-r border-border last:border-r-0 cursor-grab select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60',
         className,
+        headerStickyClass,
+        sticky.className,
       )}
     >
       <GripVertical
@@ -213,6 +265,24 @@ const SortableHeaderCell: React.FC<{
         className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-60"
       />
       {label}
+      <button
+        type="button"
+        aria-label={pinLabel}
+        aria-pressed={pinned}
+        title={pinLabel}
+        // Keep the click from starting a column drag (pointer or keyboard).
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        onClick={onTogglePin}
+        className={cn(
+          'absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex size-6 items-center justify-center rounded-md cursor-pointer transition-opacity hover:bg-background/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
+          pinned
+            ? 'text-primary'
+            : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground',
+        )}
+      >
+        <Pin size={12} className={cn(pinned && 'fill-current')} />
+      </button>
     </th>
   )
 }
@@ -225,13 +295,24 @@ function SortableHeaderCells({
   onReorder,
   drag,
   onDragChange,
+  pinnedKeys,
+  onTogglePin,
+  stickyFor,
 }: {
   columns: { key: string; label: string }[]
   onReorder: (activeKey: string, overKey: string) => void
   // Lifted to the table so body cells can render the drop feedback too.
   drag: ColumnDrag | null
   onDragChange: (drag: ColumnDrag | null) => void
+  pinnedKeys: string[]
+  onTogglePin: (key: string) => void
+  stickyFor: (key: string, layer: 'header') => StickyCell
 }) {
+  // Columns only reorder within their pin zone, so a target in the other
+  // zone gets no drop feedback.
+  const sameZone = (a: string, b: string) =>
+    pinnedKeys.includes(a) === pinnedKeys.includes(b)
+
   const draggingColumn = columns.find((c) => c.key === drag?.activeKey)
 
   const sensors = useSensors(
@@ -256,7 +337,10 @@ function SortableHeaderCells({
       onDragOver={({ active, over }) =>
         onDragChange({
           activeKey: String(active.id),
-          overKey: over ? String(over.id) : null,
+          overKey:
+            over && sameZone(String(active.id), String(over.id))
+              ? String(over.id)
+              : null,
         })
       }
       onDragEnd={({ active, over }) => {
@@ -274,7 +358,10 @@ function SortableHeaderCells({
             key={key}
             id={key}
             label={label}
-            className={columnDragClass(drag, columns, key)}
+            className={columnDragClass(drag, columns, key, 'header')}
+            pinned={pinnedKeys.includes(key)}
+            sticky={stickyFor(key, 'header')}
+            onTogglePin={() => onTogglePin(key)}
           />
         ))}
       </SortableContext>
@@ -398,13 +485,75 @@ function EditTableInner<
   // list; cells and edits are addressed by column key, never by position.
   const {
     orderedColumns: columns,
+    pinnedKeys,
     reorder,
+    togglePin,
     reset: resetColumnOrder,
     isCustomized: isColumnOrderCustomized,
   } = useColumnOrder(declaredColumns, columnOrderKey)
   const [columnDrag, setColumnDrag] = useState<ColumnDrag | null>(null)
+  // Row whose context menu is open; highlighted while the menu shows.
+  const [menuRow, setMenuRow] = useState<number | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const headerRowRef = useRef<HTMLTableRowElement>(null)
+
+  // Fixed columns, left to right: the selection checkbox, then the pinned
+  // columns. Each sticks at the summed width of the fixed columns before it.
+  const stickyKeys = [...(selection ? [SELECT_COL] : []), ...pinnedKeys]
+  const lastStickyKey = stickyKeys.at(-1)
+  const [stickyLayout, setStickyLayout] = useState<{
+    lefts: Record<string, number>
+    width: number
+  }>({ lefts: {}, width: 0 })
+  const [scrolledX, setScrolledX] = useState(false)
+
+  // Widths are measured rather than read from the column config: in sized
+  // mode a column's width is only a minimum and grows with its content.
+  const stickyKeysSig = stickyKeys.join('\n')
+  useLayoutEffect(() => {
+    const row = headerRowRef.current
+    if (!row) return
+    const cells = () =>
+      Array.from(row.querySelectorAll<HTMLElement>('th[data-sticky-col]'))
+    const measure = () => {
+      const lefts: Record<string, number> = {}
+      let width = 0
+      for (const cell of cells()) {
+        lefts[cell.dataset.stickyCol!] = width
+        width += cell.getBoundingClientRect().width
+      }
+      setStickyLayout((prev) =>
+        prev.width === width &&
+        Object.keys(lefts).every((k) => prev.lefts[k] === lefts[k])
+          ? prev
+          : { lefts, width },
+      )
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    cells().forEach((cell) => observer.observe(cell))
+    return () => observer.disconnect()
+  }, [stickyKeysSig])
+
+  // Sticky positioning for a fixed column's cell; empty for the others.
+  // Pinned body cells stay below the header (z-10); a pinned cell being
+  // edited goes one above the other pinned cells so its dropdown isn't
+  // covered by the rows below.
+  const stickyFor = (
+    key: string,
+    layer: 'header' | 'body' | 'editing',
+  ): StickyCell => {
+    if (!stickyKeys.includes(key)) return {}
+    return {
+      className: cn(
+        'sticky',
+        layer === 'header' ? 'z-20' : layer === 'editing' ? 'z-2' : 'z-1',
+        scrolledX && key === lastStickyKey && stickyEdgeClass,
+      ),
+      style: { left: stickyLayout.lefts[key] ?? 0 },
+    }
+  }
 
   useImperativeHandle(ref, () => ({
     save: handleSave,
@@ -488,7 +637,16 @@ function EditTableInner<
         className,
       )}
     >
-      <div ref={scrollRef} className="flex-1 overflow-auto overscroll-none">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-auto overscroll-none"
+        // Keyboard focus scrolls cells into view clear of the fixed columns.
+        style={{ scrollPaddingLeft: stickyLayout.width }}
+        onScroll={(e) => {
+          const next = e.currentTarget.scrollLeft > 0
+          if (next !== scrolledX) setScrolledX(next)
+        }}
+      >
         <table
           className={cn(
             'text-sm border-separate border-spacing-0',
@@ -508,9 +666,17 @@ function EditTableInner<
           )}
 
           <thead>
-            <tr className="sticky top-0 bg-muted z-10">
+            <tr ref={headerRowRef}>
               {selection && (
-                <th className="w-10 px-4 py-2.5 border-b border-r border-border">
+                <th
+                  data-sticky-col={SELECT_COL}
+                  style={stickyFor(SELECT_COL, 'header').style}
+                  className={cn(
+                    'w-10 px-4 py-2.5 border-b border-r border-border',
+                    headerStickyClass,
+                    stickyFor(SELECT_COL, 'header').className,
+                  )}
+                >
                   <Checkbox
                     checked={
                       selectableKeys.length > 0 &&
@@ -540,6 +706,9 @@ function EditTableInner<
                   onReorder={reorder}
                   drag={columnDrag}
                   onDragChange={setColumnDrag}
+                  pinnedKeys={pinnedKeys}
+                  onTogglePin={togglePin}
+                  stickyFor={stickyFor}
                 />
               ) : (
                 columns.map(({ key, label }) => (
@@ -548,6 +717,7 @@ function EditTableInner<
                     className={cn(
                       headerCellClass,
                       'border-b border-r border-border last:border-r-0',
+                      headerStickyClass,
                     )}
                   >
                     {label}
@@ -582,14 +752,20 @@ function EditTableInner<
                   </>
                 ) : null
 
+              const rowBg =
+                menuRow === rowIndex ? cellBg.rowMenu : cellBg.base
+
               const rowEl = (
-                <tr key={rowIndex} className="data-[state=open]:bg-muted/60">
+                <tr key={rowIndex}>
                   {selection && (
                     <td
+                      style={stickyFor(SELECT_COL, 'body').style}
                       className={cn(
                         'px-4 py-2 text-center align-middle border-r border-border',
+                        rowBg,
                         rowIndex < currentData.length - 1 &&
                           'border-b border-border',
+                        stickyFor(SELECT_COL, 'body').className,
                       )}
                     >
                       {rowSelectKey != null && (
@@ -622,6 +798,11 @@ function EditTableInner<
                       selectedCell?.key === key
 
                     if (isEditing) {
+                      const editSticky = stickyFor(key, 'editing')
+                      const editCellClass = cn(
+                        'px-4 py-2 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background',
+                        editSticky.className,
+                      )
                       if (col.type === 'select' && col.options) {
                         const SelectEditor = col.searchable
                           ? SearchableCellSelect
@@ -629,7 +810,8 @@ function EditTableInner<
                         return (
                           <td
                             key={key}
-                            className="px-4 py-2 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
+                            style={editSticky.style}
+                            className={editCellClass}
                           >
                             <SelectEditor
                               value={inputValue}
@@ -652,7 +834,8 @@ function EditTableInner<
                       return (
                         <td
                           key={key}
-                          className="px-4 py-2 border-b border-r border-border last:border-r-0 ring-2 ring-inset ring-primary/60 bg-background"
+                          style={editSticky.style}
+                          className={editCellClass}
                         >
                           <input
                             ref={inputRef}
@@ -732,9 +915,12 @@ function EditTableInner<
                       )
                     }
 
+                    const sticky = stickyFor(key, 'body')
+
                     return (
                       <td
                         key={key}
+                        style={sticky.style}
                         tabIndex={isEditable ? 0 : -1}
                         data-row={rowIndex}
                         data-col={key}
@@ -836,16 +1022,23 @@ function EditTableInner<
                         className={cn(
                           'px-4 py-2 text-muted-foreground focus:outline-none border-r border-border last:border-r-0 whitespace-nowrap',
                           col.type === 'boolean' && 'text-center',
-                          modified && 'bg-yellow-500/10',
-                          conflicted && 'bg-destructive/15',
-                          isSelected &&
-                            'ring-2 ring-inset ring-primary/40 bg-primary/5',
+                          rowBg,
+                          modified && cellBg.modified,
+                          conflicted && cellBg.conflicted,
+                          isSelected && [
+                            'ring-2 ring-inset ring-primary/40',
+                            cellBg.selected,
+                          ],
                           isEditable
-                            ? 'cursor-pointer hover:bg-muted/30 hover:text-foreground'
+                            ? [
+                                'cursor-pointer hover:text-foreground',
+                                cellBg.hover,
+                              ]
                             : 'ring-muted',
                           rowIndex < currentData.length - 1 &&
                             'border-b border-border',
-                          columnDragClass(columnDrag, columns, key),
+                          columnDragClass(columnDrag, columns, key, 'body'),
+                          sticky.className,
                         )}
                       >
                         {displayValue(col, item)}
@@ -860,7 +1053,14 @@ function EditTableInner<
               // Disabled while a cell in this row is being edited so the
               // input keeps the native copy/paste menu.
               return (
-                <ContextMenu key={rowIndex}>
+                <ContextMenu
+                  key={rowIndex}
+                  onOpenChange={(open) =>
+                    setMenuRow((current) =>
+                      open ? rowIndex : current === rowIndex ? null : current,
+                    )
+                  }
+                >
                   <ContextMenuTrigger
                     asChild
                     disabled={editingCell?.row === rowIndex}
